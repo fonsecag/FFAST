@@ -6,7 +6,7 @@ Install the following packages:
 
 `pip install pyside6 pyqtgraph vispy pyopengl qasync scipy sklearn sgdml`
 
-### Basic usage
+## Basic usage
 
 While inside the main folder and the appropriate python environment, simpl run:
 

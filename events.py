@@ -1,0 +1,122 @@
+from collections import defaultdict
+import logging, traceback
+import os
+
+logger = logging.getLogger("FFAST")
+subs = defaultdict(list)
+
+
+class EventClass:
+    """
+    Main EventClass, to be inherited by any object that has an independent
+    event loop (i.e. the UI Handler and the Environment).
+
+    Gives access to subscribing, pushing and handling events.
+    """
+
+    def __init__(self):
+        self.eventQueue = []
+
+    def eventSubscribe(self, event, func, asynchronous=False):
+        """
+        Subscribes to an event and provides the response function to be called.
+
+        Args:
+            event (str): Event name
+            func (func): Function to me called when event happens
+        """
+        subs[event].append((self, func, asynchronous))
+
+    def eventPush(self, event, *args, quiet=False, **kwargs):
+        """
+        Pushes event onto the stack.
+
+        Args:
+            event (str): Event name
+            quiet (bool, optional): Flag controlling whether the event should
+                be included in logs. Set to True for quick-fire events such as
+                TASK_PROGRESS. Defaults to False.
+        """
+
+        if not quiet:
+            logger.debug(f"Event pushed: {event} by {type(self)}")
+
+        for obj, func, asynchronous in subs[event]:
+            obj.eventQueue.append((event, func, asynchronous, quiet, args, kwargs))
+
+    eventBusy = None
+    eventFree = None
+    busy = False
+
+    async def eventHandle(self):
+        """
+        Goes through the event queue, which includes every event pushed since
+        last call, and calls the corresponding functions.
+
+        This method needs to be called continously and regularly called,
+        see main.py.
+        """
+
+        if len(self.eventQueue) < 1:
+            return
+
+        self.busy = True
+        if self.eventBusy is not None:
+            self.eventPush(self.eventBusy)
+
+        for event, func, asynchronous, quiet, args, kwargs in self.eventQueue:
+            if not quiet:
+                logger.debug(f"Handling event {event}, function: {func}")
+            try:
+                if asynchronous:
+                    await func(*args, **kwargs)
+                else:
+                    func(*args, **kwargs)
+            except Exception:
+                logger.exception(
+                    f"Exception while {self} tried to handle event {event}.\nfunc:{func}\nargs:{args}\nkwargs:{kwargs}"
+                )
+
+        self.busy = False
+        if self.eventFree is not None:
+            self.eventPush(self.eventFree)
+
+        self.eventQueue.clear()
+
+
+class EventWidgetClass:
+    """
+    EventClass for Qt Widgets, which cannot have an independent event handling
+    loop. Instead, this class hooks onto the UI Handler and use its event
+    handling methods instead.
+
+    Implements eventSubscribe and eventPush, but not eventHandle.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def eventSubscribe(self, *args, asynchronous=False):
+        self.handler.eventSubscribe(*args, asynchronous=asynchronous)
+
+    def eventPush(self, *args, **kwargs):
+        self.handler.eventPush(*args, **kwargs)
+
+
+class EventEnvironmentClass:
+    """
+    EventClass for objects dependent on the environment, e.g. data watchers.
+    Those will not have an independent event handling loop. Instead, this class
+    hooks onto the environment and uses its event handling methods instead.
+
+    Implements eventSubscribe and eventPush, but not eventHandle.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def eventSubscribe(self, *args, asynchronous=False):
+        self.env.eventSubscribe(*args, asynchronous=asynchronous)
+
+    def eventPush(self, *args, **kwargs):
+        self.env.eventPush(*args, **kwargs)

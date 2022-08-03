@@ -160,13 +160,7 @@ class UIHandler(EventClass):
     def addLoupeAddon(self, func):
         self.loupeAddonFunctions.append(func)
 
-    def testPopup(self):
-        # dlg = QtWidgets.QDialog()
-        # b1 = QtWidgets.QPushButton("ok",dlg)
-        # b1.move(50,50)
-        # dlg.setWindowTitle("Dialog")
-        # dlg.setWindowModality(QtCore.Qt.ApplicationModal)
-        # dlg.exec_()
+    def loadPrepredictPopup(self):
 
         dlg = LoadPrepredictFileDialog(self)
         dlg.run()

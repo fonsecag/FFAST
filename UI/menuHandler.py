@@ -20,6 +20,7 @@ class MenuHandler(EventClass):
         window.actionDatasetLoad.triggered.connect(self.onDatasetLoad)
         window.actionModelLoad.triggered.connect(self.onModelLoad)
         window.actionNewLoupe.triggered.connect(self.newLoupe)
+        window.actionLoadPrepredictedModel.triggered.connect(self.loadPrepredictedModel)
 
     def onSave(self):
         path, _ = QFileDialog.getSaveFileName(self.handler.window)
@@ -48,7 +49,7 @@ class MenuHandler(EventClass):
         )
 
     def onPreferences(self):
-        self.handler.testPopup()
+        pass
 
     def onExit(self):
         self.eventPush("QUIT_EVENT")
@@ -83,3 +84,6 @@ class MenuHandler(EventClass):
 
     def newLoupe(self):
         self.handler.newLoupe()
+
+    def loadPrepredictedModel(self):
+        self.handler.loadPrepredictPopup()

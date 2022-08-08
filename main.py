@@ -84,9 +84,7 @@ async def eventLoop(UI, env):
     taskManager = env.tm
 
     # Temporarily putting some preliminary tasks here
-    if True:
-        if not os.path.exists("private"):
-            return
+    if os.path.exists("private"):
 
         env.newTask(
             env.loadDataset,

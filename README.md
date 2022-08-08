@@ -1,6 +1,6 @@
 ## Installation
 
-Create a new python environment (conda/venv). It needs to be at least python 3.8, preferably 3.9.
+Create a new python environment (conda/venv). It needs to be at least python 3.9
 
 Install the following packages:
 

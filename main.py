@@ -133,7 +133,6 @@ async def eventLoop(UI, env):
     await env.eventHandle()
     await taskManager.eventHandle()
 
-
 def loadModules(UI, env):
     for path in glob.glob(os.path.join("modules", "*.py")):
         name = os.path.basename(path).replace(".py", "")
@@ -144,7 +143,6 @@ def loadModules(UI, env):
         spec.loader.exec_module(foo)
 
         foo.load(UI, env)
-
 
 async def main():
     UI = UIHandler()

@@ -1,12 +1,44 @@
 from config.atoms import atomColors
+import numpy as np
+from vispy.color import Colormap
+from vispy import scene
 
 
 class AtomColoringModeBase:
     def __init__(self, loupe):
         self.loupe = loupe
 
+    hasColorBar = False
+    colorMap = None
+
     def onGeometryUpdate(self):
         pass
+
+    def updateColorBar(self, minValue="", maxValue=""):
+
+        if (self.hasColorBar) and (self.colorMap is not None):
+
+            if self.loupe.colorBar is None:
+                cb = scene.ColorBarWidget(
+                    orientation="left",
+                    cmap=self.colorMap,
+                    clim=(minValue, maxValue),
+                    label_color="lightgray",
+                )
+                self.loupe.grid.add_widget(cb, col=20)
+                self.loupe.colorBar = cb
+
+            else:
+                # TODO show colorbar
+                cb = self.loupe.colorBar
+                cb._colorbar.cmap = self.colorMap
+
+                cb._colorbar.clim = (minValue, maxValue)
+                cb._update_colorbar()
+
+        else:
+            pass
+            # TODO: hide colorbar
 
 
 class AtomicColoring(AtomColoringModeBase):
@@ -15,6 +47,8 @@ class AtomicColoring(AtomColoringModeBase):
         self.atomColors = None
 
     def onGeometryUpdate(self):
+        if self.loupe.dataset is None:
+            return
         z = self.loupe.dataset.getElements()
         self.atomColors = atomColors[z]
 
@@ -26,17 +60,25 @@ class ForceErrorColoring(AtomColoringModeBase):
     def __init__(self, loupe):
         super().__init__(loupe)
         self.atomColors = None
+        # self.colorGradient = ColorGradient((0.1,0.9,0.1),(0.9,0.9,0.1),(0.5,0.1,0.1),(0.9,0.1,0.1))
+        self.colorMap = Colormap(
+            [(0.1, 0.9, 0.1), (0.9, 0.9, 0.1), (0.5, 0.1, 0.1), (0.9, 0.1, 0.1)]
+        )
+
+    hasColorBar = True
+    initialisedModel = None
 
     def onGeometryUpdate(self):
-        dataset = self.loupe.dataset
-        model = self.loupe.colorTabModelCB.currentKey()
-        if len(model) == 0:
+        if self.loupe.dataset is None:
             return
-        else:
-            model = model[0]
+        dataset = self.loupe.dataset
+        model = self.getModel()
 
         if model is None:
             return
+
+        if self.initialisedModel != model:
+            self.initialiseModel()
 
         env = self.loupe.handler.env
 
@@ -45,7 +87,36 @@ class ForceErrorColoring(AtomColoringModeBase):
             self.atomColors = None
             return
 
-        print(err.get().shape)
+        d = err.get()[self.loupe.getCurrentIndex()]
+        d = np.mean(np.abs(d), axis=1)
+        colors = self.colorMap[d]
+        self.atomColors = colors
+
+    def getModel(self):
+        model = self.loupe.colorTabModelCB.currentKey()
+        if len(model) == 0:
+            return None
+        else:
+            return model[0]
+
+    def initialiseModel(self):
+
+        if self.loupe.dataset is None:
+            return
+        model = self.getModel()
+        if model is None:
+            return
+
+        env = self.loupe.handler.env
+        dataset = self.loupe.dataset
+        err = env.getData("forcesError", dataset=dataset, model=model)
+        if err is None:
+            return
+
+        d = np.mean(np.abs(err.get()), axis=2)
+        self.maxValue = np.max(d)
+        self.initialisedModel = model
+        self.updateColorBar(minValue=0, maxValue=f"{self.maxValue:.2f}")
 
     def getColors(self):
-        dataset = self.loupe.dataset
+        return self.atomColors

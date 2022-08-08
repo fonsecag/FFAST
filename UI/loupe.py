@@ -40,7 +40,9 @@ class InteractiveCanvas(scene.SceneCanvas):
     plotWidget = None
 
     def __init__(self, plotWidget):
-        super().__init__(keys="interactive", bgcolor="black", create_native=False)
+        super().__init__(
+            keys="interactive", bgcolor="black", create_native=False
+        )
         self.plotWidget = plotWidget
         self.create_native()
 
@@ -141,7 +143,10 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
 
         # self.eventSubscribe("DATASET_LOADED", self.refreshDatasetList)
         # self.eventSubscribe("DATASET_NAME_CHANGED", self.refreshDatasetList)
-        self.eventSubscribe("SUBDATASET_INDICES_CHANGED", self.refreshDatasetSelection)
+        self.eventSubscribe(
+            "SUBDATASET_INDICES_CHANGED", self.refreshDatasetSelection
+        )
+        self.eventSubscribe("DATA_UPDATED", self.onDataUpdated)
 
         self.selectedBonds = set()
         self.selectedPoints = []
@@ -189,10 +194,22 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         )
         self.cancelAtomSelectionButton.hide()
 
+    def onDataUpdated(self, cacheKey):
+        dataTypeKey, model, dataset = self.handler.env.cacheKeyToComponents(
+            cacheKey
+        )
+        if (dataset is None) or (
+            dataset.fingerprint != self.selectedDatasetKey
+        ):
+            return
+        self.updateCurrentR()
+        self.refresh()
+
     def initialise3DPlot(self):
 
         canvas = InteractiveCanvas(self)
         view = canvas.central_widget.add_view()
+        self.grid = canvas.central_widget.add_grid(margin=10)
         view.camera = scene.TurntableCamera(up="z", fov=60)
 
         l = 0.90
@@ -227,6 +244,8 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         self.mainFrameLayout.replaceWidget(self.plot3dPH, canvas.native)
         self.plot3dPH.deleteLater()
         self.plot3dPH = None
+
+        self.colorBar = None
 
         self.n = 0
         self.updateCurrentR()
@@ -279,6 +298,12 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         self.colorTabLoadButton = DataLoaderButton(self.handler, dw)
         self.colorTabModelFrameLayout.insertWidget(1, self.colorTabLoadButton)
         self.colorTabModelCB.addUpdateCallback(dw.setModelDependencies)
+        self.colorTabModelCB.addUpdateCallback(
+            lambda x: (
+                self.activeAtomColorMode.onGeometryUpdate(),
+                self.refresh(),
+            )
+        )
         self.colorTabModelCB.updateSelection()
         self.datasetCB.addUpdateCallback(dw.setDatasetDependencies)
         self.datasetCB.updateSelection()
@@ -441,7 +466,9 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         else:
             self.activeAtomSelectTool = tool(self)
             label = self.activeAtomSelectTool.label
-            self.currentAtomSelectionLabel.setText(f"Current selection tool: {label}")
+            self.currentAtomSelectionLabel.setText(
+                f"Current selection tool: {label}"
+            )
             self.cancelAtomSelectionButton.show()
 
         self.selectedPoints = []
@@ -524,16 +551,20 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
     alignConfigurations = True
     currentR = None
 
-    def updateCurrentR(self):
-        if self.dataset is None:
-            return
-
+    def getCurrentIndex(self):
         idx = self.n
         activeIndices = self.getActiveIndices()
 
         if activeIndices is not None:
             idx = activeIndices[idx]
 
+        return idx
+
+    def updateCurrentR(self):
+        if self.dataset is None:
+            return
+
+        idx = self.getCurrentIndex()
         r = self.dataset.getCoordinates(idx)
 
         if (
@@ -544,7 +575,9 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
             r0 = self.dataset.getCoordinates(self.selectedAlignConfIndex)
             if self.centralise:
                 r0 = r0 - np.mean(r0, axis=0)
-            r = alignConfiguration(r, r0, along=self.selectedAlignAtoms, com=True)
+            r = alignConfiguration(
+                r, r0, along=self.selectedAlignAtoms, com=True
+            )
 
         elif self.centralise:
             r = r - np.mean(r, axis=0)
@@ -558,7 +591,9 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
     currentNMax = 0
 
     def refresh(self, bonds=True, renderReset=False):
-        import time as time
+
+        if self.dataset is None:
+            return
 
         nMax = self.getNMax()
         self.currentNMax = nMax
@@ -611,6 +646,9 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
                 self.bondsVis.visible = True
             else:
                 self.bondsVis.set_data(width=0)
+
+        if self.colorBar is not None:
+            pass
 
         # self.selectedIndicesLabel.setText(self.dataset.selectedIndicesLabel)
         self.nFramesLabel.setText(f"{n+1}/{nMax}")

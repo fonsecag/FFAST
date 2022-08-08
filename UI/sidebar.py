@@ -32,9 +32,7 @@ class TaskWidget(QtWidgets.QWidget):
     def abort(self):
         self.handler.eventPush("TASK_CANCEL", self.taskID)
 
-    def setProgress(
-        self, progMax=None, prog=None, percent=False, message="Working..."
-    ):
+    def setProgress(self, progMax=None, prog=None, percent=False, message="Working..."):
         if self.deleted:
             return
         bar = self.progressBar

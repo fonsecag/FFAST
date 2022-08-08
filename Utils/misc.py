@@ -28,3 +28,20 @@ def removeExtension(path):
         return path.replace(".", "")
     else:
         return match.group(1).replace(".", "")
+
+class ColorGradient:
+    def __init__(self, *args, minValue=0, maxValue=1):
+        self.setMinMax(minValue, maxValue)
+        self.colors = args
+        self.nPhases = len(args) - 1
+
+    def setMinMax(minValue, maxValue):
+        self.minValue = float(minValue)
+        self.maxValue = float(maxValue)
+        self.forkValue = self.maxValue - self.minValue
+
+    def __call__(self, v):
+        normV = (v - self.minValue)/self.forkValue
+        nFork = int(normV)
+        
+

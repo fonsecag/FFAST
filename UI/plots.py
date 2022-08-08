@@ -7,7 +7,7 @@ import numpy as np
 from Utils.uiLoader import loadUi
 import logging
 from client.dataWatcher import DataWatcher
-from UI.utils import DatasetModelSelector
+from UI.utils import DatasetModelSelector, DataLoaderButton
 from datasetLoaders.loader import SubDataset
 
 logger = logging.getLogger("FFAST")
@@ -65,7 +65,8 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
         self.eventSubscribe("QUIT_READY", self.onQuit)
         self.initialiseWatcher()
 
-        self.loadButton.clicked.connect(self.loadContent)
+        self.loadButton = DataLoaderButton(self.handler, self.dataWatcher)
+        self.toolbarLayout.insertWidget(0, self.loadButton)
 
         # when added to a tab, will link the dataset and model selection to tab toolbar
         self.parentSelector = parentSelector
@@ -75,7 +76,7 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
             self.legend = pg.LegendItem(
                 offset=(30, 10),
                 labelTextSize="12pt",
-                labelTextColor=self.handler.config["envs"].get("TextColor1"),  
+                labelTextColor=self.handler.config["envs"].get("TextColor1"),
             )
             self.legend.setParentItem(self.plotWidget.graphicsItem())
 
@@ -93,7 +94,10 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
 
         if hasModelSelector:
             cb = DatasetModelSelector(
-                self.handler, "model", text="Choose models", singleSelect=singleModel,
+                self.handler,
+                "model",
+                text="Choose models",
+                singleSelect=singleModel,
             )
             self.addWidgetToToolbar(cb)
             cb.addUpdateCallback(self.setModelDependencies)
@@ -322,13 +326,6 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
         newY = np.repeat(y, 2)
 
         self.plot(newX, newY, **kwargs)
-
-    def loadContent(self):
-        env = self.handler.env
-        deps = self.dataWatcher.getMissingDependencies()
-        for dep in deps:
-            # env.taskGenerateDataByKey(dep, visual=True, threaded=True)
-            env.generationQueue.add(dep)
 
     def mapSceneToView(self, arg1, arg2=None):
         if arg2 is not None:

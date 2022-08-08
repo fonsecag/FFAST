@@ -7,12 +7,21 @@ from collections import defaultdict
 import logging
 import numpy as np
 from vispy import scene
-from config.atoms import atomColors, covalentRadii, covalentBonds
+from config.atoms import covalentRadii, covalentBonds
 from scipy.spatial import distance_matrix
-from UI.utils import CodeTextEdit, CollapseButton, getIcon
+from UI.utils import (
+    CodeTextEdit,
+    CollapseButton,
+    getIcon,
+    DatasetModelComboBox,
+    DataLoaderButton,
+)
 import vispy
 import ast
 from client.mathUtils import alignConfiguration
+from UI.loupeAtomSelect import BondSelect, AtomAlignSelect
+from UI.loupeAtomColorMode import AtomicColoring, ForceErrorColoring
+from client.dataWatcher import DataWatcher
 
 logger = logging.getLogger("FFAST")
 lightGrayValue = 0.7
@@ -31,9 +40,7 @@ class InteractiveCanvas(scene.SceneCanvas):
     plotWidget = None
 
     def __init__(self, plotWidget):
-        super().__init__(
-            keys="interactive", bgcolor="black", create_native=False
-        )
+        super().__init__(keys="interactive", bgcolor="black", create_native=False)
         self.plotWidget = plotWidget
         self.create_native()
 
@@ -99,111 +106,6 @@ class InteractiveCanvas(scene.SceneCanvas):
         self.plotWidget.setHoveredPoint(point)
 
 
-class AtomSelectionBase:
-
-    multiselect = 1
-    cycle = False
-    label = "N/A"
-
-    def __init__(self, loupe):
-        self.selectedPoints = []
-        self.loupe = loupe
-
-    def clearSelection(self):
-        nSel = len(self.selectedPoints)
-        self.selectedPoints = []
-        if nSel > 0:
-            self.loupe.refresh()
-
-    def selectCallback(self):
-        pass
-
-    def selectAtom(self, idx):
-        if idx is None:
-            return
-
-        sp = self.selectedPoints
-
-        if idx in sp:
-            sp.remove(idx)
-        else:
-            sp.append(idx)
-
-        if self.cycle and (len(sp) > self.multiselect):
-            self.selectedPoints = sp[-self.multiselect :]
-
-        self.selectCallback()
-
-    def getSelectedPoints(self):
-        return self.selectedPoints
-
-
-class BondSelect(AtomSelectionBase):
-
-    multiselect = 2
-    label = "Bond Selection"
-
-    def __init__(self, loupe, **kwargs):
-        super().__init__(loupe, **kwargs)
-
-        self.bonds = []
-        self.selectedBonds = loupe.selectedBonds
-
-    def selectCallback(self):
-        if len(self.selectedPoints) != 2:
-            return
-
-        p1, p2 = self.selectedPoints
-        p1, p2 = int(p1), int(p2)
-        if p1 < p2:
-            sel = (p1, p2)
-        else:
-            sel = (p2, p1)
-        if sel in self.selectedBonds:
-            self.selectedBonds.remove(sel)
-        else:
-            self.selectedBonds.add(sel)
-
-        self.clearSelection()
-        self.writeSelectedBonds()
-
-    def writeSelectedBonds(self):
-        s, n, l = "", len(self.selectedBonds), list(self.selectedBonds)
-        for i in range(n):
-            bond = l[i]
-            s += f"    [{bond[0]}, {bond[1]}]"
-            if i < n - 1:
-                s += ",\n"
-            else:
-                s += "\n"
-        self.loupe.bondsTextEdit.setText(f"[\n{s}]")
-
-
-class AtomAlignSelect(AtomSelectionBase):
-    multiselect = 3
-    label = "Align Atoms Selection"
-
-    def __init__(self, loupe, **kwargs):
-        super().__init__(loupe, **kwargs)
-
-        self.atoms = []
-        self.selectedAtoms = loupe.selectedAlignAtoms
-
-    def selectCallback(self):
-        if len(self.selectedPoints) != 3:
-            return
-
-        self.applySelectedAtoms()
-        self.clearSelection()
-
-    def applySelectedAtoms(self):
-        self.loupe.selectedAlignAtoms = self.selectedPoints
-        self.loupe.selectedAlignConfIndex = self.loupe.n
-
-        self.loupe.updateCurrentR()
-        self.loupe.refresh()
-
-
 class Loupe(QtWidgets.QWidget, EventWidgetClass):
     """
     Widget class of a popout window with 3D viewer and plots.
@@ -228,26 +130,26 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         self.nPlotWidget = N
 
         self.setWindowTitle(f"Loupe {N}")
-        self.comboBox.activated.connect(self.onComboBoxSelect)
+
+        self.datasetCB = DatasetModelComboBox(self.handler, typ="dataset")
+        self.datasetCB.addUpdateCallback(self.onDatasetSelect)
+        self.headerLayout.insertWidget(2, self.datasetCB)
 
         self.initialise3DPlot()
         self.initialiseVideoPlayback()
         self.initialiseSelections()
 
-        self.eventSubscribe("DATASET_LOADED", self.refreshDatasetList)
-        self.eventSubscribe("DATASET_NAME_CHANGED", self.refreshDatasetList)
-        self.eventSubscribe(
-            "SUBDATASET_INDICES_CHANGED", self.refreshDatasetSelection
-        )
-        self.eventSubscribe("DATASET_STATE_CHANGED", self.refreshDatasetList)
+        # self.eventSubscribe("DATASET_LOADED", self.refreshDatasetList)
+        # self.eventSubscribe("DATASET_NAME_CHANGED", self.refreshDatasetList)
+        self.eventSubscribe("SUBDATASET_INDICES_CHANGED", self.refreshDatasetSelection)
 
         self.selectedBonds = set()
         self.selectedPoints = []
 
+        self.setActiveAtomColorMode(AtomicColoring, skipRefresh=True)
+
         self.connectSidebar()
         self.applyVisualConfig()
-
-        # self.refreshDatasetList(None)
 
     def applyVisualConfig(self):
         sheet = """
@@ -368,12 +270,33 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
             lambda: self.setActiveAtomSelectTool(AtomAlignSelect)
         )
 
+        # COLOR CONFIGS
+        dw = DataWatcher(self.handler.env)
+        self.colorTabDataWatcher = dw
+        self.coloringComboBox.currentIndexChanged.connect(self.updateColorMode)
+        self.colorTabModelCB = DatasetModelComboBox(self.handler, typ="model")
+        self.colorTabModelFrameLayout.insertWidget(0, self.colorTabModelCB)
+        self.colorTabLoadButton = DataLoaderButton(self.handler, dw)
+        self.colorTabModelFrameLayout.insertWidget(1, self.colorTabLoadButton)
+        self.colorTabModelCB.addUpdateCallback(dw.setModelDependencies)
+        self.colorTabModelCB.updateSelection()
+        self.datasetCB.addUpdateCallback(dw.setDatasetDependencies)
+        self.datasetCB.updateSelection()
 
     def connectLoupe(self, loupePlotWidget):
         if loupePlotWidget is not None:
             lpw = loupePlotWidget(self.handler)
             self.bottomLayout.insertWidget(0, lpw)
             self.loupePlotWidget = lpw
+
+    def updateColorMode(self, index):
+
+        if index == 0:
+            self.setActiveAtomColorMode(AtomicColoring)
+            self.colorTabDataWatcher.setDataDependencies()
+        elif index == 1:
+            self.setActiveAtomColorMode(ForceErrorColoring)
+            self.colorTabDataWatcher.setDataDependencies("forcesError")
 
     def readSelectedBonds(self):
         s = self.bondsTextEdit.toPlainText()
@@ -465,12 +388,16 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         else:
             return len(activeIndices)
 
-    def onComboBoxSelect(self, idx):
-        key = self.datasetSelection[idx]
+    def onDatasetSelect(self, keys):
+        if keys is not None:
+            key = keys[
+                0
+            ]  # the update callback is always a list of keys, but ours only returns one everytime
         self.onPause()
         self.n = 0
         self.selectDatasetKey(key)
 
+    # deprecated
     def refreshDatasetList(self, key=None):
 
         # self.applyConfig()
@@ -514,13 +441,31 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         else:
             self.activeAtomSelectTool = tool(self)
             label = self.activeAtomSelectTool.label
-            self.currentAtomSelectionLabel.setText(
-                f"Current selection tool: {label}"
-            )
+            self.currentAtomSelectionLabel.setText(f"Current selection tool: {label}")
             self.cancelAtomSelectionButton.show()
 
         self.selectedPoints = []
         self.refresh()
+
+    activeAtomColorMode = None
+
+    def isActiveAtomColorMode(self, mode):
+        if mode is None:
+            return self.activeAtomColorMode is None
+        return isinstance(self.activeAtomColorMode, mode)
+
+    def setActiveAtomColorMode(self, mode=None, skipRefresh=False):
+        if self.isActiveAtomColorMode(mode):
+            return
+
+        if mode is None:
+            return
+
+        self.activeAtomColorMode = mode(self)
+
+        if not skipRefresh:
+            self.activeAtomColorMode.onGeometryUpdate()
+            self.refresh()
 
     selectedDatasetKey = None
     dataset = None
@@ -552,7 +497,6 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         self.n = 0
         z = dataset.getElements()
 
-        self.atomColors = atomColors[z]
         self.atomSizes = covalentRadii[z] * 0.7
         self.atomSizesCurrent = np.zeros_like(self.atomSizes)
 
@@ -600,14 +544,13 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
             r0 = self.dataset.getCoordinates(self.selectedAlignConfIndex)
             if self.centralise:
                 r0 = r0 - np.mean(r0, axis=0)
-            r = alignConfiguration(
-                r, r0, along=self.selectedAlignAtoms, com=True
-            )
+            r = alignConfiguration(r, r0, along=self.selectedAlignAtoms, com=True)
 
         elif self.centralise:
             r = r - np.mean(r, axis=0)
 
         self.currentR = r
+        self.activeAtomColorMode.onGeometryUpdate()
 
     def getCurrentR(self):
         return self.currentR
@@ -643,10 +586,11 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
                 size[idx] = self.atomSizes[idx] * 1.1
                 # ew[idx] = 0.005
 
+        atomColors = self.activeAtomColorMode.getColors()
         self.atomsVis.set_data(
             pos=r,
             size=size,
-            face_color=self.atomColors,
+            face_color=atomColors,
             edge_width=0.003,
             edge_color=ec,
         )

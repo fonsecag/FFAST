@@ -1,6 +1,5 @@
 from events import EventEnvironmentClass
 import logging
-from collections.abc import Iterable
 
 logger = logging.getLogger("FFAST")
 
@@ -38,6 +37,13 @@ class DataWatcher(EventEnvironmentClass):
         self.dataTypeDependencies = []
         env = self.env
 
+        if len(args) == 0:
+            self.refreshDependencyList()
+            return
+
+        if isinstance(args[0], list):
+            args = args[0]
+
         for key in args:
             if not env.hasDataType(key):
                 logger.error(
@@ -52,6 +58,10 @@ class DataWatcher(EventEnvironmentClass):
     def setModelDependencies(self, *args):
         self.modelDependencies = []
 
+        if len(args) == 0:
+            self.refreshDependencyList()
+            return
+
         if len(args) == 1:
             if args[0] == "all":
                 self.allDatasets = True
@@ -59,7 +69,7 @@ class DataWatcher(EventEnvironmentClass):
             else:
                 self.allDatasets = False
 
-            if isinstance(args[0], Iterable):
+            if isinstance(args[0], list):
                 args = args[0]
 
         for key in args:
@@ -73,6 +83,10 @@ class DataWatcher(EventEnvironmentClass):
     def setDatasetDependencies(self, *args):
         self.datasetDependencies = []
 
+        if len(args) == 0:
+            self.refreshDependencyList()
+            return
+
         if len(args) == 1:
             if args[0] == "all":
                 self.allDatasets = True
@@ -80,7 +94,7 @@ class DataWatcher(EventEnvironmentClass):
             else:
                 self.allDatasets = False
 
-            if isinstance(args[0], Iterable):
+            if isinstance(args[0], list):
                 args = args[0]
 
         for key in args:
@@ -106,6 +120,7 @@ class DataWatcher(EventEnvironmentClass):
         env = self.env
 
         if len(self.dataTypeDependencies) < 1 or (self.dataTypeDependencies[0] is None):
+            self.refresh()
             return
 
         datasetDependencies = (
@@ -158,10 +173,6 @@ class DataWatcher(EventEnvironmentClass):
         self.refreshWidgets.append(widget)
 
     def refresh(self):
-
-        if len(self.dependencyList) == 0:
-            self.sendRefresh()
-            return
 
         missingKeys = self.getMissingDependencies()
         self.currentlyMissingKeys = missingKeys
@@ -220,3 +231,10 @@ class DataWatcher(EventEnvironmentClass):
         # links this dataWatcher to another
         # everytime the other dataWatcher gets updated, updates this one to the same values
         pass
+
+    def loadContent(self):
+        env = self.env
+        deps = self.getMissingDependencies()
+        for dep in deps:
+            # env.taskGenerateDataByKey(dep, visual=True, threaded=True)
+            env.generationQueue.add(dep)

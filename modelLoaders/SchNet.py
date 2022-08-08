@@ -24,7 +24,7 @@ class SchNetModelLoader(ModelLoader):
 
         import torch
 
-        self.model = torch.load(path, map_location=torch.device('cpu'))
+        self.model = torch.load(path, map_location=torch.device("cpu"))
 
     def predict(self, dataset, indices=None, batchSize=50, taskID=None):
         """
@@ -43,6 +43,7 @@ class SchNetModelLoader(ModelLoader):
         """
 
         import schnetpack
+
         # import schnetpack.transform as trn
         # see https://schnetpack.readthedocs.io/en/dev/tutorials/tutorial_03_force_models.html#Using-the-model
         # except it doesnt work :)
@@ -66,14 +67,12 @@ class SchNetModelLoader(ModelLoader):
         # )
 
         for i in range(len(R)):
-            atoms = Atoms(
-                numbers = z, positions = R[i]
-            )
+            atoms = Atoms(numbers=z, positions=R[i])
             # inputs = converter(atoms)
             inputs = atoms
             results = self.model(inputs)
-            e = results['energy'].detach().cpu().numpy()
-            f = results['forces'].detach().cpu().numpy()
+            e = results["energy"].detach().cpu().numpy()
+            f = results["forces"].detach().cpu().numpy()
             E.append(e)
             F.append(f)
 

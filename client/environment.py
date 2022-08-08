@@ -118,7 +118,7 @@ class Environment(EventClass):
         return [x.fingerprint for x in ds]
         # return list(self.datasets.keys())
 
-    def getAllDatasets(self, subOnly=False, excludeSubs = False):
+    def getAllDatasets(self, subOnly=False, excludeSubs=False):
         ds = [x for x in self.datasets.values() if x.active]
         if subOnly:
             return [x for x in ds if x.isSubDataset]
@@ -197,7 +197,7 @@ class Environment(EventClass):
 
         if self.hasCacheKey(dataKey):
             return
-        
+
         if dataKey in self.queuedTasks:
             # even if the job is not running, it's possible it was generated already
             # in that case, don't
@@ -209,7 +209,11 @@ class Environment(EventClass):
         self.newTask(
             func,
             args=(dataTypeKey,),
-            kwargs={"model": model, "dataset": dataset, "isComponent": isComponent,},
+            kwargs={
+                "model": model,
+                "dataset": dataset,
+                "isComponent": isComponent,
+            },
             threaded=threaded,
             visual=visual,
             name=f"Generating {dataTypeKey}",
@@ -246,7 +250,12 @@ class Environment(EventClass):
         return canGenerate
 
     def generateData(
-        self, dataTypeKey, model=None, dataset=None, isComponent=False, taskID=None,
+        self,
+        dataTypeKey,
+        model=None,
+        dataset=None,
+        isComponent=False,
+        taskID=None,
     ):
         dataType = self.getDataType(dataTypeKey)
 
@@ -276,13 +285,11 @@ class Environment(EventClass):
             logger.info(f"Added {cacheKey} to generation queue")
             self.eventPush("GENERATION_QUEUE_CHANGED")
 
-    def keyIsHaunted(self, dataTypeKey, model = None, dataset = None):
+    def keyIsHaunted(self, dataTypeKey, model=None, dataset=None):
         if not model.isGhost:
             return False
 
-        compKeys = self.getLowestComponents(
-            dataTypeKey, model=model, dataset=dataset
-        )
+        compKeys = self.getLowestComponents(dataTypeKey, model=model, dataset=dataset)
 
         for key in compKeys:
             dataTypeKey, _, _ = self.cacheKeyToComponents(key)
@@ -327,7 +334,7 @@ class Environment(EventClass):
 
         for key, parentKey in keysToGenerate.items():
             dataTypeKey, model, dataset = self.cacheKeyToComponents(key)
-            
+
             self.taskGenerateData(
                 dataTypeKey,
                 model=model,
@@ -484,7 +491,7 @@ class Environment(EventClass):
         self.lookForGhosts()
 
     def lookForGhosts(self):
-        
+
         for cacheKey in self.cache.keys():
             dataKey, modelKey, datasetKey = cacheKey.split("__")
 
@@ -494,23 +501,24 @@ class Environment(EventClass):
                 self.setNewModel(modelKey, model)
 
     def loadPrepredictedDataset(self, path, datasetKey):
-        d = np.load(path, allow_pickle = True)
-        E, F = d['E'], d['F']
+        d = np.load(path, allow_pickle=True)
+        E, F = d["E"], d["F"]
 
         dataset = self.getDataset(datasetKey)
         eDataset = dataset.getEnergies()
         if E.shape != eDataset.shape:
-            logger.error(f'Shape mismatch when loading prepredicted model. Model energy shape: {E.shape}, dataset energy shape: {eDataset.shape}')
+            logger.error(
+                f"Shape mismatch when loading prepredicted model. Model energy shape: {E.shape}, dataset energy shape: {eDataset.shape}"
+            )
 
         modelKey = md5FromArraysAndStrings(E, F)
 
-        energyDataType=self.getDataType("energy")
-        energyDataEntity = energyDataType.newDataEntity(energy = E)
-        self.setData(energyDataEntity, "energy", model = modelKey, dataset = dataset)
+        energyDataType = self.getDataType("energy")
+        energyDataEntity = energyDataType.newDataEntity(energy=E)
+        self.setData(energyDataEntity, "energy", model=modelKey, dataset=dataset)
 
-
-        forcesDataType=self.getDataType("forces")
-        forcesDataEntity = forcesDataType.newDataEntity(forces = F)
-        self.setData(forcesDataEntity, "forces", model = modelKey, dataset = dataset)
+        forcesDataType = self.getDataType("forces")
+        forcesDataEntity = forcesDataType.newDataEntity(forces=F)
+        self.setData(forcesDataEntity, "forces", model=modelKey, dataset=dataset)
 
         self.lookForGhosts()

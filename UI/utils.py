@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QTextEdit,
     QToolButton,
+    QPushButton,
 )
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QPalette, QStandardItem, QFontMetrics
@@ -140,9 +141,7 @@ class CheckableComboBox(QComboBox):
 
         # Compute elided text (with "...")
         metrics = QFontMetrics(self.lineEdit().font())
-        elidedText = metrics.elidedText(
-            text, Qt.ElideRight, self.lineEdit().width()
-        )
+        elidedText = metrics.elidedText(text, Qt.ElideRight, self.lineEdit().width())
         self.lineEdit().setText(elidedText)
 
     def addItem(self, text, data=None):
@@ -216,9 +215,6 @@ class DatasetModelSelector(CheckableComboBox, EventWidgetClass):
 
     def updateSelection(self):
 
-        if self.updateCallback is None:
-            return
-
         sel = self.currentData()
         self.updateCallback(sel)
 
@@ -251,6 +247,75 @@ class DatasetModelSelector(CheckableComboBox, EventWidgetClass):
     # deprecated
 
 
+class DatasetModelComboBox(QComboBox, EventWidgetClass):
+    def __init__(self, handler, typ="dataset"):
+        self.handler = handler
+        super().__init__()
+
+        self.eventSubscribe("DATASET_LOADED", self.refreshList)
+        self.eventSubscribe("DATASET_STATE_CHANGED", self.refreshList)
+        self.eventSubscribe("MODEL_LOADED", self.refreshList)
+        self.callbacks = []
+        self.currentIndexChanged.connect(self.updateSelection)
+
+        if typ == "dataset":
+            self.eventSubscribe("DATASET_NAME_CHANGED", self.refreshList)
+
+        elif typ == "model":
+            self.eventSubscribe("MODEL_NAME_CHANGED", self.refreshList)
+
+        else:
+            logger.exception(
+                f"Initialised DatasetModelSelector but type {typ} is not recognised. Needs to be dataset or model."
+            )
+
+        self.type = typ
+        self.refreshList()
+
+    keys = None
+
+    def currentKey(self):
+        if self.keys is None:
+            return []
+        idx = self.currentIndex()
+        if (idx is None) or (idx >= len(self.keys)):
+            return []
+        return [self.keys[idx]]
+
+    def refreshList(self, *args):
+        sel = self.currentKey()
+        self.clear()
+
+        if self.type == "dataset":
+            datasets = self.handler.env.getAllDatasets()
+            names = [x.getDisplayName() for x in datasets]
+            self.keys = [x.fingerprint for x in datasets]
+            self.addItems(names)
+
+        if self.type == "model":
+            models = self.handler.env.getAllModels()
+            names = [x.getDisplayName() for x in models]
+            self.keys = [x.fingerprint for x in models]
+            self.addItems(names)
+
+        if sel in self.keys:
+            idx = self.keys.index(sel)
+        else:
+            idx = 0
+        self.setCurrentIndex(idx)
+
+    def updateCallback(self, sel):
+        for func in self.callbacks:
+            func(sel)
+
+    def addUpdateCallback(self, func):
+        self.callbacks.append(func)
+
+    def updateSelection(self):
+        sel = self.currentKey()
+        self.updateCallback(sel)
+
+
 class CodeTextEdit(QTextEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -274,6 +339,31 @@ class CodeTextEdit(QTextEdit):
             super().keyPressEvent(event)
 
 
+class DataLoaderButton(QPushButton, EventWidgetClass):
+    def __init__(self, handler, watcher):
+        super().__init__()
+        self.handler = handler
+        self.dataWatcher = watcher
+
+        self.setText("Load")
+        self.clicked.connect(self.dataWatcher.loadContent)
+
+        self.dataWatcher.addRefreshWidget(self)
+        self.eventSubscribe("WIDGET_REFRESH", self.onWidgetRefresh)
+
+        self.onWidgetRefresh(self)
+
+    def onWidgetRefresh(self, widget):
+        if self is not widget:
+            return
+
+        missing = self.dataWatcher.currentlyMissingKeys
+        if len(missing) == 0:
+            self.setEnabled(False)
+        else:
+            self.setEnabled(True)
+
+
 def getIcon(name):
     if not name.endswith(".sgv"):
         name = name + ".svg"
@@ -283,9 +373,7 @@ def getIcon(name):
 
 
 class CollapseButton(QToolButton):
-    def __init__(
-        self, handler, frame, direction, frameSize, defaultCollapsed=True
-    ):
+    def __init__(self, handler, frame, direction, frameSize, defaultCollapsed=True):
         super().__init__()
         self.dir = direction
         self.frame = frame
@@ -318,6 +406,7 @@ class CollapseButton(QToolButton):
         self.setConfig()
 
     collapsed = False
+
     def setConfig(self):
         sheet = """
             QToolButton,

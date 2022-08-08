@@ -34,7 +34,9 @@ def agglomerative(desc, n, nInitPoints):
     lDescRest = len(descRest)
 
     cinitLabels = AgglomerativeClustering(
-        affinity="euclidean", n_clusters=n, linkage="complete",
+        affinity="euclidean",
+        n_clusters=n,
+        linkage="complete",
     ).fit_predict(descInit)
 
     # gather cluster data from labels and return to original indices
@@ -398,7 +400,10 @@ def load(UIHandler, env):
     env.registerDataType(ClusterEnergyError)
 
     tab = Tab(
-        UIHandler, hasDatasetSelector=True, hasModelSelector=True, singleDataset=True,
+        UIHandler,
+        hasDatasetSelector=True,
+        hasModelSelector=True,
+        singleDataset=True,
     )
     UIHandler.addTab(tab, "Cluster Error")
 

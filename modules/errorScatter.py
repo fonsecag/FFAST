@@ -10,6 +10,7 @@ logger = logging.getLogger("FFAST")
 # TODO refactor some of this, there should be no need to rewrite this much
 # especially since getDatasetSubIndices is (almost) completely generic here
 
+
 class ForcesErrorScatterPlot(BasicPlotContainer):
     def __init__(self, handler, tab):
         super().__init__(
@@ -30,12 +31,8 @@ class ForcesErrorScatterPlot(BasicPlotContainer):
             dataset = x["dataset"]
             fTrue = dataset.getForces()
 
-            fPred = np.mean(
-                np.absolute(fPred.reshape(fPred.shape[0], -1)), axis=1
-            )
-            fTrue = np.mean(
-                np.absolute(fTrue.reshape(fTrue.shape[0], -1)), axis=1
-            )
+            fPred = np.mean(np.absolute(fPred.reshape(fPred.shape[0], -1)), axis=1)
+            fTrue = np.mean(np.absolute(fTrue.reshape(fTrue.shape[0], -1)), axis=1)
             self.plot(fTrue, fPred, pen=None, symbol="o")
 
     def getDatasetSubIndices(self, dataset, model):
@@ -45,19 +42,15 @@ class ForcesErrorScatterPlot(BasicPlotContainer):
         y0, y1 = yRange
 
         fTrue = dataset.getForces()
-        fPred = self.env.getData("forces", dataset=dataset,model=model).get()
+        fPred = self.env.getData("forces", dataset=dataset, model=model).get()
 
-        fPred = np.mean(
-            np.absolute(fPred.reshape(fPred.shape[0], -1)), axis=1
-        )
-        fTrue = np.mean(
-            np.absolute(fTrue.reshape(fTrue.shape[0], -1)), axis=1
-        )
-
+        fPred = np.mean(np.absolute(fPred.reshape(fPred.shape[0], -1)), axis=1)
+        fTrue = np.mean(np.absolute(fTrue.reshape(fTrue.shape[0], -1)), axis=1)
 
         xTruth = (fTrue > x0) & (fTrue < x1)
         yTruth = (fPred > y0) & (fPred < y1)
         return np.argwhere(xTruth & yTruth).flatten()
+
 
 class EnergyErrorScatterPlot(BasicPlotContainer):
     def __init__(self, handler, tab):
@@ -88,11 +81,12 @@ class EnergyErrorScatterPlot(BasicPlotContainer):
         y0, y1 = yRange
 
         eTrue = dataset.getEnergies()
-        ePred = self.env.getData("energy", dataset=dataset,model=model).get()
+        ePred = self.env.getData("energy", dataset=dataset, model=model).get()
 
         xTruth = (eTrue > x0) & (eTrue < x1)
         yTruth = (ePred > y0) & (ePred < y1)
         return np.argwhere(xTruth & yTruth).flatten()
+
 
 def load(UIHandler, env):
     tab = Tab(

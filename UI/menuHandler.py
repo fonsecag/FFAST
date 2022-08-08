@@ -20,6 +20,7 @@ class MenuHandler(EventClass):
         window.actionDatasetLoad.triggered.connect(self.onDatasetLoad)
         window.actionModelLoad.triggered.connect(self.onModelLoad)
         window.actionNewLoupe.triggered.connect(self.newLoupe)
+        window.actionNewLoupe.setShortcut("Ctrl+n")
         window.actionLoadPrepredictedModel.triggered.connect(self.loadPrepredictedModel)
 
     def onSave(self):

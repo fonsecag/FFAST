@@ -6,6 +6,7 @@ from Utils.misc import md5FromArraysAndStrings
 class GhostDatasetLoader(ModelLoader):
 
     isGhost = True
+
     def __init__(self, env, fingerprint, *args, **kwargs):
         """
         Initialises the ModelLoader given a path to the model. All methods
@@ -24,7 +25,7 @@ class GhostDatasetLoader(ModelLoader):
         return self.fingerprint
 
     def getDisplayName(self):
-        return f'*{self.getName()}'
+        return f"*{self.getName()}"
 
     def initialise(self):
         self.setName(self.fingerprint)

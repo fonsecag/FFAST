@@ -41,7 +41,10 @@ class DatasetKernelPCA3(DataType):
 class LoupeKPCA3Plot(LoupePlot):
     def __init__(self, handler, loupe):
         super().__init__(
-            handler, loupe, title="Kernel PCA", name="LoupeKPCA",
+            handler,
+            loupe,
+            title="Kernel PCA",
+            name="LoupeKPCA",
         )
         self.setDataDependencies("kpca3")
         self.setXLabel("Component 1")

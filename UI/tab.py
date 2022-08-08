@@ -110,14 +110,12 @@ class Tab(EventWidgetClass, QtWidgets.QWidget):
             return
 
         if widget.parentSelector and (widget.dataWatcher is not None):
-            self.datasetSelector.addUpdateCallback(
-                widget.setDatasetDependencies
-            )
+            self.datasetSelector.addUpdateCallback(widget.setDatasetDependencies)
             self.modelSelector.addUpdateCallback(widget.setModelDependencies)
 
         self.widgets.append(widget)
 
     def loadAllContent(self):
         for w in self.widgets:
-            if hasattr(w, "loadContent"):
-                w.loadContent()
+            if hasattr(w, "dataWatcher"):
+                w.dataWatcher.loadContent()

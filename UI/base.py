@@ -56,9 +56,7 @@ class UIHandler(EventClass):
 
     def loadUiElements(self):
         self.sidebar = Sidebar(self)
-        self.window.horizontalLayout.replaceWidget(
-            self.window.leftWidget, self.sidebar
-        )
+        self.window.horizontalLayout.replaceWidget(self.window.leftWidget, self.sidebar)
 
         self.menuHandler = MenuHandler(self)
 
@@ -71,7 +69,6 @@ class UIHandler(EventClass):
         self.loupes.append(loupe)
         loupe.show()
         loupe.setFocus()
-        loupe.refreshDatasetList()
 
         self.eventPush("LOUPES_UPDATE")
 
@@ -187,14 +184,14 @@ class LoadPrepredictFileDialog(QtWidgets.QFileDialog, EventWidgetClass):
         layout.addWidget(cbLabel, 5, 0)
 
         cb = QtWidgets.QComboBox()
-        layout.addWidget(cb, 5,1)
+        layout.addWidget(cb, 5, 1)
 
-        datasets = env.getAllDatasets(excludeSubs = True)
+        datasets = env.getAllDatasets(excludeSubs=True)
         self.selections = []
         for dataset in datasets:
             cb.addItem(dataset.getDisplayName())
             self.selections.append(dataset.fingerprint)
-        
+
         self.datasetComboBox = cb
         self.currentChanged.connect(self.onCurrentChanged)
         btnBox = self.findChild(QtWidgets.QDialogButtonBox)
@@ -215,7 +212,7 @@ class LoadPrepredictFileDialog(QtWidgets.QFileDialog, EventWidgetClass):
     def onDialogUpdate(self):
         if not self.confirmButton.isEnabled():
             return
-        
+
         self.confirmButton.setEnabled(self.getOpenableStatus())
 
     def getOpenableStatus(self):

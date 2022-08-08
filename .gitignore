@@ -6,6 +6,7 @@ test.py
 *.npz
 save/
 .qt_for_python/
+.VSCodeCounter/
 
 # Byte-compiled / optimized / DLL files
 */__pycache__

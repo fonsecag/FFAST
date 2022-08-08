@@ -27,13 +27,13 @@ def loadModel(env, path):
         logger.error(f"Tried to load model, but path `{path}` not found")
         return None
 
-    if path.endswith('.npz'):
+    if path.endswith(".npz"):
         model = sGDMLModelLoader(env, path)
     elif "." not in path:
         model = SchNetModelLoader(env, path)
     else:
         model = None
-    
+
     if model is not None:
         model.initialise()
 

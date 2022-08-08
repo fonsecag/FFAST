@@ -278,7 +278,7 @@ class DatasetModelComboBox(QComboBox, EventWidgetClass):
         if self.keys is None:
             return []
         idx = self.currentIndex()
-        if (idx is None) or (idx >= len(self.keys)):
+        if (idx == -1) or (idx is None) or (idx >= len(self.keys)):
             return []
         return [self.keys[idx]]
 

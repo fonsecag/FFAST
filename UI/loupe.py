@@ -268,7 +268,7 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
 
         # add collapse button
         self.collapseSidebarButton = CollapseButton(
-            self.handler, self.rightContainer, "right", 300
+            self.handler, self.rightContainer, "right"
         )
         self.headerLayout.insertWidget(-1, self.collapseSidebarButton)
 
@@ -360,13 +360,6 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         self.updateCurrentR()
         self.refresh()
 
-    def toggleSidebar(self):
-        w = self.rightContainer.width()
-        if w == 0:
-            self.rightContainer.setFixedWidth(300)
-        else:
-            self.rightContainer.setFixedWidth(0)
-
     def getColorIDs(self):
         n = len(self.dataset.getElements())
         ids = np.arange(n)
@@ -415,9 +408,11 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
 
     def onDatasetSelect(self, keys):
         if keys is not None:
-            key = keys[
-                0
-            ]  # the update callback is always a list of keys, but ours only returns one everytime
+            if len(keys) == 0:
+                return
+
+        key = keys[0]
+        # the update callback is always a list of keys, but ours only returns one everytime
         self.onPause()
         self.n = 0
         self.selectDatasetKey(key)
@@ -491,7 +486,7 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         self.activeAtomColorMode = mode(self)
 
         if not skipRefresh:
-            self.activeAtomColorMode.onGeometryUpdate()
+            self.activeAtomColorMode.initialise()
             self.refresh()
 
     selectedDatasetKey = None
@@ -703,3 +698,14 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
 
     def registerLoupePlot(self, plotWidget):
         self.registeredPlots.append(plotWidget)
+
+    def showColorBar(self):
+        if self.colorBar is None:
+            return
+        self.colorBar.visible = True
+
+    def hideColorBar(self):
+        if self.colorBar is None:
+            return
+
+        self.colorBar.visible = False

@@ -10,14 +10,17 @@ class AtomColoringModeBase:
 
     hasColorBar = False
     colorMap = None
+    colorBarVisible = False
 
     def onGeometryUpdate(self):
         pass
 
     def updateColorBar(self, minValue="", maxValue=""):
-
-        if (self.hasColorBar) and (self.colorMap is not None):
-
+        if (
+            self.colorBarVisible
+            and (self.hasColorBar)
+            and (self.colorMap is not None)
+        ):
             if self.loupe.colorBar is None:
                 cb = scene.ColorBarWidget(
                     orientation="left",
@@ -29,7 +32,7 @@ class AtomColoringModeBase:
                 self.loupe.colorBar = cb
 
             else:
-                # TODO show colorbar
+                self.loupe.showColorBar()
                 cb = self.loupe.colorBar
                 cb._colorbar.cmap = self.colorMap
 
@@ -37,8 +40,11 @@ class AtomColoringModeBase:
                 cb._update_colorbar()
 
         else:
-            pass
-            # TODO: hide colorbar
+            self.loupe.hideColorBar()
+
+    def initialise(self):
+        self.onGeometryUpdate()
+        self.updateColorBar()
 
 
 class AtomicColoring(AtomColoringModeBase):
@@ -100,7 +106,6 @@ class ForceErrorColoring(AtomColoringModeBase):
             return model[0]
 
     def initialiseModel(self):
-
         if self.loupe.dataset is None:
             return
         model = self.getModel()
@@ -110,13 +115,15 @@ class ForceErrorColoring(AtomColoringModeBase):
         env = self.loupe.handler.env
         dataset = self.loupe.dataset
         err = env.getData("forcesError", dataset=dataset, model=model)
-        if err is None:
-            return
-
-        d = np.mean(np.abs(err.get()), axis=2)
-        self.maxValue = np.max(d)
-        self.initialisedModel = model
-        self.updateColorBar(minValue=0, maxValue=f"{self.maxValue:.2f}")
+        if err is not None:
+            d = np.mean(np.abs(err.get()), axis=2)
+            self.maxValue = np.max(d)
+            self.initialisedModel = model
+            self.colorBarVisible = True
+            self.updateColorBar(minValue=0, maxValue=f"{self.maxValue:.2f}")
+        else:
+            self.colorBarVisible = False
+            self.updateColorBar()
 
     def getColors(self):
         return self.atomColors

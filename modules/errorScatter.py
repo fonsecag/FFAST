@@ -7,9 +7,6 @@ import math
 
 logger = logging.getLogger("FFAST")
 
-# TODO refactor some of this, there should be no need to rewrite this much
-# especially since getDatasetSubIndices is (almost) completely generic here
-
 
 class ForcesErrorScatterPlot(BasicPlotContainer):
     def __init__(self, handler, tab):
@@ -31,8 +28,12 @@ class ForcesErrorScatterPlot(BasicPlotContainer):
             dataset = x["dataset"]
             fTrue = dataset.getForces()
 
-            fPred = np.mean(np.absolute(fPred.reshape(fPred.shape[0], -1)), axis=1)
-            fTrue = np.mean(np.absolute(fTrue.reshape(fTrue.shape[0], -1)), axis=1)
+            fPred = np.mean(
+                np.absolute(fPred.reshape(fPred.shape[0], -1)), axis=1
+            )
+            fTrue = np.mean(
+                np.absolute(fTrue.reshape(fTrue.shape[0], -1)), axis=1
+            )
             self.plot(fTrue, fPred, pen=None, symbol="o")
 
     def getDatasetSubIndices(self, dataset, model):

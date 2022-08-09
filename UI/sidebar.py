@@ -32,7 +32,9 @@ class TaskWidget(QtWidgets.QWidget):
     def abort(self):
         self.handler.eventPush("TASK_CANCEL", self.taskID)
 
-    def setProgress(self, progMax=None, prog=None, percent=False, message="Working..."):
+    def setProgress(
+        self, progMax=None, prog=None, percent=False, message="Working..."
+    ):
         if self.deleted:
             return
         bar = self.progressBar
@@ -74,7 +76,7 @@ class LoaderWidget(EventWidgetClass, QtWidgets.QWidget):
 
         # ADD UI ELEMENTS
         cb = CollapseButton(
-            handler, self.contentFrame, "down", None, defaultCollapsed=True
+            handler, self.contentFrame, "down", defaultCollapsed=True
         )
         self.headerLayout.insertWidget(0, cb)
 
@@ -104,9 +106,11 @@ class LoaderWidget(EventWidgetClass, QtWidgets.QWidget):
             return
 
         if self.loadee.active:
-            self.setFixedHeight(79)
+            self.show()
+            # self.setFixedHeight(79)
         else:
-            self.setFixedHeight(0)
+            self.hide()
+            # self.setFixedHeight(0)
 
     def onColorChanged(self, btn):
         pass

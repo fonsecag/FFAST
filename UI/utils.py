@@ -141,7 +141,9 @@ class CheckableComboBox(QComboBox):
 
         # Compute elided text (with "...")
         metrics = QFontMetrics(self.lineEdit().font())
-        elidedText = metrics.elidedText(text, Qt.ElideRight, self.lineEdit().width())
+        elidedText = metrics.elidedText(
+            text, Qt.ElideRight, self.lineEdit().width()
+        )
         self.lineEdit().setText(elidedText)
 
     def addItem(self, text, data=None):
@@ -373,11 +375,10 @@ def getIcon(name):
 
 
 class CollapseButton(QToolButton):
-    def __init__(self, handler, frame, direction, frameSize, defaultCollapsed=True):
+    def __init__(self, handler, frame, direction, defaultCollapsed=True):
         super().__init__()
         self.dir = direction
         self.frame = frame
-        self.frameSize = ((frameSize is None) and 99999) or frameSize
         self.handler = handler
 
         if direction not in ["left", "right", "up", "down"]:
@@ -426,18 +427,20 @@ class CollapseButton(QToolButton):
 
     def setExpanded(self):
         if (self.dir == "left") or (self.dir == "right"):
-            self.frame.setMaximumWidth(self.frameSize)
+            self.frame.show()
         else:
-            self.frame.setMaximumHeight(self.frameSize)
+            self.frame.show()
 
         self.setIcon(self.expandedIcon)
         self.collapsed = False
 
     def setCollapsed(self):
         if (self.dir == "left") or (self.dir == "right"):
-            self.frame.setMaximumWidth(0)
+            self.frame.hide()
+            # self.frame.setMaximumWidth(0)
         else:
-            self.frame.setMaximumHeight(0)
+            self.frame.hide()
+            # self.frame.setMaximumHeight(0)
 
         self.setIcon(self.collapsedIcon)
         self.collapsed = True

@@ -417,34 +417,6 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         self.n = 0
         self.selectDatasetKey(key)
 
-    # deprecated
-    def refreshDatasetList(self, key=None):
-
-        # self.applyConfig()
-        # self.refresh()
-
-        datasets = self.handler.env.getAllDatasets()
-        self.datasetSelection.clear()
-
-        if len(datasets) == 0:
-            return
-
-        cb = self.comboBox
-        cb.clear()
-
-        for dataset in datasets:
-            self.datasetSelection.append(dataset.fingerprint)
-            name = f"{dataset.getDisplayName()}"
-            cb.addItem(name)
-
-        key = self.selectedDatasetKey
-        if key not in self.datasetSelection:
-            key = None
-        if key is None:
-            key = self.datasetSelection[0]
-
-        self.selectDatasetKey(key)
-
     def isActiveAtomSelectTool(self, tool):
         if tool is None:
             return self.activeAtomSelectTool is None

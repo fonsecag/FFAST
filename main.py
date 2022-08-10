@@ -104,7 +104,7 @@ async def eventLoop(UI, env):
 
         env.newTask(
             env.loadModel,
-            args=("private/eth_il_1000.npz",),
+            args=("private/eth_schnet",),
             visual=True,
             name="Loading model",
             threaded=True,

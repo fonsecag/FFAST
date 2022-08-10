@@ -1,5 +1,5 @@
 from events import EventClass, EventWidgetClass
-from PySide6 import QtCore, QtGui, QtWidgets, Qt
+from PySide6 import QtCore, QtGui, QtWidgets
 import logging
 import numpy as np
 import os
@@ -23,7 +23,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # icon = QtGui.QIcon("tempIcon.png")
         # self.setWindowIcon(icon)
         self.setFocus()
-        # self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
     def closeEvent(self, event):
         self.handler.quitEvent()

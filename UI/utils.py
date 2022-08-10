@@ -356,6 +356,7 @@ class DataLoaderButton(QPushButton, EventWidgetClass):
         self.onWidgetRefresh(self)
 
     def onWidgetRefresh(self, widget):
+        print("REFRESH", widget)
         if self is not widget:
             return
 

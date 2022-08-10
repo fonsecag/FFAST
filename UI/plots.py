@@ -219,12 +219,6 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
         if self is not widget:
             return
 
-        # updateKey = self.dataWatcher.getUpdateKey()
-
-        # if updateKey == self.lastUpdateKey:
-        #     return
-
-        # self.lastUpdateKey = updateKey
         self.refresh()
 
     def setDataDependencies(self, *args, **kwargs):
@@ -345,6 +339,7 @@ class LoupePlot(BasicPlotContainer):
         )
         self.plotWidget.sigRangeChanged.connect(self.updateSub)
         self.loupe = loupe
+        self.eventPush("WIDGET_REFRESH", self.loadButton)
 
     def isSubbing(self):
         return True

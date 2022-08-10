@@ -23,8 +23,13 @@ class SchNetModelLoader(ModelLoader):
         super().__init__(env, path, *args, **kwargs)
 
         import torch
+        import schnetpack
 
         self.model = torch.load(path, map_location=torch.device("cpu"))
+        self.model.requires_stress = False
+        for name, mod in self.model.named_modules():
+            if isinstance(mod, schnetpack.atomistic.output_modules.Atomwise):
+                mod.stress = None
 
     def predict(self, dataset, indices=None, batchSize=50, taskID=None):
         """
@@ -42,7 +47,7 @@ class SchNetModelLoader(ModelLoader):
             F (array): NxMx3 array containing calculated forces.
         """
 
-        import schnetpack
+        import schnetpack, os
 
         # import schnetpack.transform as trn
         # see https://schnetpack.readthedocs.io/en/dev/tutorials/tutorial_03_force_models.html#Using-the-model
@@ -56,21 +61,23 @@ class SchNetModelLoader(ModelLoader):
         z = dataset.getElements()
 
         E, F = [], []
-
-        # batch size is useless here because of how this whole Atoms conversion
-        # nBatches = len(R) // batchSize + 1
-        # rBatches = np.array_split(R, nBatches)
-        # nBatches = len(rBatches)
-
-        # converter = schnetpack.interfaces.AtomsConverter(
-        #     neighbor_list=trn.ASENeighborList(cutoff=5.0), dtype=torch.float32
-        # )
-
+        molecules, props = [], []
         for i in range(len(R)):
-            atoms = Atoms(numbers=z, positions=R[i])
-            # inputs = converter(atoms)
-            inputs = atoms
-            results = self.model(inputs)
+            r = R[i]
+            atoms = Atoms(numbers=z, positions=r)
+            molecules.append(atoms)
+            props.append({"energy": 0, "forces": np.zeros(r.shape)})
+
+        path = os.path.join("temp",f'{self.fingerprint}_{dataset.fingerprint}.db')
+        if os.path.exists(path):
+            os.remove(path)
+        d = schnetpack.AtomsData(path, available_properties=["energy", "forces"])
+        d.add_systems(molecules, props)
+
+        # molecules = schnetpack.AtomsData(molecules)
+        loader = schnetpack.AtomsLoader(d, batch_size=10)
+        for count, batch in enumerate(loader):
+            results = self.model(batch)
             e = results["energy"].detach().cpu().numpy()
             f = results["forces"].detach().cpu().numpy()
             E.append(e)
@@ -80,8 +87,8 @@ class SchNetModelLoader(ModelLoader):
                 self.eventPush(
                     "TASK_PROGRESS",
                     taskID,
-                    progMax=nBatches,
-                    prog=i,
+                    progMax=len(loader),
+                    prog=count,
                     message=f"SchNet batch predictions",
                     quiet=True,
                     percent=True,
@@ -90,9 +97,9 @@ class SchNetModelLoader(ModelLoader):
                 if not self.env.tm.isTaskRunning(taskID):
                     return None
 
-        E, F = np.array(E), np.array(F)
+        E, F = np.concatenate(E), np.concatenate(F)
 
-        return E, F.reshape(F.shape[0], -1, 3)
+        return E.flatten(), F.reshape(F.shape[0], -1, 3)
 
     def getFingerprint(self):
         """

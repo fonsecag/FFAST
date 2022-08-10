@@ -236,5 +236,4 @@ class DataWatcher(EventEnvironmentClass):
         env = self.env
         deps = self.getMissingDependencies()
         for dep in deps:
-            # env.taskGenerateDataByKey(dep, visual=True, threaded=True)
             env.generationQueue.add(dep)

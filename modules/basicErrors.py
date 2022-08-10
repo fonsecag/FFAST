@@ -186,7 +186,7 @@ class EnergyErrorPlot(BasicPlotContainer):
             self.plot(np.arange(err.shape[0]), np.abs(err))
 
     def getDatasetSubIndices(self, dataset, model):
-        xRange, yRange = self.getRanges()
+        (xRange, yRange) = self.getRanges()
         N = dataset.getN()
         x0, x1 = xRange
         return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
@@ -212,7 +212,7 @@ class ForcesErrorPlot(BasicPlotContainer):
             self.plot(np.arange(mae.shape[0]), mae)
 
     def getDatasetSubIndices(self, dataset, model):
-        xRange, yRange = self.getRanges()
+        (xRange, yRange) = self.getRanges()
         N = dataset.getN()
         x0, x1 = xRange
         return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))

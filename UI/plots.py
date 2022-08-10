@@ -1,4 +1,4 @@
-from events import EventWidgetClass
+from events import EventChildClass
 import sys, os, time
 from PySide6 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
@@ -16,7 +16,7 @@ PLOT_WIDGETS = []
 GIVEN_NAMES = []
 
 
-class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
+class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
     def __init__(
         self,
         handler,
@@ -34,6 +34,7 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
         self.handler = handler
         self.env = self.handler.env
         super().__init__()
+        self.handler.addEventChild(self)
 
         loadUi(os.path.join(self.handler.uiFilesPath, "plotWidget.ui"), self)
 
@@ -145,7 +146,7 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
         ay.setTicks([[(y[i], str(labels[i])) for i in range(n)]])
 
     def getRanges(self):
-        x1, y1, x2, y2 = self.plotWidget.visibleRange().getCoords()
+        (x1, y1, x2, y2) = self.plotWidget.visibleRange().getCoords()
         return (x1, x2), (y1, y2)
 
     def onSubStateChanged(self):
@@ -218,7 +219,6 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
     def onWidgetRefresh(self, widget):
         if self is not widget:
             return
-
         self.refresh()
 
     def setDataDependencies(self, *args, **kwargs):
@@ -312,7 +312,7 @@ class BasicPlotContainer(EventWidgetClass, QtWidgets.QWidget):
         self.plotItems.append(plotItem)
 
     def stepPlot(self, x, y, width=1, **kwargs):
-        xLeft, xRight = x - width / 2, x + width / 2
+        xLeft, xRight = (x - width / 2, x + width / 2)
         newX = np.zeros(xLeft.shape[0] * 2)
         newX[::2] = xLeft
         newX[1::2] = xRight

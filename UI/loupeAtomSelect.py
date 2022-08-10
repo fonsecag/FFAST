@@ -52,7 +52,7 @@ class BondSelect(AtomSelectionBase):
         if len(self.selectedPoints) != 2:
             return
 
-        p1, p2 = self.selectedPoints
+        (p1, p2) = self.selectedPoints
         p1, p2 = int(p1), int(p2)
         if p1 < p2:
             sel = (p1, p2)
@@ -67,7 +67,7 @@ class BondSelect(AtomSelectionBase):
         self.writeSelectedBonds()
 
     def writeSelectedBonds(self):
-        s, n, l = "", len(self.selectedBonds), list(self.selectedBonds)
+        s, n, l = ("", len(self.selectedBonds), list(self.selectedBonds))
         for i in range(n):
             bond = l[i]
             s += f"    [{bond[0]}, {bond[1]}]"

@@ -1,4 +1,4 @@
-from events import EventWidgetClass
+from events import EventChildClass
 import sys, os
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtUiTools import QUiLoader
@@ -56,13 +56,14 @@ class TaskWidget(QtWidgets.QWidget):
         bar.setValue(prog)
 
 
-class LoaderWidget(EventWidgetClass, QtWidgets.QWidget):
+class LoaderWidget(EventChildClass, QtWidgets.QWidget):
     def __init__(self, handler, loadee, *args, **kwargs):
 
         self.loadee = loadee
         self.handler = handler
         self.loadeeType = loadee.loadeeType
         super().__init__(*args, **kwargs)
+        self.handler.addEventChild(self)
         loadUi(os.path.join(self.handler.uiFilesPath, "loaderWidget.ui"), self)
 
         # self.pathValueLabel.setText(loadee.path)
@@ -167,10 +168,11 @@ class ModelLoaderWidget(LoaderWidget):
             )
 
 
-class Sidebar(EventWidgetClass, QtWidgets.QWidget):
+class Sidebar(EventChildClass, QtWidgets.QWidget):
     def __init__(self, handler, *args, **kwargs):
         self.handler = handler
         super().__init__(*args, **kwargs)
+        self.handler.addEventChild(self)
         loadUi(os.path.join(self.handler.uiFilesPath, "sidebar.ui"), self)
 
         self.eventSubscribe("DATASET_LOADED", self.onDatasetLoaded)
@@ -206,7 +208,7 @@ class Sidebar(EventWidgetClass, QtWidgets.QWidget):
         self.eventPush("CONTEXT_UPDATED_FORCE")
 
     def chooseDataset(self):
-        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self)
+        (fileName, _) = QtWidgets.QFileDialog.getOpenFileName(self)
         if fileName is None or fileName == "":
             return
         self.eventPush("DATASET_CHOSEN", fileName)

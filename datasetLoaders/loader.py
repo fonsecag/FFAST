@@ -300,7 +300,9 @@ class SubDataset(DatasetLoader):
         self.updatePath()
 
     def updatePath(self):
-        self.path = f"{self.subName},{self.parent.getName()},{self.modelDep.getName()}"
+        self.path = (
+            f"{self.subName},{self.parent.getName()},{self.modelDep.getName()}"
+        )
 
     def setIndices(self, indices):
         self.indices = indices
@@ -318,7 +320,9 @@ class SubDataset(DatasetLoader):
         if model is None:
             fp = md5FromArraysAndStrings(parent.fingerprint, subName)
         else:
-            fp = md5FromArraysAndStrings(parent.fingerprint, model.fingerprint, subName)
+            fp = md5FromArraysAndStrings(
+                parent.fingerprint, model.fingerprint, subName
+            )
 
         return fp
 

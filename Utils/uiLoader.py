@@ -115,12 +115,12 @@ class UiLoader(QUiLoader):
 
                 # this outputs the various widget names, e.g.
                 # sampleGraphicsView, dockWidget, samplesTableView etc.
-                # print(name)
-
             return widget
 
 
-def loadUi(uifile, baseinstance=None, customWidgets=None, workingDirectory=None):
+def loadUi(
+    uifile, baseinstance=None, customWidgets=None, workingDirectory=None
+):
     """
     Dynamically load a user interface from the given ``uifile``.
     ``uifile`` is a string containing a file name of the UI file to load.

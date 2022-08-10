@@ -34,9 +34,7 @@ def agglomerative(desc, n, nInitPoints):
     lDescRest = len(descRest)
 
     cinitLabels = AgglomerativeClustering(
-        affinity="euclidean",
-        n_clusters=n,
-        linkage="complete",
+        affinity="euclidean", n_clusters=n, linkage="complete"
     ).fit_predict(descInit)
 
     # gather cluster data from labels and return to original indices
@@ -92,12 +90,16 @@ class DatasetCluster(DataType):
         elif scheme["desc"] == "Energy":
             d = dataset.getEnergies(indices=indices).reshape(-1, 1)
         else:
-            logger.error(f"Unrecognised cluster scheme descriptor {scheme['desc']}")
+            logger.error(
+                f"Unrecognised cluster scheme descriptor {scheme['desc']}"
+            )
 
         nClusters = scheme["nClusters"]
 
         if scheme["type"] == "Agglo":
-            localClind = agglomerative(d, nClusters, env.getConfig("aggloNInitPoints"))
+            localClind = agglomerative(
+                d, nClusters, env.getConfig("aggloNInitPoints")
+            )
         elif scheme["type"] == "KMeans":
             localClind = kMeans(d, nClusters)
         else:
@@ -226,7 +228,11 @@ class OrderingCheckBox(QCheckBox):
 class ClusterErrorPlot(BasicPlotContainer):
     def __init__(self, handler, tab, title="N/A", name="N/A"):
         super().__init__(
-            handler, parentSelector=True, title=title, isSubbable=True, name=name
+            handler,
+            parentSelector=True,
+            title=title,
+            isSubbable=True,
+            name=name,
         )
         self.setXLabel("Cluster index")
 
@@ -316,12 +322,12 @@ class ClusterErrorPlot(BasicPlotContainer):
 
     def viewCoordsToIndex(self, x, y):
         coords = self.mapSceneToView(x, y)
-        x, y = coords.x(), coords.y()
+        x, y = (coords.x(), coords.y())
 
         return math.floor(x + 0.5)
 
     def mouseClicked(self, event):
-        x, y = event.scenePos()
+        (x, y) = event.scenePos()
         idx = self.viewCoordsToIndex(x, y)
         self.toggleSelectCluster(idx)
 
@@ -368,7 +374,9 @@ class ClusterErrorPlot(BasicPlotContainer):
 
         indices = self.modelOrder[model.fingerprint][self.selectedRegions]
 
-        if (not self.isOrdered()) and (model.fingerprint != self.orderedModelKey):
+        if (not self.isOrdered()) and (
+            model.fingerprint != self.orderedModelKey
+        ):
             return None
 
         clind = self.env.getData("datasetCluster", dataset=dataset)
@@ -380,7 +388,9 @@ class ClusterErrorPlot(BasicPlotContainer):
 
 class ForcesClusterErrorPlot(ClusterErrorPlot):
     def __init__(self, handler, tab):
-        super().__init__(handler, tab, title="Forces Cluster Error", name="ClFoErr")
+        super().__init__(
+            handler, tab, title="Forces Cluster Error", name="ClFoErr"
+        )
 
         self.setDataDependencies("clusterForceError")
         self.setYLabel("Force MAE", "kcal/mol A")
@@ -388,7 +398,9 @@ class ForcesClusterErrorPlot(ClusterErrorPlot):
 
 class EnergyClusterErrorPlot(ClusterErrorPlot):
     def __init__(self, handler, tab):
-        super().__init__(handler, tab, title="Energy Cluster Error", name="ClEnErr")
+        super().__init__(
+            handler, tab, title="Energy Cluster Error", name="ClEnErr"
+        )
 
         self.setDataDependencies("clusterEnergyError")
         self.setYLabel("Energy MAE", "kcal/mol")

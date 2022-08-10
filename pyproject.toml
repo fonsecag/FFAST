@@ -1,0 +1,7 @@
+[tool.black]
+line-length = 79
+skip-magic-trailing-comma = 1
+
+[tool.isort]
+profile = "black"
+line-length = 79

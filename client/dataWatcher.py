@@ -1,10 +1,10 @@
-from events import EventEnvironmentClass
+from events import EventChildClass
 import logging
 
 logger = logging.getLogger("FFAST")
 
 
-class DataWatcher(EventEnvironmentClass):
+class DataWatcher(EventChildClass):
     """
     They're always watching.
     """
@@ -12,11 +12,15 @@ class DataWatcher(EventEnvironmentClass):
     def __init__(self, env):
         super().__init__()
         self.env = env
+        self.env.addEventChild(self)
+
         self.eventSubscribe("DATA_UPDATED", self.onDataUpdated)
         self.eventSubscribe("DATASET_LOADED", self.refreshDependencyList)
         self.eventSubscribe("MODEL_LOADED", self.refreshDependencyList)
         self.eventSubscribe("DATASET_UPDATED", self.onDatasetUpdated)
-        self.eventSubscribe("DATASET_STATE_CHANGED", self.onDatasetStateChanged)
+        self.eventSubscribe(
+            "DATASET_STATE_CHANGED", self.onDatasetStateChanged
+        )
 
         self.dataTypeDependencies = []
         self.datasetDependencies = []
@@ -119,12 +123,16 @@ class DataWatcher(EventEnvironmentClass):
         self.dependencyList = []
         env = self.env
 
-        if len(self.dataTypeDependencies) < 1 or (self.dataTypeDependencies[0] is None):
+        if len(self.dataTypeDependencies) < 1 or (
+            self.dataTypeDependencies[0] is None
+        ):
             self.refresh()
             return
 
         datasetDependencies = (
-            self.allDatasets and env.getAllDatasetKeys() or self.datasetDependencies
+            self.allDatasets
+            and env.getAllDatasetKeys()
+            or self.datasetDependencies
         )
         modelDependencies = (
             self.allModels and env.getAllModelKeys() or self.modelDependencies
@@ -183,7 +191,7 @@ class DataWatcher(EventEnvironmentClass):
         if cacheKey not in self.dependencyList:
             return
 
-        dataTypeKey, model, dataset = self.env.cacheKeyToComponents(cacheKey)
+        (dataTypeKey, model, dataset) = self.env.cacheKeyToComponents(cacheKey)
 
         self.refresh()
 
@@ -213,7 +221,9 @@ class DataWatcher(EventEnvironmentClass):
                 if dataOnly:
                     allData.append(env.getCacheByKey(key))
                 else:
-                    dataTypeKey, model, dataset = env.cacheKeyToComponents(key)
+                    (dataTypeKey, model, dataset) = env.cacheKeyToComponents(
+                        key
+                    )
 
                     dataEntry = env.getCacheByKey(key)
                     entry = {

@@ -2,7 +2,9 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 
 def makeStretchingTable(tbl):
-    tbl.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+    tbl.setSizePolicy(
+        QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+    )
 
     tbl.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
     tbl.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)

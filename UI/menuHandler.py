@@ -11,7 +11,7 @@ class MenuHandler(EventClass):
         self.connectActions()
 
     def connectActions(self):
-        handler, window = self.handler, self.window
+        handler, window = (self.handler, self.window)
 
         window.actionSave.triggered.connect(self.onSave)
         window.actionLoad.triggered.connect(self.onLoad)
@@ -21,10 +21,12 @@ class MenuHandler(EventClass):
         window.actionModelLoad.triggered.connect(self.onModelLoad)
         window.actionNewLoupe.triggered.connect(self.newLoupe)
         window.actionNewLoupe.setShortcut("Ctrl+n")
-        window.actionLoadPrepredictedModel.triggered.connect(self.loadPrepredictedModel)
+        window.actionLoadPrepredictedModel.triggered.connect(
+            self.loadPrepredictedModel
+        )
 
     def onSave(self):
-        path, _ = QFileDialog.getSaveFileName(self.handler.window)
+        (path, _) = QFileDialog.getSaveFileName(self.handler.window)
         if path is None or path.strip() == "":
             return
 
@@ -56,7 +58,7 @@ class MenuHandler(EventClass):
         self.eventPush("QUIT_EVENT")
 
     def onDatasetLoad(self):
-        path, _ = QFileDialog.getOpenFileName(self.handler.window)
+        (path, _) = QFileDialog.getOpenFileName(self.handler.window)
         if path is None or path.strip() == "":
             return
 
@@ -70,7 +72,7 @@ class MenuHandler(EventClass):
         )
 
     def onModelLoad(self):
-        path, _ = QFileDialog.getOpenFileName(self.handler.window)
+        (path, _) = QFileDialog.getOpenFileName(self.handler.window)
         if path is None or path.strip() == "":
             return
 

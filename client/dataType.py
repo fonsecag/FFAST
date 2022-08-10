@@ -15,7 +15,7 @@ class DataEntity:
     def __init__(self, dataType, **kwargs):
         self.dataType = dataType
         self.data = {}
-        for k, v in kwargs.items():
+        for (k, v) in kwargs.items():
             self.data[k] = v
 
         self.timestamp = time.time()
@@ -89,7 +89,7 @@ class DataType(EventClass):
             if dataset is None:
                 logger.exception(
                     f"Getting cache key of dataset dependent DataType"
-                    + f"{self}, key {self.key}, but no dataset was given",
+                    + f"{self}, key {self.key}, but no dataset was given"
                 )
                 return None
 
@@ -122,7 +122,9 @@ class DataType(EventClass):
 
         data = None
 
-        deps, canGenerate = self.checkDependencies(dataset=dataset, model=model)
+        (deps, canGenerate) = self.checkDependencies(
+            dataset=dataset, model=model
+        )
         if canGenerate:
             data = self.data(dataset, model, taskID=taskID)
 
@@ -140,7 +142,7 @@ class DataType(EventClass):
             return [], True
 
         env = self.env
-        deps, canGenerate = [], True
+        deps, canGenerate = ([], True)
         for dep in self.dependencies:
             if env.hasData(dep, dataset=dataset, model=model):
                 continue
@@ -148,14 +150,14 @@ class DataType(EventClass):
             canGenerate = False
             deps.append(dep)
 
-        return deps, canGenerate
+        return (deps, canGenerate)
 
     def getGeneratableComponent(self, dataset=None, model=None):
         if self.dependencies is None:
             return [], True
 
         env = self.env
-        generatableComps, canGenerate = [], True
+        (generatableComps, canGenerate) = ([], True)
         comps = [self]
 
         for i in range(100):
@@ -166,7 +168,9 @@ class DataType(EventClass):
 
             newComps = []
             for comp in comps:
-                deps, canGenerate = comp.checkDependencies(dataset=dataset, model=model)
+                (deps, canGenerate) = comp.checkDependencies(
+                    dataset=dataset, model=model
+                )
                 if canGenerate:
                     generatableComps.append(comp.key)
                 else:
@@ -199,7 +203,7 @@ class EnergyPredictionData(DataType):
         env = self.env
 
         if model.singlePredict:
-            e, f = model.predict(dataset, taskID=taskID)
+            (e, f) = model.predict(dataset, taskID=taskID)
             fData = self.newDataEntity(forces=f)
             env.setData(fData, "forces", model=model, dataset=dataset)
 
@@ -226,7 +230,7 @@ class ForcesPredictionData(DataType):
         env = self.env
 
         if model.singlePredict:
-            e, f = model.predict(dataset, taskID=taskID)
+            (e, f) = model.predict(dataset, taskID=taskID)
             eData = self.newDataEntity(energy=e)
             env.setData(eData, "energy", model=model, dataset=dataset)
 

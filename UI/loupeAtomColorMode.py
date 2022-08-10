@@ -68,7 +68,12 @@ class ForceErrorColoring(AtomColoringModeBase):
         self.atomColors = None
         # self.colorGradient = ColorGradient((0.1,0.9,0.1),(0.9,0.9,0.1),(0.5,0.1,0.1),(0.9,0.1,0.1))
         self.colorMap = Colormap(
-            [(0.1, 0.9, 0.1), (0.9, 0.9, 0.1), (0.5, 0.1, 0.1), (0.9, 0.1, 0.1)]
+            [
+                (0.1, 0.9, 0.1),
+                (0.9, 0.9, 0.1),
+                (0.5, 0.1, 0.1),
+                (0.9, 0.1, 0.1),
+            ]
         )
 
     hasColorBar = True

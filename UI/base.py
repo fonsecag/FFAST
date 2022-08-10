@@ -1,4 +1,4 @@
-from events import EventClass, EventWidgetClass
+from events import EventClass, EventChildClass
 from PySide6 import QtCore, QtGui, QtWidgets
 import logging
 import numpy as np
@@ -55,7 +55,9 @@ class UIHandler(EventClass):
 
     def loadUiElements(self):
         self.sidebar = Sidebar(self)
-        self.window.horizontalLayout.replaceWidget(self.window.leftWidget, self.sidebar)
+        self.window.horizontalLayout.replaceWidget(
+            self.window.leftWidget, self.sidebar
+        )
 
         self.menuHandler = MenuHandler(self)
 
@@ -81,7 +83,7 @@ class UIHandler(EventClass):
         self.env = env
 
     def applyConfigToStyleSheet(self, sheet):
-        for key, value in self.config["envs"].items():
+        for (key, value) in self.config["envs"].items():
             sheet = sheet.replace(f"@{key}", value)
 
         return sheet
@@ -162,10 +164,11 @@ class UIHandler(EventClass):
         dlg.run()
 
 
-class LoadPrepredictFileDialog(QtWidgets.QFileDialog, EventWidgetClass):
+class LoadPrepredictFileDialog(EventChildClass, QtWidgets.QFileDialog):
     def __init__(self, handler):
         self.handler = handler
         super().__init__()
+        self.handler.addEventChild(self)
 
         self.eventSubscribe("CUSTOM_FILE_DIALOG_UPDATE", self.onDialogUpdate)
 
@@ -176,7 +179,6 @@ class LoadPrepredictFileDialog(QtWidgets.QFileDialog, EventWidgetClass):
         layout = self.layout()
         self.setFileMode(QtWidgets.QFileDialog.ExistingFile)
         # self.setNameFilters([".npz"])
-        # print(self.acceptMode())
 
         cbLabel = QtWidgets.QLabel()
         cbLabel.setText("Dataset")

@@ -1,4 +1,4 @@
-from events import EventWidgetClass
+from events import EventChildClass
 import os
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtUiTools import QUiLoader
@@ -108,7 +108,7 @@ class InteractiveCanvas(scene.SceneCanvas):
         self.plotWidget.setHoveredPoint(point)
 
 
-class Loupe(QtWidgets.QWidget, EventWidgetClass):
+class Loupe(EventChildClass, QtWidgets.QWidget):
     """
     Widget class of a popout window with 3D viewer and plots.
 
@@ -126,6 +126,7 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         """
         self.handler = handler
         super().__init__()
+        self.handler.addEventChild(self)
         loadUi(os.path.join(self.handler.uiFilesPath, "loupe.ui"), self)
 
         self.datasetSelection = []
@@ -195,7 +196,7 @@ class Loupe(QtWidgets.QWidget, EventWidgetClass):
         self.cancelAtomSelectionButton.hide()
 
     def onDataUpdated(self, cacheKey):
-        dataTypeKey, model, dataset = self.handler.env.cacheKeyToComponents(
+        (dataTypeKey, model, dataset) = self.handler.env.cacheKeyToComponents(
             cacheKey
         )
         if (dataset is None) or (

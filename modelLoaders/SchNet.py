@@ -27,7 +27,7 @@ class SchNetModelLoader(ModelLoader):
 
         self.model = torch.load(path, map_location=torch.device("cpu"))
         self.model.requires_stress = False
-        for name, mod in self.model.named_modules():
+        for (name, mod) in self.model.named_modules():
             if isinstance(mod, schnetpack.atomistic.output_modules.Atomwise):
                 mod.stress = None
 
@@ -61,22 +61,26 @@ class SchNetModelLoader(ModelLoader):
         z = dataset.getElements()
 
         E, F = [], []
-        molecules, props = [], []
+        molecules, props = ([], [])
         for i in range(len(R)):
             r = R[i]
             atoms = Atoms(numbers=z, positions=r)
             molecules.append(atoms)
             props.append({"energy": 0, "forces": np.zeros(r.shape)})
 
-        path = os.path.join("temp",f'{self.fingerprint}_{dataset.fingerprint}.db')
+        path = os.path.join(
+            "temp", f"{self.fingerprint}_{dataset.fingerprint}.db"
+        )
         if os.path.exists(path):
             os.remove(path)
-        d = schnetpack.AtomsData(path, available_properties=["energy", "forces"])
+        d = schnetpack.AtomsData(
+            path, available_properties=["energy", "forces"]
+        )
         d.add_systems(molecules, props)
 
         # molecules = schnetpack.AtomsData(molecules)
         loader = schnetpack.AtomsLoader(d, batch_size=10)
-        for count, batch in enumerate(loader):
+        for (count, batch) in enumerate(loader):
             results = self.model(batch)
             e = results["energy"].detach().cpu().numpy()
             f = results["forces"].detach().cpu().numpy()
@@ -99,7 +103,7 @@ class SchNetModelLoader(ModelLoader):
 
         E, F = np.concatenate(E), np.concatenate(F)
 
-        return E.flatten(), F.reshape(F.shape[0], -1, 3)
+        return (E.flatten(), F.reshape(F.shape[0], -1, 3))
 
     def getFingerprint(self):
         """

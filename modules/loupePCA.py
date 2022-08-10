@@ -25,7 +25,9 @@ class DatasetKernelPCA3(DataType):
         d = dataset.getPDist()
         kpca = KernelPCA(n_components=3, kernel="rbf")
         if len(d) > 1000:
-            trainIdxs = np.random.choice(np.arange(len(d)), 1000, replace=False)
+            trainIdxs = np.random.choice(
+                np.arange(len(d)), 1000, replace=False
+            )
             dTrain = d[trainIdxs]
             kpca.fit(dTrain)
             y = kpca.transform(d)
@@ -40,12 +42,7 @@ class DatasetKernelPCA3(DataType):
 
 class LoupeKPCA3Plot(LoupePlot):
     def __init__(self, handler, loupe):
-        super().__init__(
-            handler,
-            loupe,
-            title="Kernel PCA",
-            name="LoupeKPCA",
-        )
+        super().__init__(handler, loupe, title="Kernel PCA", name="LoupeKPCA")
         self.setDataDependencies("kpca3")
         self.setXLabel("Component 1")
         self.setYLabel("Component 2")
@@ -57,7 +54,7 @@ class LoupeKPCA3Plot(LoupePlot):
             self.plot(y[:, 0], y[:, 1], pen=None, symbol="o")
 
     def getDatasetSubIndices(self, dataset, model):
-        xRange, yRange = self.getRanges()
+        (xRange, yRange) = self.getRanges()
         N = dataset.getN()
         x0, x1 = xRange
         y0, y1 = yRange

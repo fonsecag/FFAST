@@ -1,4 +1,4 @@
-from events import EventWidgetClass
+from events import EventChildClass
 import sys, os, time
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtUiTools import QUiLoader
@@ -11,7 +11,7 @@ from UI.utils import DatasetModelSelector
 logger = logging.getLogger("FFAST")
 
 
-class Tab(EventWidgetClass, QtWidgets.QWidget):
+class Tab(EventChildClass, QtWidgets.QWidget):
     def __init__(
         self,
         handler,
@@ -26,6 +26,7 @@ class Tab(EventWidgetClass, QtWidgets.QWidget):
 
         self.handler = handler
         super().__init__(*args, **kwargs)
+        self.handler.addEventChild(self)
         loadUi(os.path.join(self.handler.uiFilesPath, "tab.ui"), self)
 
         self.layoutType = layoutType
@@ -110,7 +111,9 @@ class Tab(EventWidgetClass, QtWidgets.QWidget):
             return
 
         if widget.parentSelector and (widget.dataWatcher is not None):
-            self.datasetSelector.addUpdateCallback(widget.setDatasetDependencies)
+            self.datasetSelector.addUpdateCallback(
+                widget.setDatasetDependencies
+            )
             self.modelSelector.addUpdateCallback(widget.setModelDependencies)
 
         self.widgets.append(widget)

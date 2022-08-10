@@ -37,7 +37,7 @@ class ForcesErrorScatterPlot(BasicPlotContainer):
             self.plot(fTrue, fPred, pen=None, symbol="o")
 
     def getDatasetSubIndices(self, dataset, model):
-        xRange, yRange = self.getRanges()
+        (xRange, yRange) = self.getRanges()
         N = dataset.getN()
         x0, x1 = xRange
         y0, y1 = yRange
@@ -76,7 +76,7 @@ class EnergyErrorScatterPlot(BasicPlotContainer):
             self.plot(eTrue, ePred, pen=None, symbol="o")
 
     def getDatasetSubIndices(self, dataset, model):
-        xRange, yRange = self.getRanges()
+        (xRange, yRange) = self.getRanges()
         N = dataset.getN()
         x0, x1 = xRange
         y0, y1 = yRange

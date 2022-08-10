@@ -1,6 +1,7 @@
 import hashlib
 import re
-import numpy as np 
+import numpy as np
+
 
 def md5FromArraysAndStrings(*args):
     fp = hashlib.md5()
@@ -29,6 +30,7 @@ def removeExtension(path):
     else:
         return match.group(1).replace(".", "")
 
+
 class ColorGradient:
     # DEPRECATED, NOW USING VISPY'S COLORMAP
     def __init__(self, *args, minValue=0, maxValue=1):
@@ -53,12 +55,9 @@ class ColorGradient:
         elif v >= self.maxValue:
             return self.colors[-1]
 
-        normV = (v - self.minValue)/self.forkValue * self.nPhases
+        normV = (v - self.minValue) / self.forkValue * self.nPhases
         nFork = int(normV)
         fact = normV - nFork
-        c1, c2 = self.colors[nFork], self.colors[nFork + 1]
+        c1, c2 = (self.colors[nFork], self.colors[nFork + 1])
 
-        return c2 * fact + c1 * (1- fact)
-
-        
-
+        return c2 * fact + c1 * (1 - fact)

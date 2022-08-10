@@ -8,5 +8,5 @@ config = {
         "TextColor1": "#b9bbc2",
         "TextColor2": "#ffffff",
         "TextColorHover": "#dbdde4",
-    },
+    }
 }

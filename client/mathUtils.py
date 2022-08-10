@@ -3,7 +3,7 @@ from scipy.spatial.transform import Rotation
 
 
 def getVV0Angle(v, v0, directionVector=None):
-    u, u0 = v / np.linalg.norm(v), v0 / np.linalg.norm(v0)
+    (u, u0) = v / np.linalg.norm(v), v0 / np.linalg.norm(v0)
     if directionVector is None:
         sign = 1
     else:

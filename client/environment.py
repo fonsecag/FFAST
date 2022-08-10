@@ -41,7 +41,9 @@ class Environment(EventClass):
         # self.eventSubscribe("GENERATION_QUEUE_CHANGED", self.handleGenerationQueue)
         self.eventSubscribe("TASK_CANCEL", self.onTaskCancel)
         self.eventSubscribe("TASK_DONE", self.onTaskDone)
-        self.eventSubscribe("SUBDATASET_INDICES_CHANGED", self.deleteCacheByDataset)
+        self.eventSubscribe(
+            "SUBDATASET_INDICES_CHANGED", self.deleteCacheByDataset
+        )
 
     def loadConfig(self):
         from config.userConfig import config
@@ -174,8 +176,10 @@ class Environment(EventClass):
         return self.tm.getTask(*args, **kwargs)
 
     def taskGenerateDataByKey(self, key, **kwargs):
-        dataTypeKey, model, dataset = self.cacheKeyToComponents(key)
-        self.taskGenerateData(dataTypeKey, model=model, dataset=dataset, **kwargs)
+        (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
+        self.taskGenerateData(
+            dataTypeKey, model=model, dataset=dataset, **kwargs
+        )
 
     def taskGenerateData(
         self,
@@ -190,7 +194,11 @@ class Environment(EventClass):
 
         # for models that predict energies and forces at the same time (e.g. sGDML)
         # convert force tasks to energy tasks to avoid duplicates
-        if (model is not None) and (model.singlePredict) and (dataTypeKey == "forces"):
+        if (
+            (model is not None)
+            and (model.singlePredict)
+            and (dataTypeKey == "forces")
+        ):
             dataTypeKey = "energy"
 
         dataKey = self.getCacheKey(dataTypeKey, model=model, dataset=dataset)
@@ -245,7 +253,9 @@ class Environment(EventClass):
 
     def canGenerateData(self, dataTypeKey, model=None, dataset=None):
         dataType = self.getDataType(dataTypeKey)
-        deps, canGenerate = dataType.checkDependencies(model=model, dataset=dataset)
+        (deps, canGenerate) = dataType.checkDependencies(
+            model=model, dataset=dataset
+        )
 
         return canGenerate
 
@@ -270,7 +280,9 @@ class Environment(EventClass):
 
         logger.info(f"Generating data for key {cacheKey}")
 
-        generated = dataType.generateData(model=model, dataset=dataset, taskID=taskID)
+        generated = dataType.generateData(
+            model=model, dataset=dataset, taskID=taskID
+        )
 
         if (taskID is not None) and (not self.tm.isTaskRunning(taskID)):
             # check if the task was cancelled, in which case it's normal it
@@ -289,10 +301,12 @@ class Environment(EventClass):
         if not model.isGhost:
             return False
 
-        compKeys = self.getLowestComponents(dataTypeKey, model=model, dataset=dataset)
+        compKeys = self.getLowestComponents(
+            dataTypeKey, model=model, dataset=dataset
+        )
 
         for key in compKeys:
-            dataTypeKey, _, _ = self.cacheKeyToComponents(key)
+            (dataTypeKey, _, _) = self.cacheKeyToComponents(key)
             if (dataTypeKey == "energy") or (dataTypeKey == "forces"):
                 return True
 
@@ -310,13 +324,15 @@ class Environment(EventClass):
         # copying because we discard in loop
         keysToGenerate = {}
         for cacheKey in queue.copy():
-            dataTypeKey, model, dataset = self.cacheKeyToComponents(cacheKey)
+            (dataTypeKey, model, dataset) = self.cacheKeyToComponents(cacheKey)
 
             if self.hasCacheKey(cacheKey):
                 continue
 
             if self.canGenerateData(dataTypeKey, model=model, dataset=dataset):
-                keysToGenerate[cacheKey] = None  # value is the parent key, if available
+                keysToGenerate[
+                    cacheKey
+                ] = None  # value is the parent key, if available
                 queue.discard(cacheKey)
 
             elif self.keyIsHaunted(dataTypeKey, model=model, dataset=dataset):
@@ -330,10 +346,12 @@ class Environment(EventClass):
 
                 for key in compKeys:
                     if key not in keysToGenerate:
-                        keysToGenerate[key] = cacheKey  # indicates the parent key
+                        keysToGenerate[
+                            key
+                        ] = cacheKey  # indicates the parent key
 
-        for key, parentKey in keysToGenerate.items():
-            dataTypeKey, model, dataset = self.cacheKeyToComponents(key)
+        for (key, parentKey) in keysToGenerate.items():
+            (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
 
             self.taskGenerateData(
                 dataTypeKey,
@@ -347,9 +365,14 @@ class Environment(EventClass):
 
     def getLowestComponents(self, dataTypeKey, model=None, dataset=None):
         dataType = self.getDataType(dataTypeKey)
-        compKeys = dataType.getGeneratableComponent(model=model, dataset=dataset)
+        compKeys = dataType.getGeneratableComponent(
+            model=model, dataset=dataset
+        )
 
-        return [self.getCacheKey(key, model=model, dataset=dataset) for key in compKeys]
+        return [
+            self.getCacheKey(key, model=model, dataset=dataset)
+            for key in compKeys
+        ]
 
     def getData(self, dataTypeKey, model=None, dataset=None):
         dataType = self.getRegisteredDataType(dataTypeKey)
@@ -361,8 +384,14 @@ class Environment(EventClass):
             )
             return None
 
-        if (dataset is not None) and (dataset.isSubDataset) and dataType.iterable:
-            cacheKey = dataType.getCacheKey(model=model, dataset=dataset.parent)
+        if (
+            (dataset is not None)
+            and (dataset.isSubDataset)
+            and dataType.iterable
+        ):
+            cacheKey = dataType.getCacheKey(
+                model=model, dataset=dataset.parent
+            )
             data = self.cache.get(cacheKey, None)
             if data is not None:
                 data = data.getSubEntity(indices=dataset.indices)
@@ -412,7 +441,7 @@ class Environment(EventClass):
 
     def hasCacheKey(self, key, subChecks=True):
         if subChecks:
-            dataTypeKey, model, dataset = self.cacheKeyToComponents(key)
+            (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
             return self.hasData(dataTypeKey, model=model, dataset=dataset)
         else:
             return key in self.cache
@@ -423,12 +452,14 @@ class Environment(EventClass):
         if (dataset is not None) and (dataset.isSubDataset):
             dataType = self.getDataType(dataTypeKey)
             if (not hasKey) and dataType.iterable:
-                return self.hasData(dataTypeKey, model=model, dataset=dataset.parent)
+                return self.hasData(
+                    dataTypeKey, model=model, dataset=dataset.parent
+                )
         return hasKey
 
     def getCacheByKey(self, key, subChecks=True):
         if subChecks:
-            dataTypeKey, model, dataset = self.cacheKeyToComponents(key)
+            (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
             return self.getData(dataTypeKey, model=model, dataset=dataset)
         else:
             return self.cache.get(key, None)
@@ -447,7 +478,7 @@ class Environment(EventClass):
         else:
             dataset = self.getDataset(spl[2])
 
-        return dataTypeKey, model, dataset
+        return (dataTypeKey, model, dataset)
 
     def save(self, path, taskID=None):
         if not os.path.exists(path):
@@ -458,7 +489,7 @@ class Environment(EventClass):
         if not os.path.exists(cacheDir):
             os.mkdir(cacheDir)
 
-        for key, entity in self.cache.items():
+        for (key, entity) in self.cache.items():
             if isinstance(entity, SubDataEntity):
                 continue
 
@@ -493,7 +524,7 @@ class Environment(EventClass):
     def lookForGhosts(self):
 
         for cacheKey in self.cache.keys():
-            dataKey, modelKey, datasetKey = cacheKey.split("__")
+            (dataKey, modelKey, datasetKey) = cacheKey.split("__")
 
             if modelKey not in self.models:
                 model = GhostModelLoader(self, modelKey)
@@ -515,10 +546,14 @@ class Environment(EventClass):
 
         energyDataType = self.getDataType("energy")
         energyDataEntity = energyDataType.newDataEntity(energy=E)
-        self.setData(energyDataEntity, "energy", model=modelKey, dataset=dataset)
+        self.setData(
+            energyDataEntity, "energy", model=modelKey, dataset=dataset
+        )
 
         forcesDataType = self.getDataType("forces")
         forcesDataEntity = forcesDataType.newDataEntity(forces=F)
-        self.setData(forcesDataEntity, "forces", model=modelKey, dataset=dataset)
+        self.setData(
+            forcesDataEntity, "forces", model=modelKey, dataset=dataset
+        )
 
         self.lookForGhosts()

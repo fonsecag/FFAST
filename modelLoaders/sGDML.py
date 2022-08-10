@@ -56,7 +56,7 @@ class sGDMLModelLoader(ModelLoader):
 
         for i in range(nBatches):
             r = rBatches[i]
-            e, f = self.model.predict(r.reshape((r.shape[0], -1)))
+            (e, f) = self.model.predict(r.reshape((r.shape[0], -1)))
             E.append(e)
             F.append(f)
 

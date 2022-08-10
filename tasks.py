@@ -33,7 +33,7 @@ class TaskManager(EventClass):
 
     async def quit(self):
         tasks = []
-        for k, v in self.runningTasks.items():
+        for (k, v) in self.runningTasks.items():
             await self.cancelTask(k)
             tasks.append(v["task"])
 
@@ -55,7 +55,9 @@ class TaskManager(EventClass):
             await task["task"]
         except asyncio.CancelledError:
             logger.info(f"Successfully cancelled task {taskID}")
-            self.eventPush("TASK_DONE", taskID)  # makes sure it gets removed from UI
+            self.eventPush(
+                "TASK_DONE", taskID
+            )  # makes sure it gets removed from UI
 
     def getTask(self, taskID):
         return self.runningTasks.get(taskID, None)

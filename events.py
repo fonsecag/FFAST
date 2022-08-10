@@ -5,17 +5,26 @@ import os
 logger = logging.getLogger("FFAST")
 subs = defaultdict(list)
 
+REFRESH_EVENTS = ["WIDGET_REFRESH", "WIDGET_VISUAL_REFRESH"]
+
+
+def doNothing(*args):
+    pass
+
 
 class EventClass:
     """
-    Main EventClass, to be inherited by any object that has an independent
-    event loop (i.e. the UI Handler and the Environment).
+    Main EventClass, to be inherited by any object that has an independent event loop (i.e. the UI Handler and the Environment).
 
     Gives access to subscribing, pushing and handling events.
     """
 
-    def __init__(self):
+    isEventChild = False
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.eventQueue = []
+        self.eventChildren = []
 
     def eventSubscribe(self, event, func, asynchronous=False):
         """
@@ -41,8 +50,10 @@ class EventClass:
         if not quiet:
             logger.debug(f"Event pushed: {event} by {type(self)}")
 
-        for obj, func, asynchronous in subs[event]:
-            obj.eventQueue.append((event, func, asynchronous, quiet, args, kwargs))
+        for (obj, func, asynchronous) in subs[event]:
+            obj.eventQueue.append(
+                (event, func, asynchronous, quiet, args, kwargs)
+            )
 
     eventBusy = None
     eventFree = None
@@ -57,16 +68,25 @@ class EventClass:
         see main.py.
         """
 
-        if len(self.eventQueue) < 1:
+        if (self.isEventChild) and (len(self.eventQueue) < 1):
             return
 
         self.busy = True
         if self.eventBusy is not None:
             self.eventPush(self.eventBusy)
 
-        for event, func, asynchronous, quiet, args, kwargs in self.eventQueue:
+        for (
+            event,
+            func,
+            asynchronous,
+            quiet,
+            args,
+            kwargs,
+        ) in self.eventQueue:
             if not quiet:
-                logger.debug(f"Handling event {event}, function: {func}")
+                logger.debug(
+                    f"{self} handling event {event}, function: {func}"
+                )
             try:
                 if asynchronous:
                     await func(*args, **kwargs)
@@ -83,40 +103,23 @@ class EventClass:
 
         self.eventQueue.clear()
 
+        if not self.isEventChild:
+            for child in self.eventChildren:
+                await child.eventHandle()
 
-class EventWidgetClass:
-    """
-    EventClass for Qt Widgets, which cannot have an independent event handling
-    loop. Instead, this class hooks onto the UI Handler and use its event
-    handling methods instead.
+    def addEventChild(self, obj):
+        obj.eventParent = self
+        self.eventChildren.append(obj)
 
-    Implements eventSubscribe and eventPush, but not eventHandle.
+
+class EventChildClass(EventClass):
     """
+    EventClass for Qt Widgets, which cannot have an independent event handling loop. Instead, this class hooks onto the UI Handler and use its event handling methods instead.
+
+    Note that after initialising the object, the parent needs to call addEventChild.
+    """
+
+    isEventChild = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-    def eventSubscribe(self, *args, asynchronous=False):
-        self.handler.eventSubscribe(*args, asynchronous=asynchronous)
-
-    def eventPush(self, *args, **kwargs):
-        self.handler.eventPush(*args, **kwargs)
-
-
-class EventEnvironmentClass:
-    """
-    EventClass for objects dependent on the environment, e.g. data watchers.
-    Those will not have an independent event handling loop. Instead, this class
-    hooks onto the environment and uses its event handling methods instead.
-
-    Implements eventSubscribe and eventPush, but not eventHandle.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def eventSubscribe(self, *args, asynchronous=False):
-        self.env.eventSubscribe(*args, asynchronous=asynchronous)
-
-    def eventPush(self, *args, **kwargs):
-        self.env.eventPush(*args, **kwargs)

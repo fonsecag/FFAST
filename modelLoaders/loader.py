@@ -82,3 +82,6 @@ class ModelLoader(EventClass):
 
         name = removeExtension(os.path.basename(self.path))
         self.setName(name)
+
+    def onDelete(self):
+        pass

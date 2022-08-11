@@ -80,7 +80,8 @@ class CheckableComboBox(QComboBox):
         return "?"
 
     def getSelection(self):
-        return list(self.selectedKeys)
+        sel = list(self.selectedKeys)
+        return [x for x in sel if x in self.cbKeys] # account for deleted elements
 
 
 class DatasetModelSelector(CheckableComboBox, EventChildClass):
@@ -97,6 +98,9 @@ class DatasetModelSelector(CheckableComboBox, EventChildClass):
         self.eventSubscribe("DATASET_LOADED", self.refreshList)
         self.eventSubscribe("DATASET_STATE_CHANGED", self.refreshList)
         self.eventSubscribe("MODEL_LOADED", self.refreshList)
+        self.eventSubscribe("DATASET_DELETED", self.refreshList)
+        self.eventSubscribe("MODEL_DELETED", self.refreshList)
+
 
         if typ == "dataset":
             self.eventSubscribe("DATASET_NAME_CHANGED", self.refreshList)

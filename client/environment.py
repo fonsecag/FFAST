@@ -107,6 +107,27 @@ class Environment(EventClass):
         key = model.fingerprint
         self.setNewModel(key, model)
 
+    def deleteModel(self, key):
+        model = self.getModel(key)
+        if model is None:
+            return
+        
+        model.onDelete()
+        del self.models[key]
+        logger.info(f'Model {key} deleted')
+        self.eventPush("MODEL_DELETED", key)
+
+    def deleteDataset(self, key):
+        dataset = self.getDataset(key)
+        if dataset is None:
+            return
+        
+        dataset.onDelete()
+        del self.datasets[key]
+        logger.info(f'Dataset {key} deleted')
+        self.eventPush("DATASET_DELETED", key)
+
+
     def setNewDataset(self, dataset):
         self.datasets[dataset.fingerprint] = dataset
         dataset.loaded = True

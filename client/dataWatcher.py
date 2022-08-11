@@ -21,6 +21,8 @@ class DataWatcher(EventChildClass):
         self.eventSubscribe(
             "DATASET_STATE_CHANGED", self.onDatasetStateChanged
         )
+        self.eventSubscribe("DATASET_DELETED", self.refreshDependencyList)
+        self.eventSubscribe("MODEL_DELETED", self.refreshDependencyList)
 
         self.dataTypeDependencies = []
         self.datasetDependencies = []

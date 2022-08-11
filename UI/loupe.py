@@ -142,8 +142,6 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.initialiseVideoPlayback()
         self.initialiseSelections()
 
-        # self.eventSubscribe("DATASET_LOADED", self.refreshDatasetList)
-        # self.eventSubscribe("DATASET_NAME_CHANGED", self.refreshDatasetList)
         self.eventSubscribe(
             "SUBDATASET_INDICES_CHANGED", self.refreshDatasetSelection
         )

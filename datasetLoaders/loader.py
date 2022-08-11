@@ -173,7 +173,6 @@ def loadDataset(path, fromCache=False):
     dataset.initialise()
     return dataset
 
-
 class DatasetLoader(EventClass):
     """
     Base class for any dataset. Contains all dataset-agnostic methods.
@@ -279,6 +278,8 @@ class DatasetLoader(EventClass):
         self.active = state
         self.eventPush("DATASET_STATE_CHANGED", self.fingerprint)
 
+    def onDelete(self):
+        pass
 
 class SubDataset(DatasetLoader):
 

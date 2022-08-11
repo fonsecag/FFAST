@@ -75,6 +75,8 @@ class LoaderWidget(EventChildClass, QtWidgets.QWidget):
         self.nameValueEdit.setText(loadee.getName())
         self.nameValueEdit.editingFinished.connect(self.onNameEdited)
 
+        self.deleteButton.clicked.connect(self.onDelete)
+
         # ADD UI ELEMENTS
         cb = CollapseButton(
             handler, self.contentFrame, "down", defaultCollapsed=True
@@ -120,6 +122,13 @@ class LoaderWidget(EventChildClass, QtWidgets.QWidget):
         txt = self.nameValueEdit.text()
         self.loadee.setName(txt)
 
+    def onDelete(self):
+        env = self.handler.env
+
+        if self.loadeeType == 'dataset':
+            env.deleteDataset(self.loadee.fingerprint)
+        elif self.loadeeType == 'model':
+            env.deleteModel(self.loadee.fingerprint)
 
 class DatasetLoaderWidget(LoaderWidget):
     def __init__(self, handler, loadee):
@@ -177,6 +186,8 @@ class Sidebar(EventChildClass, QtWidgets.QWidget):
 
         self.eventSubscribe("DATASET_LOADED", self.onDatasetLoaded)
         self.eventSubscribe("MODEL_LOADED", self.onModelLoaded)
+        self.eventSubscribe("DATASET_DELETED", self.onDatasetDeleted)
+        self.eventSubscribe("MODEL_DELETED", self.onModelDeleted)
 
         # TASKS
         self.eventSubscribe("TASK_CREATED", self.onTaskCreated)
@@ -214,13 +225,15 @@ class Sidebar(EventChildClass, QtWidgets.QWidget):
         self.eventPush("DATASET_CHOSEN", fileName)
 
     def onDatasetLoaded(self, key, *args):
+        existingWidget = self.getDatasetWidget(key)
+        if existingWidget is not None:
+            return
         dataset = self.handler.env.getDataset(key)
         loader = DatasetLoaderWidget(self.handler, dataset)
         n = self.datasetsLayout.count()
         self.datasetsLayout.insertWidget(n - 1, loader)
 
     def getDatasetWidget(self, key):
-
         layout = self.datasetsLayout
         widgets = (layout.itemAt(i) for i in range(layout.count()))
         for widget in widgets:
@@ -229,15 +242,48 @@ class Sidebar(EventChildClass, QtWidgets.QWidget):
             loaderWidget = widget.widget()
             dataset = loaderWidget.loadee
             if dataset.fingerprint == key:
-                return dataset
+                return loaderWidget
+
+        return None
+
+    def getModelWidget(self, key):
+        layout = self.modelsLayout
+        widgets = (layout.itemAt(i) for i in range(layout.count()))
+        for widget in widgets:
+            if not isinstance(widget, QtWidgets.QWidgetItem):
+                continue
+            loaderWidget = widget.widget()
+            model = loaderWidget.loadee
+            if model.fingerprint == key:
+                return loaderWidget
 
         return None
 
     def onModelLoaded(self, key):
+        existingWidget = self.getModelWidget(key)
+        if existingWidget is not None:
+            return
         model = self.handler.env.getModel(key)
         loader = ModelLoaderWidget(self.handler, model)
         n = self.modelsLayout.count()
         self.modelsLayout.insertWidget(n - 1, loader)
+
+    def onDatasetDeleted(self, key):
+        widget = self.getDatasetWidget(key)
+        if widget is None:
+            return
+        
+        self.datasetsLayout.removeWidget(widget)
+        widget.deleteLater()
+
+    def onModelDeleted(self, key):
+        widget = self.getModelWidget(key)
+        if widget is None:
+            return
+        
+        self.modelsLayout.removeWidget(widget)
+        widget.deleteLater()
+
 
     tasks = {}
 

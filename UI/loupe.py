@@ -551,6 +551,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.currentR = r
         self.activeAtomColorMode.onGeometryUpdate()
 
+
     def getCurrentR(self):
         return self.currentR
 

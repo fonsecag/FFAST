@@ -299,7 +299,12 @@ class Environment(EventClass):
 
         cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
 
-        logger.info(f"Generating data for key {cacheKey}")
+        sModel, sDataset = 'None', 'None'
+        if model is not None:
+            sModel = model.getDisplayName()
+        if dataset is not None:
+            sDataset = dataset.getDisplayName()
+        logger.info(f"Generating data for key {cacheKey}, model = {sModel}, dataset = {sDataset}")
 
         generated = dataType.generateData(
             model=model, dataset=dataset, taskID=taskID
@@ -405,10 +410,12 @@ class Environment(EventClass):
             )
             return None
 
+        cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
         if (
             (dataset is not None)
             and (dataset.isSubDataset)
             and dataType.iterable
+            and not self.hasCacheKey(cacheKey, subChecks=False)
         ):
             cacheKey = dataType.getCacheKey(
                 model=model, dataset=dataset.parent
@@ -417,7 +424,6 @@ class Environment(EventClass):
             if data is not None:
                 data = data.getSubEntity(indices=dataset.indices)
         else:
-            cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
             data = self.cache.get(cacheKey, None)
 
         return data

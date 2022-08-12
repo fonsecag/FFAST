@@ -28,13 +28,7 @@ class ForcesErrorScatterPlot(BasicPlotContainer):
             dataset = x["dataset"]
             fTrue = dataset.getForces()
 
-            fPred = np.mean(
-                np.absolute(fPred.reshape(fPred.shape[0], -1)), axis=1
-            )
-            fTrue = np.mean(
-                np.absolute(fTrue.reshape(fTrue.shape[0], -1)), axis=1
-            )
-            self.plot(fTrue, fPred, pen=None, symbol="o")
+            self.plot(fTrue.flatten(), fPred.flatten(), pen=None, symbol="o")
 
     def getDatasetSubIndices(self, dataset, model):
         (xRange, yRange) = self.getRanges()
@@ -45,13 +39,16 @@ class ForcesErrorScatterPlot(BasicPlotContainer):
         fTrue = dataset.getForces()
         fPred = self.env.getData("forces", dataset=dataset, model=model).get()
 
-        fPred = np.mean(np.absolute(fPred.reshape(fPred.shape[0], -1)), axis=1)
-        fTrue = np.mean(np.absolute(fTrue.reshape(fTrue.shape[0], -1)), axis=1)
+        fPred = fPred.flatten()
+        fTrue = fTrue.flatten()
 
         xTruth = (fTrue > x0) & (fTrue < x1)
         yTruth = (fPred > y0) & (fPred < y1)
-        return np.argwhere(xTruth & yTruth).flatten()
+        args = np.argwhere(xTruth & yTruth).flatten() 
 
+        nEntriesPerConf = dataset.getNAtoms() * 3
+        args = np.unique(np.floor(args / nEntriesPerConf)).astype(int)
+        return args
 
 class EnergyErrorScatterPlot(BasicPlotContainer):
     def __init__(self, handler, tab):

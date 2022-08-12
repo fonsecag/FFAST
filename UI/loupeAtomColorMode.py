@@ -11,11 +11,18 @@ class AtomColoringModeBase:
     hasColorBar = False
     colorMap = None
     colorBarVisible = False
+    minValue = ''
+    maxValue = ''
 
     def onGeometryUpdate(self):
         pass
 
-    def updateColorBar(self, minValue="", maxValue=""):
+    def updateColorBar(self, minValue=None, maxValue=None):
+
+        if minValue is not None:
+            self.minValue = minValue
+        if maxValue is not None:
+            self.maxValue = maxValue
         if (
             self.colorBarVisible
             and (self.hasColorBar)
@@ -25,7 +32,7 @@ class AtomColoringModeBase:
                 cb = scene.ColorBarWidget(
                     orientation="left",
                     cmap=self.colorMap,
-                    clim=(minValue, maxValue),
+                    clim=(self.minValue, self.maxValue),
                     label_color="lightgray",
                 )
                 self.loupe.grid.add_widget(cb, col=20)
@@ -36,7 +43,7 @@ class AtomColoringModeBase:
                 cb = self.loupe.colorBar
                 cb._colorbar.cmap = self.colorMap
 
-                cb._colorbar.clim = (minValue, maxValue)
+                cb._colorbar.clim = (self.minValue, self.maxValue)
                 cb._update_colorbar()
 
         else:
@@ -77,7 +84,6 @@ class ForceErrorColoring(AtomColoringModeBase):
         )
 
     hasColorBar = True
-    initialisedModel = None
 
     def onGeometryUpdate(self):
         if self.loupe.dataset is None:
@@ -85,11 +91,10 @@ class ForceErrorColoring(AtomColoringModeBase):
         dataset = self.loupe.dataset
         model = self.getModel()
 
+        self.initialiseModel()
+
         if model is None:
             return
-
-        if self.initialisedModel != model:
-            self.initialiseModel()
 
         env = self.loupe.handler.env
 
@@ -123,7 +128,6 @@ class ForceErrorColoring(AtomColoringModeBase):
         if err is not None:
             d = np.mean(np.abs(err.get()), axis=2)
             self.maxValue = np.max(d)
-            self.initialisedModel = model
             self.colorBarVisible = True
             self.updateColorBar(minValue=0, maxValue=f"{self.maxValue:.2f}")
         else:

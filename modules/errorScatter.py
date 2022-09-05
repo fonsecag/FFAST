@@ -28,7 +28,9 @@ class ForcesErrorScatterPlot(BasicPlotContainer):
             dataset = x["dataset"]
             fTrue = dataset.getForces()
 
-            self.plot(fTrue.flatten(), fPred.flatten(), pen=None, symbol="o")
+            self.plot(
+                fTrue.flatten(), fPred.flatten(), scatter=True, symbol="o"
+            )
 
     def getDatasetSubIndices(self, dataset, model):
         (xRange, yRange) = self.getRanges()
@@ -44,11 +46,12 @@ class ForcesErrorScatterPlot(BasicPlotContainer):
 
         xTruth = (fTrue > x0) & (fTrue < x1)
         yTruth = (fPred > y0) & (fPred < y1)
-        args = np.argwhere(xTruth & yTruth).flatten() 
+        args = np.argwhere(xTruth & yTruth).flatten()
 
         nEntriesPerConf = dataset.getNAtoms() * 3
         args = np.unique(np.floor(args / nEntriesPerConf)).astype(int)
         return args
+
 
 class EnergyErrorScatterPlot(BasicPlotContainer):
     def __init__(self, handler, tab):
@@ -70,7 +73,7 @@ class EnergyErrorScatterPlot(BasicPlotContainer):
             dataset = x["dataset"]
             eTrue = dataset.getEnergies()
 
-            self.plot(eTrue, ePred, pen=None, symbol="o")
+            self.plot(eTrue, ePred, scatter=True, symbol="o")
 
     def getDatasetSubIndices(self, dataset, model):
         (xRange, yRange) = self.getRanges()

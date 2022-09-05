@@ -111,22 +111,21 @@ class Environment(EventClass):
         model = self.getModel(key)
         if model is None:
             return
-        
+
         model.onDelete()
         del self.models[key]
-        logger.info(f'Model {key} deleted')
+        logger.info(f"Model {key} deleted")
         self.eventPush("MODEL_DELETED", key)
 
     def deleteDataset(self, key):
         dataset = self.getDataset(key)
         if dataset is None:
             return
-        
+
         dataset.onDelete()
         del self.datasets[key]
-        logger.info(f'Dataset {key} deleted')
+        logger.info(f"Dataset {key} deleted")
         self.eventPush("DATASET_DELETED", key)
-
 
     def setNewDataset(self, dataset):
         self.datasets[dataset.fingerprint] = dataset
@@ -299,12 +298,14 @@ class Environment(EventClass):
 
         cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
 
-        sModel, sDataset = 'None', 'None'
+        sModel, sDataset = "None", "None"
         if model is not None:
             sModel = model.getDisplayName()
         if dataset is not None:
             sDataset = dataset.getDisplayName()
-        logger.info(f"Generating data for key {cacheKey}, model = {sModel}, dataset = {sDataset}")
+        logger.info(
+            f"Generating data for key {cacheKey}, model = {sModel}, dataset = {sDataset}"
+        )
 
         generated = dataType.generateData(
             model=model, dataset=dataset, taskID=taskID

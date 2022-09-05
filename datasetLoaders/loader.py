@@ -173,6 +173,7 @@ def loadDataset(path, fromCache=False):
     dataset.initialise()
     return dataset
 
+
 class DatasetLoader(EventClass):
     """
     Base class for any dataset. Contains all dataset-agnostic methods.
@@ -280,6 +281,7 @@ class DatasetLoader(EventClass):
 
     def onDelete(self):
         pass
+
 
 class SubDataset(DatasetLoader):
 

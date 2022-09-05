@@ -86,17 +86,24 @@ async def eventLoop(UI, env):
     # Temporarily putting some preliminary tasks here
     if os.path.exists("private"):
 
-        env.newTask(
-            env.loadDataset,
-            args=("private/ethanol.npz",),
-            visual=True,
-            name="Loading dataset",
-            threaded=True,
-        )
+        # env.newTask(
+        #     env.loadDataset,
+        #     args=("private/ethanol.npz",),
+        #     visual=True,
+        #     name="Loading dataset",
+        #     threaded=True,
+        # )
 
         env.newTask(
             env.loadDataset,
             args=("private/ethanol_spl_100.npz",),
+            visual=True,
+            name="Loading dataset",
+            threaded=True,
+        )
+        env.newTask(
+            env.loadDataset,
+            args=("private/ethanol_spl_200.npz",),
             visual=True,
             name="Loading dataset",
             threaded=True,
@@ -113,6 +120,14 @@ async def eventLoop(UI, env):
         env.newTask(
             env.loadModel,
             args=("private/ethanol_def_1000.npz",),
+            visual=True,
+            name="Loading model",
+            threaded=True,
+        )
+
+        env.newTask(
+            env.loadModel,
+            args=("private/eth_il_1000.npz",),
             visual=True,
             name="Loading model",
             threaded=True,

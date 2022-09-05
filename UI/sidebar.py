@@ -125,10 +125,11 @@ class LoaderWidget(EventChildClass, QtWidgets.QWidget):
     def onDelete(self):
         env = self.handler.env
 
-        if self.loadeeType == 'dataset':
+        if self.loadeeType == "dataset":
             env.deleteDataset(self.loadee.fingerprint)
-        elif self.loadeeType == 'model':
+        elif self.loadeeType == "model":
             env.deleteModel(self.loadee.fingerprint)
+
 
 class DatasetLoaderWidget(LoaderWidget):
     def __init__(self, handler, loadee):
@@ -137,6 +138,7 @@ class DatasetLoaderWidget(LoaderWidget):
 
         if loadee.isSubDataset:
             self.eventSubscribe("SUBDATASET_INDICES_CHANGED", self.updateInfo)
+            self.deleteButton.hide()
 
         # add stuff to content
         if not loadee.isSubDataset:
@@ -272,7 +274,7 @@ class Sidebar(EventChildClass, QtWidgets.QWidget):
         widget = self.getDatasetWidget(key)
         if widget is None:
             return
-        
+
         self.datasetsLayout.removeWidget(widget)
         widget.deleteLater()
 
@@ -280,10 +282,9 @@ class Sidebar(EventChildClass, QtWidgets.QWidget):
         widget = self.getModelWidget(key)
         if widget is None:
             return
-        
+
         self.modelsLayout.removeWidget(widget)
         widget.deleteLater()
-
 
     tasks = {}
 

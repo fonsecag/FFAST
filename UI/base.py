@@ -147,6 +147,7 @@ class UIHandler(EventClass):
             foreground=self.config["envs"].get("TextColor1"),
             useOpenGL=True,
             enableExperimental=True,
+            exitCleanup=True,
         )
 
     def addTab(self, widget, name):

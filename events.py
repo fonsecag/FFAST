@@ -1,6 +1,6 @@
 from collections import defaultdict
 import logging, traceback
-import os
+import os, time
 
 logger = logging.getLogger("FFAST")
 subs = defaultdict(list)
@@ -20,6 +20,7 @@ class EventClass:
     """
 
     isEventChild = False
+    eventClockTimestamp = 0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -67,6 +68,8 @@ class EventClass:
         This method needs to be called continously and regularly called,
         see main.py.
         """
+
+        self.eventClockTimestamp = time.process_time()
 
         if (self.isEventChild) and (len(self.eventQueue) < 1):
             return

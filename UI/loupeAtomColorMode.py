@@ -2,6 +2,7 @@ from config.atoms import atomColors
 import numpy as np
 from vispy.color import Colormap
 from vispy import scene
+from UI.utils import ColorBarVisual
 
 
 class AtomColoringModeBase:
@@ -11,40 +12,56 @@ class AtomColoringModeBase:
     hasColorBar = False
     colorMap = None
     colorBarVisible = False
-    minValue = ''
-    maxValue = ''
+    minValue = ""
+    maxValue = ""
+    label = ""
 
     def onGeometryUpdate(self):
         pass
 
-    def updateColorBar(self, minValue=None, maxValue=None):
+    def updateColorBar(self, minValue=None, maxValue=None, label=None):
 
         if minValue is not None:
             self.minValue = minValue
         if maxValue is not None:
             self.maxValue = maxValue
+        if label is not None:
+            self.label = label
         if (
             self.colorBarVisible
             and (self.hasColorBar)
             and (self.colorMap is not None)
         ):
             if self.loupe.colorBar is None:
-                cb = scene.ColorBarWidget(
-                    orientation="left",
+                cb = ColorBarVisual(
+                    orientation="right",
                     cmap=self.colorMap,
                     clim=(self.minValue, self.maxValue),
                     label_color="lightgray",
+                    label=self.label,
+                    parent=self.loupe.scene,
+                    parentCanvas=self.loupe.canvas,
                 )
-                self.loupe.grid.add_widget(cb, col=20)
+                self.colorBar = cb
                 self.loupe.colorBar = cb
 
+                # # self.loupe.grid.add_widget(cb, col=20)
+                # self.loupe.colorBar = cb
+                # cb.label.font_size = 9
+                # for x in cb.ticks:
+                #     x.font_size = 9
+
+                # cbText = scene.visuals.Text("TESTTESTTESTTEST",parent=self.loupe.scene, color = 'lightgray')
+                # cbText.font_size = 25
+                # cbText.pos = 0.5, 0.3
             else:
                 self.loupe.showColorBar()
-                cb = self.loupe.colorBar
-                cb._colorbar.cmap = self.colorMap
+                # cb = self.loupe.colorBar
+                # cb._colorbar.cmap = self.colorMap
 
-                cb._colorbar.clim = (self.minValue, self.maxValue)
-                cb._update_colorbar()
+                # cb._colorbar.clim = (self.minValue, self.maxValue)
+                # cb._colorbar.label = self.label
+                # cb._update_colorbar()
 
         else:
             self.loupe.hideColorBar()
@@ -129,7 +146,11 @@ class ForceErrorColoring(AtomColoringModeBase):
             d = np.mean(np.abs(err.get()), axis=2)
             self.maxValue = np.max(d)
             self.colorBarVisible = True
-            self.updateColorBar(minValue=0, maxValue=f"{self.maxValue:.2f}")
+            self.updateColorBar(
+                minValue=0,
+                maxValue=f"{self.maxValue:.2f}",
+                label="Force MAE [kcal/mol A]",
+            )
         else:
             self.colorBarVisible = False
             self.updateColorBar()

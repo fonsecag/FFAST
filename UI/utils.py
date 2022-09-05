@@ -11,6 +11,7 @@ from PySide6.QtGui import QPalette, QStandardItem, QFontMetrics
 from PySide6 import QtCore, QtGui
 from events import EventChildClass
 import os
+from vispy import scene
 
 
 # https://www.geeksforgeeks.org/pyqt5-adding-action-to-combobox-with-checkable-items/
@@ -81,7 +82,9 @@ class CheckableComboBox(QComboBox):
 
     def getSelection(self):
         sel = list(self.selectedKeys)
-        return [x for x in sel if x in self.cbKeys] # account for deleted elements
+        return [
+            x for x in sel if x in self.cbKeys
+        ]  # account for deleted elements
 
 
 class DatasetModelSelector(CheckableComboBox, EventChildClass):
@@ -100,7 +103,6 @@ class DatasetModelSelector(CheckableComboBox, EventChildClass):
         self.eventSubscribe("MODEL_LOADED", self.refreshList)
         self.eventSubscribe("DATASET_DELETED", self.refreshList)
         self.eventSubscribe("MODEL_DELETED", self.refreshList)
-
 
         if typ == "dataset":
             self.eventSubscribe("DATASET_NAME_CHANGED", self.refreshList)
@@ -354,3 +356,18 @@ class CollapseButton(QToolButton):
 
         self.setIcon(self.collapsedIcon)
         self.collapsed = True
+
+
+class ColorBarVisual:
+    def __init__(self, parentCanvas=None, **kwargs):
+        w, h = parentCanvas.size
+        self.colorBar = scene.visuals.ColorBar(size=(0.8 * h, 10), **kwargs)
+
+        self.visual = self.colorBar
+
+        self.colorBar.pos = (20, h / 2)
+        self.colorBar.label.font_size = 9
+        self.colorBar.label.pos = (45, h / 2)
+
+        for x in self.colorBar.ticks:
+            x.font_size = 9

@@ -51,12 +51,15 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
 
         PLOT_WIDGETS.append(self)
 
-        self.plotWidget = pg.PlotWidget(name=name + "PlotWidget", title=title)
+        # title in kwargs cant be formatted, using own title instead
+        # .setTitle(**kwargs) also doesnt work, unlike labels
+        self.plotWidget = pg.PlotWidget(name=name + "PlotWidget")
         self.plotItem = self.plotWidget.getPlotItem()
-        self.mainLayout.addWidget(self.plotWidget)
+        self.plotLayout.addWidget(self.plotWidget)
         self.plotWidget.setBackground(None)
+        self.plotWidget.adjustSize()
 
-        self.plotItem.setTitle(title=title)
+        self.titleLabel.setText(title)
 
         self.data = []
         self.plotItems = []
@@ -116,7 +119,23 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
         if bypassMinimumSize:
             self.setMinimumSize(0, 0)
 
+        self.applyVisualConfig()
+
     active3DIndex = -1
+
+    def applyVisualConfig(self):
+        sheet = """
+            QLabel{
+                background-color: @BGColor3;
+                font-size: 22px;
+                border-radius:0px;
+            }
+            QFrame{
+                border-radius:0px;
+            }
+        """
+
+        self.setStyleSheet(self.handler.applyConfigToStyleSheet(sheet))
 
     def isSubbing(self):
         return self.subCheckBox.isChecked()
@@ -126,14 +145,16 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
         self.toolbarLayout.insertWidget(n - 1, widget)
 
     def setXLabel(self, label, unit=None):
+        fontOptions = {"font-size": "20px", "color": "lightgray"}
         if unit is not None:
             label = f"{label} [{unit}]"
-        self.plotWidget.setLabel("bottom", label)
+        self.plotWidget.setLabel("bottom", label, **fontOptions)
 
     def setYLabel(self, label, unit=None):
+        fontOptions = {"font-size": "20px", "color": "lightgray"}
         if unit is not None:
             label = f"{label} [{unit}]"
-        self.plotWidget.setLabel("left", label)
+        self.plotWidget.setLabel("left", label, **fontOptions)
 
     def setXTicks(self, x, labels):
         ax = self.plotWidget.getAxis("bottom")
@@ -252,7 +273,17 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
         # placeholder, should be implemented by user
         return NotImplementedError
 
+    lastUpdatedTimestamp = -1
+
     def visualRefresh(self):
+
+        # when many refresh events happen in a single loop, no need to
+        # refresh every time since information won't change
+        if self.eventClockTimestamp <= self.lastUpdatedTimestamp:
+            return
+
+        self.lastUpdatedTimestamp = self.eventClockTimestamp
+
         self.clear()
 
         self.addPlots()
@@ -295,19 +326,26 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
 
         self.plotItems = []
 
-    def plot(self, x, y, **kwargs):
+    def plot(self, x, y, scatter=False, **kwargs):
         colors = self.handler.env.getConfig("plotColors")
         N = len(self.plotItems) % len(colors)
+        color = colors[N]
 
         if "pen" in kwargs:
             pen = kwargs["pen"]
             del kwargs["pen"]
         else:
-            color = colors[N]
             pen = pg.mkPen(color, width=2.5)
 
         # plotItem = self.plotWidget.plot(x, y, pen=pg.mkPen(color, width=2.5))
-        plotItem = pg.PlotDataItem(x, y, pen=pen, **kwargs)
+        if scatter:
+            brush = pg.mkBrush(color)
+            plotItem = pg.PlotDataItem(
+                x, y, symbolBrush=brush, symbolPen=pen, pen=None, symbolSize=2
+            )
+        else:
+            plotItem = pg.PlotDataItem(x, y, pen=pen, **kwargs)
+
         self.plotItem.addItem(plotItem)
         self.plotItems.append(plotItem)
 

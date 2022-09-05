@@ -238,8 +238,16 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         )
         view.add(self.bondsVis)
 
+        # self.axis = scene.visuals.XYZAxis()
+        # view.add(self.axis)
+        # self.axis.unfreeze(True)
+        # self.axis.pos = np.array(
+        #     [[0, 0, 0], [2, 0, 0], [0, 0, 0], [0, 2, 0], [0, 0, 0], [0, 0, 2]]
+        # )
+
         self.canvas = canvas
         self.view = view
+        self.scene = canvas.scene
         self.mainFrameLayout.replaceWidget(self.plot3dPH, canvas.native)
         self.plot3dPH.deleteLater()
         self.plot3dPH = None
@@ -550,7 +558,6 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
 
         self.currentR = r
         self.activeAtomColorMode.onGeometryUpdate()
-
 
     def getCurrentR(self):
         return self.currentR

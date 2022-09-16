@@ -4,7 +4,7 @@ Create a new python environment (conda/venv). It needs to be at least python 3.9
 
 Install the following packages:
 
-`pip install pyside6 pyqtgraph vispy pyopengl qasync scipy sklearn sgdml`
+`pip install pyside6 pyqtgraph vispy pyopengl qasync scipy sklearn sgdml schnetpack`
 
 ## Basic usage
 

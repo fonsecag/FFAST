@@ -268,9 +268,20 @@ class DataLoaderButton(EventChildClass, QPushButton):
 
         self.onWidgetRefresh(self)
 
+    lastUpdatedTimestamp = -1
     def onWidgetRefresh(self, widget):
+
         if self is not widget:
             return
+
+        # when many refresh events happen in a single loop, no need to
+        # refresh every time since information won't change
+        if self.eventClockTimestamp <= self.lastUpdatedTimestamp:
+            return
+
+        self.lastUpdatedTimestamp = self.eventClockTimestamp
+
+
         missing = self.dataWatcher.currentlyMissingKeys
         if len(missing) == 0:
             self.setEnabled(False)

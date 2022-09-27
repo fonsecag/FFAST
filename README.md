@@ -8,7 +8,7 @@ Install the following packages:
 
 ## Basic usage
 
-While inside the main folder and the appropriate python environment, simpl run:
+While inside the main folder and the appropriate python environment, simply run:
 
 `python main.py`
 

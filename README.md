@@ -14,7 +14,7 @@ While inside the main folder and the appropriate python environment, simply run:
 
 ### Models
 
-Currently only sGDML are _fully_ implemented. You can however also load prepredicted energies and forces in the "Models" menu. The format for this is simple: create a .npz file with energies under the "E" key and forces under the "F" key (same as sGDML npz datasets).
+Currently only sGDML and SchNet are _fully_ implemented. You can however also load prepredicted energies and forces in the "Models" menu. The format for this is simple: create a .npz file with energies under the "E" key and forces under the "F" key (same as sGDML npz datasets).
 
 ### Datasets
 

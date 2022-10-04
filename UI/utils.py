@@ -12,6 +12,7 @@ from PySide6 import QtCore, QtGui
 from events import EventChildClass
 import os
 from vispy import scene
+import numpy as np 
 
 
 # https://www.geeksforgeeks.org/pyqt5-adding-action-to-combobox-with-checkable-items/
@@ -269,6 +270,7 @@ class DataLoaderButton(EventChildClass, QPushButton):
         self.onWidgetRefresh(self)
 
     lastUpdatedTimestamp = -1
+
     def onWidgetRefresh(self, widget):
 
         if self is not widget:
@@ -280,7 +282,6 @@ class DataLoaderButton(EventChildClass, QPushButton):
             return
 
         self.lastUpdatedTimestamp = self.eventClockTimestamp
-
 
         missing = self.dataWatcher.currentlyMissingKeys
         if len(missing) == 0:
@@ -371,14 +372,22 @@ class CollapseButton(QToolButton):
 
 class ColorBarVisual:
     def __init__(self, parentCanvas=None, **kwargs):
+        self.parentCanvas = parentCanvas
         w, h = parentCanvas.size
         self.colorBar = scene.visuals.ColorBar(size=(0.8 * h, 10), **kwargs)
 
         self.visual = self.colorBar
+        self.onUpdate()
+
+    def onUpdate(self):
+        # https://github.com/vispy/vispy/blob/main/vispy/visuals/colorbar.py
+        w, h = self.parentCanvas.size
 
         self.colorBar.pos = (20, h / 2)
-        self.colorBar.label.font_size = 9
-        self.colorBar.label.pos = (45, h / 2)
+        self.colorBar.size = (0.8 * h, 10)
 
         for x in self.colorBar.ticks:
             x.font_size = 9
+
+        # needs to be last for some reason, some other updates overwrite it
+        self.colorBar.label.pos = (45, h / 2)

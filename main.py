@@ -13,6 +13,7 @@ from events import EventClass
 from client.dataWatcher import DataWatcher
 import vispy
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="[%(levelname)s] %(message)s",

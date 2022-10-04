@@ -17,6 +17,9 @@ class AtomColoringModeBase:
     label = ""
 
     def onGeometryUpdate(self):
+        self._onGeometryUpdate()
+
+    def _onGeometryUpdate(self):
         pass
 
     def updateColorBar(self, minValue=None, maxValue=None, label=None):
@@ -45,23 +48,13 @@ class AtomColoringModeBase:
                 self.colorBar = cb
                 self.loupe.colorBar = cb
 
-                # # self.loupe.grid.add_widget(cb, col=20)
-                # self.loupe.colorBar = cb
-                # cb.label.font_size = 9
-                # for x in cb.ticks:
-                #     x.font_size = 9
 
-                # cbText = scene.visuals.Text("TESTTESTTESTTEST",parent=self.loupe.scene, color = 'lightgray')
-                # cbText.font_size = 25
-                # cbText.pos = 0.5, 0.3
             else:
                 self.loupe.showColorBar()
-                # cb = self.loupe.colorBar
-                # cb._colorbar.cmap = self.colorMap
-
-                # cb._colorbar.clim = (self.minValue, self.maxValue)
-                # cb._colorbar.label = self.label
-                # cb._update_colorbar()
+                cb = self.loupe.colorBar
+                cb.visual.cmap = self.colorMap
+                cb.visual.clim = (self.minValue, self.maxValue)
+                cb.onUpdate()
 
         else:
             self.loupe.hideColorBar()
@@ -76,7 +69,7 @@ class AtomicColoring(AtomColoringModeBase):
         super().__init__(loupe)
         self.atomColors = None
 
-    def onGeometryUpdate(self):
+    def _onGeometryUpdate(self):
         if self.loupe.dataset is None:
             return
         z = self.loupe.dataset.getElements()
@@ -102,7 +95,7 @@ class ForceErrorColoring(AtomColoringModeBase):
 
     hasColorBar = True
 
-    def onGeometryUpdate(self):
+    def _onGeometryUpdate(self):
         if self.loupe.dataset is None:
             return
         dataset = self.loupe.dataset

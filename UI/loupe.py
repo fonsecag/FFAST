@@ -107,6 +107,10 @@ class InteractiveCanvas(scene.SceneCanvas):
         point = self.getPointAtPosition(event.pos, refresh=False)
         self.plotWidget.setHoveredPoint(point)
 
+    def on_resize(self, *args):
+        scene.SceneCanvas.on_resize(self, *args)
+        self.plotWidget.onResize()
+
 
 class Loupe(EventChildClass, QtWidgets.QWidget):
     """
@@ -153,6 +157,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.setActiveAtomColorMode(AtomicColoring, skipRefresh=True)
 
         self.connectSidebar()
+        self.connectBottom()
         self.applyVisualConfig()
 
     def applyVisualConfig(self):
@@ -270,6 +275,13 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
 
         self.startButton.clicked.connect(self.onStart)
         self.pauseButton.clicked.connect(self.onPause)
+
+    def connectBottom(self):
+
+        self.collapseBottomButton = CollapseButton(
+            self.handler, self.bottomTabWidget, "down"
+        )
+        self.bottomHeaderLayout.insertWidget(0, self.collapseBottomButton)
 
     def connectSidebar(self):
 
@@ -563,6 +575,10 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         return self.currentR
 
     currentNMax = 0
+
+    def onResize(self):
+        if (self.activeAtomColorMode is not None) and self.activeAtomColorMode.colorBarVisible and (self.colorBar is not None):
+            self.colorBar.onUpdate()
 
     def refresh(self, bonds=True, renderReset=False):
 

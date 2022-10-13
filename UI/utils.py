@@ -12,7 +12,7 @@ from PySide6 import QtCore, QtGui
 from events import EventChildClass
 import os
 from vispy import scene
-import numpy as np 
+import numpy as np
 
 
 # https://www.geeksforgeeks.org/pyqt5-adding-action-to-combobox-with-checkable-items/
@@ -390,4 +390,4 @@ class ColorBarVisual:
             x.font_size = 9
 
         # needs to be last for some reason, some other updates overwrite it
-        self.colorBar.label.pos = (45, h / 2)
+        self.colorBar.label.pos = (50, h / 2)

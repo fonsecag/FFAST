@@ -48,7 +48,6 @@ class AtomColoringModeBase:
                 self.colorBar = cb
                 self.loupe.colorBar = cb
 
-
             else:
                 self.loupe.showColorBar()
                 cb = self.loupe.colorBar

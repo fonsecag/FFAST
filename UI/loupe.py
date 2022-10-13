@@ -270,7 +270,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         # Set timer for animation
         timer = QtCore.QTimer()
         timer.timeout.connect(self.onNext)
-        timer.setInterval(int((1 / 60) * 1000))  # milliseconds
+        timer.setInterval(int((1 / 20) * 1000))  # milliseconds
         self.timer = timer
 
         self.startButton.clicked.connect(self.onStart)
@@ -577,7 +577,11 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
     currentNMax = 0
 
     def onResize(self):
-        if (self.activeAtomColorMode is not None) and self.activeAtomColorMode.colorBarVisible and (self.colorBar is not None):
+        if (
+            (self.activeAtomColorMode is not None)
+            and self.activeAtomColorMode.colorBarVisible
+            and (self.colorBar is not None)
+        ):
             self.colorBar.onUpdate()
 
     def refresh(self, bonds=True, renderReset=False):

@@ -592,7 +592,7 @@
          <attribute name="title">
           <string>Image</string>
          </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_6">
+         <layout class="QVBoxLayout" name="imageTabLayout">
           <item>
            <widget class="QCheckBox" name="checkBox">
             <property name="text">

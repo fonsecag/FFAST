@@ -380,3 +380,6 @@ class SubDataset(DatasetLoader):
 
     def getElements(self):
         return self.parent.z
+
+    def getLattice(self):
+        return self.parent.getLattice()

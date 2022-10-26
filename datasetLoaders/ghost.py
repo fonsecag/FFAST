@@ -3,13 +3,13 @@ import numpy as np
 from Utils.misc import md5FromArraysAndStrings
 
 
-class GhostDatasetLoader(ModelLoader):
+class GhostDatasetLoader(DatasetLoader):
 
     isGhost = True
 
     def __init__(self, env, fingerprint, *args, **kwargs):
         """
-        Initialises the ModelLoader given a path to the model. All methods
+        Initialises the DatasetLoader given a path to the model. All methods
         that are only called once (i.e. loading the model) are performed here.
 
         Args:

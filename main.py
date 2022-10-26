@@ -97,42 +97,42 @@ async def eventLoop(UI, env):
 
         env.newTask(
             env.loadDataset,
-            args=("private/ethanol_spl_100.npz",),
+            args=("private/graph_ethanol.npz",),
             visual=True,
             name="Loading dataset",
             threaded=True,
         )
-        env.newTask(
-            env.loadDataset,
-            args=("private/ethanol_spl_200.npz",),
-            visual=True,
-            name="Loading dataset",
-            threaded=True,
-        )
+        # env.newTask(
+        #     env.loadDataset,
+        #     args=("private/ethanol_spl_200.npz",),
+        #     visual=True,
+        #     name="Loading dataset",
+        #     threaded=True,
+        # )
 
-        env.newTask(
-            env.loadModel,
-            args=("private/eth_schnet",),
-            visual=True,
-            name="Loading model",
-            threaded=True,
-        )
+        # env.newTask(
+        #     env.loadModel,
+        #     args=("private/eth_schnet",),
+        #     visual=True,
+        #     name="Loading model",
+        #     threaded=True,
+        # )
 
-        env.newTask(
-            env.loadModel,
-            args=("private/ethanol_def_1000.npz",),
-            visual=True,
-            name="Loading model",
-            threaded=True,
-        )
+        # env.newTask(
+        #     env.loadModel,
+        #     args=("private/ethanol_def_1000.npz",),
+        #     visual=True,
+        #     name="Loading model",
+        #     threaded=True,
+        # )
 
-        env.newTask(
-            env.loadModel,
-            args=("private/eth_il_1000.npz",),
-            visual=True,
-            name="Loading model",
-            threaded=True,
-        )
+        # env.newTask(
+        #     env.loadModel,
+        #     args=("private/eth_il_1000.npz",),
+        #     visual=True,
+        #     name="Loading model",
+        #     threaded=True,
+        # )
 
     # env.newTask(nh.taskWatchDog, name="TaskWatchDog", visual=True)
 

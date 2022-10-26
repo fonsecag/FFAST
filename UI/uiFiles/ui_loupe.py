@@ -311,16 +311,16 @@ class Ui_Form(object):
         self.sidebarWidget.addTab(self.colorTab, "")
         self.imageTab = QWidget()
         self.imageTab.setObjectName(u"imageTab")
-        self.verticalLayout_6 = QVBoxLayout(self.imageTab)
-        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.imageTabLayout = QVBoxLayout(self.imageTab)
+        self.imageTabLayout.setObjectName(u"imageTabLayout")
         self.checkBox = QCheckBox(self.imageTab)
         self.checkBox.setObjectName(u"checkBox")
 
-        self.verticalLayout_6.addWidget(self.checkBox)
+        self.imageTabLayout.addWidget(self.checkBox)
 
         self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.verticalLayout_6.addItem(self.verticalSpacer_4)
+        self.imageTabLayout.addItem(self.verticalSpacer_4)
 
         self.sidebarWidget.addTab(self.imageTab, "")
 

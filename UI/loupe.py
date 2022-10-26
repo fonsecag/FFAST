@@ -327,6 +327,12 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.datasetCB.addUpdateCallback(dw.setDatasetDependencies)
         self.datasetCB.updateSelection()
 
+        # IMAGE
+        self.imageTextEdit = CodeTextEdit()
+        self.imageTextEdit.setEnabled(False)
+        self.imageTabLayout.insertWidget(1, self.imageTextEdit)
+        self.imageTextEdit.setReturnCallback(self.readLattice)
+
     def connectLoupe(self, loupePlotWidget):
         if loupePlotWidget is not None:
             lpw = loupePlotWidget(self.handler)
@@ -357,6 +363,9 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
             self.selectedBonds.add(sel)
 
         self.refresh()
+
+    def readLattice(self):
+        print("reading lattice")
 
     def updateDynamicBonds(self):
         dyn = self.dynamicBondsCB.isChecked()

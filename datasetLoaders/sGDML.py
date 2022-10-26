@@ -14,6 +14,11 @@ class sGDMLDatasetLoader(DatasetLoader):
         self.N = self.R.shape[0]
         self.nAtoms = self.R.shape[1]
 
+        if 'lattice' in self.data:
+            self.lattice = self.data['lattice']
+        else:
+            self.lattice = np.eye(3)
+
     def getN(self):
         return self.N
 
@@ -43,3 +48,6 @@ class sGDMLDatasetLoader(DatasetLoader):
 
     def getElements(self):
         return self.z
+
+    def getLattice(self):
+        return

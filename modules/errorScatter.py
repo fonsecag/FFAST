@@ -89,7 +89,11 @@ class EnergyErrorScatterPlot(BasicPlotContainer):
         return np.argwhere(xTruth & yTruth).flatten()
 
 
-def load(UIHandler, env):
+def load(UIHandler, env, headless = False):
+
+    if headless:
+        return
+
     tab = Tab(
         UIHandler,
         hasDatasetSelector=True,

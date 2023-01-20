@@ -9,8 +9,44 @@ from client.dataType import SubDataEntity
 import logging
 import os, glob
 import numpy as np
+import asyncio
 
 logger = logging.getLogger("FFAST")
+
+
+async def headlessEventLoop(env):
+    taskManager = env.tm
+    while not env.quitReady:
+        await env.eventHandle()
+        await env.handleGenerationQueue()
+        await taskManager.eventHandle()
+        await taskManager.handleTaskQueue()
+        await asyncio.sleep(0.1)
+        print("event loop", flush = True)
+
+    await env.eventHandle()
+    await taskManager.eventHandle()
+
+def runHeadless(func):
+    # https://stackoverflow.com/questions/27480967/why-does-the-asyncios-event-loop-suppress-the-keyboardinterrupt-on-windows
+    # Without it, it just gets stuck forever...
+    # It's dirty but it's the only way it's worked so far
+    import signal 
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    async def funcWrapper(env):
+        await func(env)
+        env.quitReady = True
+
+    loop = asyncio.get_event_loop()
+    env = Environment()
+
+    tasks =  asyncio.gather(
+        headlessEventLoop(env),
+        funcWrapper(env),
+    )
+    
+    loop.run_until_complete(tasks)
 
 
 class Environment(EventClass):
@@ -20,10 +56,13 @@ class Environment(EventClass):
     model predictions, extra dataset descriptors).
     """
 
-    def __init__(self):
+    def __init__(self, headless = True):
         super().__init__()
-
+        self.headless = headless
         self.loadConfig()
+
+        if headless:
+            self.quitReady = False
 
         # Note: might have multiple environments at some point
         self.datasets = {}
@@ -89,6 +128,15 @@ class Environment(EventClass):
     def getAllModels(self):
         return list(self.models.values())
 
+    def taskLoadModel(self, path):
+        self.newTask(
+            self.loadModel,
+            args=(path,),
+            visual=True,
+            name="Loading model",
+            threaded=True,
+        )
+
     def loadModel(self, path, taskID=None):
         """
         Asks the environment to load a model from a given path and save it at a
@@ -149,10 +197,18 @@ class Environment(EventClass):
         else:
             return ds
 
+    def taskLoadDataset(self, path):
+        self.newTask(
+            self.loadDataset,
+            args = (path,),
+            visual = True,
+            name = "Loading dataset",
+            threaded = True
+        )
+
     def loadDataset(self, path, taskID=None):
         """
-        Asks the environment to load a dataset from a given path and save it at
-        a newly generated key.
+        Asks the environment to load a dataset from a given path and save it at a newly generated key.
 
         Should be called as a threaded task.
 
@@ -206,7 +262,7 @@ class Environment(EventClass):
         dataTypeKey,
         model=None,
         dataset=None,
-        threaded=False,
+        threaded=True,
         visual=False,
         isComponent=False,
         componentParent=None,
@@ -338,6 +394,13 @@ class Environment(EventClass):
                 return True
 
         return False
+
+    def addToGenerationQueue(self, key, dataset = None, model = None):
+        dataType = self.getDataType(key)
+        cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
+        self.generationQueue.add(cacheKey)
+        if self.headless:
+            print(f'Added {cacheKey} to generation queue', flush = True)
 
     async def handleGenerationQueue(self, *args):
 
@@ -585,3 +648,10 @@ class Environment(EventClass):
         )
 
         self.lookForGhosts()
+
+    async def waitForTasks(self):
+        tm = self.tm
+        while ((tm.taskQueue.qsize()>0) or (len(tm.runningTasks)>0) or (len(self.generationQueue)>0)) and not self.quitReady:
+            await asyncio.sleep(.1)
+
+

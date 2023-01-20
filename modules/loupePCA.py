@@ -73,7 +73,11 @@ def loupeAddon(UIHandler, loupe):
     tabWidget.layout.insertWidget(-1, kpcaPlot)
 
 
-def load(UIHandler, env):
+def load(UIHandler, env, headless = False):
 
     env.registerDataType(DatasetKernelPCA3)
+
+    if headless:
+        return
+
     UIHandler.addLoupeAddon(loupeAddon)

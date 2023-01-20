@@ -406,10 +406,13 @@ class EnergyClusterErrorPlot(ClusterErrorPlot):
         self.setYLabel("Energy MAE", "kcal/mol")
 
 
-def load(UIHandler, env):
+def load(UIHandler, env, headless = False):
     env.registerDataType(DatasetCluster)
     env.registerDataType(ClusterForceError)
     env.registerDataType(ClusterEnergyError)
+
+    if headless:
+        return
 
     tab = Tab(
         UIHandler,

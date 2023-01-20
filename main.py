@@ -4,15 +4,11 @@ from client.environment import Environment
 import qasync
 import asyncio
 import sys
-import time
-import glob
 import logging
-import os
-import importlib
 from events import EventClass
 from client.dataWatcher import DataWatcher
-import vispy
-
+from Utils.misc import loadModules
+import os 
 
 logging.basicConfig(
     level=logging.INFO,
@@ -87,52 +83,22 @@ async def eventLoop(UI, env):
     # Temporarily putting some preliminary tasks here
     if os.path.exists("private"):
 
+        env.taskLoadDataset("private/ethanol.npz")
+        env.taskLoadDataset("private/ethanol_spl_200.npz")
+        # env.taskLoadDataset("private/graph_ethanol.npz")
+        # env.taskLoadDataset("private/eth_schnet")
+
         # env.newTask(
         #     env.loadDataset,
-        #     args=("private/ethanol.npz",),
+        #     args=("private/graph_ethanol.npz",),
         #     visual=True,
         #     name="Loading dataset",
         #     threaded=True,
         # )
 
-        env.newTask(
-            env.loadDataset,
-            args=("private/graph_ethanol.npz",),
-            visual=True,
-            name="Loading dataset",
-            threaded=True,
-        )
-        # env.newTask(
-        #     env.loadDataset,
-        #     args=("private/ethanol_spl_200.npz",),
-        #     visual=True,
-        #     name="Loading dataset",
-        #     threaded=True,
-        # )
-
-        # env.newTask(
-        #     env.loadModel,
-        #     args=("private/eth_schnet",),
-        #     visual=True,
-        #     name="Loading model",
-        #     threaded=True,
-        # )
-
-        # env.newTask(
-        #     env.loadModel,
-        #     args=("private/ethanol_def_1000.npz",),
-        #     visual=True,
-        #     name="Loading model",
-        #     threaded=True,
-        # )
-
-        # env.newTask(
-        #     env.loadModel,
-        #     args=("private/eth_il_1000.npz",),
-        #     visual=True,
-        #     name="Loading model",
-        #     threaded=True,
-        # )
+        env.taskLoadModel("private/ethanol_def_1000.npz")
+        env.taskLoadModel("private/eth_il_1000.npz")
+ 
 
     # env.newTask(nh.taskWatchDog, name="TaskWatchDog", visual=True)
 
@@ -150,23 +116,11 @@ async def eventLoop(UI, env):
     await taskManager.eventHandle()
 
 
-def loadModules(UI, env):
-    for path in glob.glob(os.path.join("modules", "*.py")):
-        name = os.path.basename(path).replace(".py", "")
-        name = f"module_{name}"
-
-        spec = importlib.util.spec_from_file_location(name, path)
-        foo = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(foo)
-
-        foo.load(UI, env)
-
-
 async def main():
     UI = UIHandler()
     UI.launch()
 
-    env = Environment()
+    env = Environment(headless = False)
     UI.setEnvironment(env)
     UI.loadUiElements()
 

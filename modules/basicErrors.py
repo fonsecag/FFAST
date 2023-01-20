@@ -219,12 +219,15 @@ class ForcesErrorPlot(BasicPlotContainer):
         return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
 
 
-def load(UIHandler, env):
+def load(UIHandler, env, headless = False):
     env.registerDataType(EnergyPredictionError)
     env.registerDataType(ForcesPredictionError)
     env.registerDataType(EnergyErrorDist)
     env.registerDataType(ForcesErrorDist)
 
+    if headless:
+        return 
+    
     tab = Tab(UIHandler, hasDatasetSelector=True, hasModelSelector=True)
     UIHandler.addTab(tab, "Basic")
 

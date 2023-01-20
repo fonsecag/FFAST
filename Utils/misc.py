@@ -1,7 +1,20 @@
 import hashlib
 import re
 import numpy as np
+import glob 
+import importlib
+import os
 
+def loadModules(UI, env, headless = False):
+    for path in glob.glob(os.path.join("modules", "*.py")):
+        name = os.path.basename(path).replace(".py", "")
+        name = f"module_{name}"
+
+        spec = importlib.util.spec_from_file_location(name, path)
+        foo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(foo)
+
+        foo.load(UI, env, headless = headless)
 
 def md5FromArraysAndStrings(*args):
     fp = hashlib.md5()

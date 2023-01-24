@@ -3,7 +3,7 @@ import asyncio
 
 async def main(env):
 
-    env.taskLoadDataset("private/ethanol.npz")
+    env.taskLoadDataset("private/ethanol_spl_100.npz")
     env.taskLoadDataset("private/ethanol_spl_200.npz")
 
     env.taskLoadModel("private/ethanol_def_1000.npz")
@@ -11,10 +11,18 @@ async def main(env):
 
     await env.waitForTasks()
 
+    print(list(env.dataTypes.keys()))
+
+    sys.exit()
+
     for model in env.getAllModelKeys():
         for dataset in env.getAllDatasetKeys():
-            env.addToGenerationQueue("forces",model=model, dataset=dataset)
+            env.addToGenerationQueue("forcesErrorDist",model=model, dataset=dataset)
+            env.addToGenerationQueue("energyErrorDist",model=model, dataset=dataset)
             
-    await env.waitForTasks()
+    await env.waitForTasks(verbose = True)
 
-runHeadless(main)
+    # env.save("savetest")
+
+if __name__ == '__main__':
+    runHeadless(main)

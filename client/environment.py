@@ -10,6 +10,7 @@ import logging
 import os, glob
 import numpy as np
 import asyncio
+from Utils.misc import loadModules
 
 logger = logging.getLogger("FFAST")
 
@@ -22,7 +23,6 @@ async def headlessEventLoop(env):
         await taskManager.eventHandle()
         await taskManager.handleTaskQueue()
         await asyncio.sleep(0.1)
-        print("event loop", flush = True)
 
     await env.eventHandle()
     await taskManager.eventHandle()
@@ -40,6 +40,7 @@ def runHeadless(func):
 
     loop = asyncio.get_event_loop()
     env = Environment()
+    loadModules(None, env, headless = True)
 
     tasks =  asyncio.gather(
         headlessEventLoop(env),
@@ -47,7 +48,6 @@ def runHeadless(func):
     )
     
     loop.run_until_complete(tasks)
-
 
 class Environment(EventClass):
     """
@@ -649,9 +649,35 @@ class Environment(EventClass):
 
         self.lookForGhosts()
 
-    async def waitForTasks(self):
+    async def waitForTasks(self, verbose = False, dt = 1):
         tm = self.tm
         while ((tm.taskQueue.qsize()>0) or (len(tm.runningTasks)>0) or (len(self.generationQueue)>0)) and not self.quitReady:
-            await asyncio.sleep(.1)
+            if verbose:
+                print('-'*20)
+                lTaskQueue = tm.taskQueue.qsize()
+                if (lTaskQueue>0):
+                    print(f'{lTaskQueue} tasks queued.\n')
+
+                lRunningTasks = len(tm.runningTasks)
+                if lRunningTasks > 0:
+                    print(f'{lRunningTasks} tasks running:')
+                    for taskID in tm.runningTasks:
+                        task = tm.getTask(taskID)
+                        prog = '?%'
+                        if task['progress'] is not None:
+                            prog = f'{task["progress"]:.0f}%'
+
+                        print(f'{prog:<4} {task["name"]:<20}  {task["progressMessage"]}')
+                    print()
+
+                lGenQueue = len(self.generationQueue)
+                if lGenQueue > 0:
+                    print(f'{lGenQueue} tasks in generation queue:')
+                    for i in self.generationQueue:
+                        print(i)
+
+                print(flush=True)
+
+            await asyncio.sleep(dt)
 
 

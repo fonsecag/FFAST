@@ -30,6 +30,7 @@ class TaskManager(EventClass):
         self.eventSubscribe("TASK_DONE", self.onTaskDone)
         self.eventSubscribe("QUIT_EVENT", self.quit, asynchronous=True)
         self.eventSubscribe("TASK_CANCEL", self.cancelTask, asynchronous=True)
+        self.eventSubscribe("TASK_PROGRESS", self.setTaskProgress, asynchronous = True)
 
     async def quit(self):
         tasks = []
@@ -120,6 +121,8 @@ class TaskManager(EventClass):
             "process": False,  # not yet used
             "name": name,
             "threaded": threaded,
+            "progress":None,
+            "progressMessage":"N/A",
         }
 
         loop = asyncio.get_event_loop()
@@ -184,3 +187,18 @@ class TaskManager(EventClass):
         args, kwargs = q.get()
 
         self.newTask(*args, **kwargs)
+
+    async def setTaskProgress(
+        self, taskID, progMax=None, prog=None, percent=False, message="Working..."
+    ):
+        task = self.getTask(taskID)
+        if task is None:
+            return
+
+        if (progMax is not None) and (prog is not None):
+            task['progress'] = prog/progMax
+        else:
+            task['progress'] = None
+
+        task['progressMessage'] = message
+            

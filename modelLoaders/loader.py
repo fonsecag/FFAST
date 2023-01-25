@@ -1,6 +1,10 @@
 import os
 from events import EventClass
 from Utils.misc import removeExtension
+import torch
+import logging 
+
+logger = logging.getLogger("FFAST")
 
 
 def loadModel(env, path):
@@ -22,15 +26,26 @@ def loadModel(env, path):
 
     from .sGDML import sGDMLModelLoader
     from .SchNet import SchNetModelLoader
+    from .Nequip import nequipModelLoader
 
     if not os.path.exists(path):
         logger.error(f"Tried to load model, but path `{path}` not found")
         return None
 
+    # TODO put each of those into the respective model files    
     if path.endswith(".npz"):
         model = sGDMLModelLoader(env, path)
     elif "." not in path:
         model = SchNetModelLoader(env, path)
+    elif path.endswith(".pt") or path.endswith(".pth"):
+        from nequip.scripts.deploy import _ALL_METADATA_KEYS
+        metadata = {k: "" for k in _ALL_METADATA_KEYS}
+        fil = torch.jit.load(path,_extra_files=metadata)
+        if metadata["nequip_version"] == "":
+            logger.warn(f"Tried loading {path} as Nequip model, but failed.")
+            model = None
+        else:
+            model = nequipModelLoader(env, path)
     else:
         model = None
 

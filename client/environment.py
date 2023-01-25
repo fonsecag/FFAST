@@ -14,7 +14,6 @@ from Utils.misc import loadModules
 
 logger = logging.getLogger("FFAST")
 
-
 async def headlessEventLoop(env):
     taskManager = env.tm
     while not env.quitReady:
@@ -150,10 +149,12 @@ class Environment(EventClass):
         """
         model = loadModel(self, path)
         if model is None:
+            logging.warn(f'Model `{path}` did not load successfully')
             return
 
         key = model.fingerprint
         self.setNewModel(key, model)
+        logging.info(f'Model `{path}` successfully loaded')
 
     def deleteModel(self, key):
         model = self.getModel(key)
@@ -219,10 +220,12 @@ class Environment(EventClass):
 
         dataset = loadDataset(path)
         if dataset is None:
+            logging.warn(f'Dataset `{path}` did not load successfully')
             return
 
         key = dataset.fingerprint
         self.setNewDataset(dataset)
+        logging.info(f'Dataset `{path}` successfully loaded')
 
     def declareSubDataset(self, parent, model, idx, subName):
         subs = self.getAllDatasets(subOnly=True)
@@ -665,7 +668,7 @@ class Environment(EventClass):
                         task = tm.getTask(taskID)
                         prog = '?%'
                         if task['progress'] is not None:
-                            prog = f'{task["progress"]:.0f}%'
+                            prog = f'{task["progress"]*100:.0f}%'
 
                         print(f'{prog:<4} {task["name"]:<20}  {task["progressMessage"]}')
                     print()

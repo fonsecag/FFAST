@@ -4,6 +4,16 @@ import numpy as np
 import glob 
 import importlib
 import os
+import logging
+
+def setupLogger():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(levelname)s] %(message)s",
+        handlers=[logging.FileHandler("debug.log"), logging.StreamHandler()],
+    )
+    logger = logging.getLogger("FFAST")
+
 
 def loadModules(UI, env, headless = False):
     for path in glob.glob(os.path.join("modules", "*.py")):
@@ -21,9 +31,10 @@ def md5FromArraysAndStrings(*args):
     for arg in args:
         if isinstance(arg, str):
             d = arg.encode("utf8")
-        else:
+        elif isinstance(arg, np.ndarray):
             d = arg.ravel()
-
+        else:
+            continue
         fp.update(hashlib.md5(d).digest())
 
     return fp.hexdigest()

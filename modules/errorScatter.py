@@ -1,98 +1,101 @@
 import numpy as np
-from UI.plots import BasicPlotContainer
-from UI.tab import Tab
 import logging
-import pyqtgraph as pg
-import math
 
 logger = logging.getLogger("FFAST")
 
 
-class ForcesErrorScatterPlot(BasicPlotContainer):
-    def __init__(self, handler, tab):
-        super().__init__(
-            handler,
-            parentSelector=True,
-            title="Forces Scatter",
-            isSubbable=True,
-            name="FoErrScatter",
-        )
-        self.setDataDependencies("forces")
-        self.setXLabel("True MA Force", "kcal/mol A")
-        self.setYLabel("Predicted MA Force", "kcal/mol A")
+def loadData(env):
+    pass
 
-    def addPlots(self):
-        for x in self.getWatchedData():
-            de = x["dataEntry"]
-            fPred = de.get()
-            dataset = x["dataset"]
-            fTrue = dataset.getForces()
 
-            self.plot(
-                fTrue.flatten(), fPred.flatten(), scatter=True, symbol="o"
+def loadUI(UIHandler, env):
+
+    from UI.plots import BasicPlotContainer
+    from UI.tab import Tab
+    import pyqtgraph as pg
+
+    class ForcesErrorScatterPlot(BasicPlotContainer):
+        def __init__(self, handler, tab):
+            super().__init__(
+                handler,
+                parentSelector=True,
+                title="Forces Scatter",
+                isSubbable=True,
+                name="FoErrScatter",
             )
+            self.setDataDependencies("forces")
+            self.setXLabel("True MA Force", "kcal/mol A")
+            self.setYLabel("Predicted MA Force", "kcal/mol A")
 
-    def getDatasetSubIndices(self, dataset, model):
-        (xRange, yRange) = self.getRanges()
-        N = dataset.getN()
-        x0, x1 = xRange
-        y0, y1 = yRange
+        def addPlots(self):
+            for x in self.getWatchedData():
+                de = x["dataEntry"]
+                fPred = de.get()
+                dataset = x["dataset"]
+                fTrue = dataset.getForces()
 
-        fTrue = dataset.getForces()
-        fPred = self.env.getData("forces", dataset=dataset, model=model).get()
+                self.plot(
+                    fTrue.flatten(), fPred.flatten(), scatter=True, symbol="o"
+                )
 
-        fPred = fPred.flatten()
-        fTrue = fTrue.flatten()
+        def getDatasetSubIndices(self, dataset, model):
+            (xRange, yRange) = self.getRanges()
+            N = dataset.getN()
+            x0, x1 = xRange
+            y0, y1 = yRange
 
-        xTruth = (fTrue > x0) & (fTrue < x1)
-        yTruth = (fPred > y0) & (fPred < y1)
-        args = np.argwhere(xTruth & yTruth).flatten()
+            fTrue = dataset.getForces()
+            fPred = self.env.getData(
+                "forces", dataset=dataset, model=model
+            ).get()
 
-        nEntriesPerConf = dataset.getNAtoms() * 3
-        args = np.unique(np.floor(args / nEntriesPerConf)).astype(int)
-        return args
+            fPred = fPred.flatten()
+            fTrue = fTrue.flatten()
 
+            xTruth = (fTrue > x0) & (fTrue < x1)
+            yTruth = (fPred > y0) & (fPred < y1)
+            args = np.argwhere(xTruth & yTruth).flatten()
 
-class EnergyErrorScatterPlot(BasicPlotContainer):
-    def __init__(self, handler, tab):
-        super().__init__(
-            handler,
-            parentSelector=True,
-            title="Energy Scatter",
-            isSubbable=True,
-            name="EnErrScatter",
-        )
-        self.setDataDependencies("energy")
-        self.setXLabel("True Energy", "kcal/mol")
-        self.setYLabel("Predicted Energy", "kcal/mol")
+            nEntriesPerConf = dataset.getNAtoms() * 3
+            args = np.unique(np.floor(args / nEntriesPerConf)).astype(int)
+            return args
 
-    def addPlots(self):
-        for x in self.getWatchedData():
-            de = x["dataEntry"]
-            ePred = de.get()
-            dataset = x["dataset"]
+    class EnergyErrorScatterPlot(BasicPlotContainer):
+        def __init__(self, handler, tab):
+            super().__init__(
+                handler,
+                parentSelector=True,
+                title="Energy Scatter",
+                isSubbable=True,
+                name="EnErrScatter",
+            )
+            self.setDataDependencies("energy")
+            self.setXLabel("True Energy", "kcal/mol")
+            self.setYLabel("Predicted Energy", "kcal/mol")
+
+        def addPlots(self):
+            for x in self.getWatchedData():
+                de = x["dataEntry"]
+                ePred = de.get()
+                dataset = x["dataset"]
+                eTrue = dataset.getEnergies()
+
+                self.plot(eTrue, ePred, scatter=True, symbol="o")
+
+        def getDatasetSubIndices(self, dataset, model):
+            (xRange, yRange) = self.getRanges()
+            N = dataset.getN()
+            x0, x1 = xRange
+            y0, y1 = yRange
+
             eTrue = dataset.getEnergies()
+            ePred = self.env.getData(
+                "energy", dataset=dataset, model=model
+            ).get()
 
-            self.plot(eTrue, ePred, scatter=True, symbol="o")
-
-    def getDatasetSubIndices(self, dataset, model):
-        (xRange, yRange) = self.getRanges()
-        N = dataset.getN()
-        x0, x1 = xRange
-        y0, y1 = yRange
-
-        eTrue = dataset.getEnergies()
-        ePred = self.env.getData("energy", dataset=dataset, model=model).get()
-
-        xTruth = (eTrue > x0) & (eTrue < x1)
-        yTruth = (ePred > y0) & (ePred < y1)
-        return np.argwhere(xTruth & yTruth).flatten()
-
-
-def load(UIHandler, env, headless = False):
-
-    if headless:
-        return
+            xTruth = (eTrue > x0) & (eTrue < x1)
+            yTruth = (ePred > y0) & (ePred < y1)
+            return np.argwhere(xTruth & yTruth).flatten()
 
     tab = Tab(
         UIHandler,

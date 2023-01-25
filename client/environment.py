@@ -14,6 +14,7 @@ from Utils.misc import loadModules
 
 logger = logging.getLogger("FFAST")
 
+
 async def headlessEventLoop(env):
     taskManager = env.tm
     while not env.quitReady:
@@ -26,11 +27,13 @@ async def headlessEventLoop(env):
     await env.eventHandle()
     await taskManager.eventHandle()
 
+
 def runHeadless(func):
     # https://stackoverflow.com/questions/27480967/why-does-the-asyncios-event-loop-suppress-the-keyboardinterrupt-on-windows
     # Without it, it just gets stuck forever...
     # It's dirty but it's the only way it's worked so far
-    import signal 
+    import signal
+
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     async def funcWrapper(env):
@@ -39,14 +42,12 @@ def runHeadless(func):
 
     loop = asyncio.get_event_loop()
     env = Environment()
-    loadModules(None, env, headless = True)
+    loadModules(None, env, headless=True)
 
-    tasks =  asyncio.gather(
-        headlessEventLoop(env),
-        funcWrapper(env),
-    )
-    
+    tasks = asyncio.gather(headlessEventLoop(env), funcWrapper(env),)
+
     loop.run_until_complete(tasks)
+
 
 class Environment(EventClass):
     """
@@ -55,7 +56,7 @@ class Environment(EventClass):
     model predictions, extra dataset descriptors).
     """
 
-    def __init__(self, headless = True):
+    def __init__(self, headless=True):
         super().__init__()
         self.headless = headless
         self.loadConfig()
@@ -149,12 +150,12 @@ class Environment(EventClass):
         """
         model = loadModel(self, path)
         if model is None:
-            logging.warn(f'Model `{path}` did not load successfully')
+            logging.warn(f"Model `{path}` did not load successfully")
             return
 
         key = model.fingerprint
         self.setNewModel(key, model)
-        logging.info(f'Model `{path}` successfully loaded')
+        logging.info(f"Model `{path}` successfully loaded")
 
     def deleteModel(self, key):
         model = self.getModel(key)
@@ -201,10 +202,10 @@ class Environment(EventClass):
     def taskLoadDataset(self, path):
         self.newTask(
             self.loadDataset,
-            args = (path,),
-            visual = True,
-            name = "Loading dataset",
-            threaded = True
+            args=(path,),
+            visual=True,
+            name="Loading dataset",
+            threaded=True,
         )
 
     def loadDataset(self, path, taskID=None):
@@ -220,12 +221,12 @@ class Environment(EventClass):
 
         dataset = loadDataset(path)
         if dataset is None:
-            logging.warn(f'Dataset `{path}` did not load successfully')
+            logging.warn(f"Dataset `{path}` did not load successfully")
             return
 
         key = dataset.fingerprint
         self.setNewDataset(dataset)
-        logging.info(f'Dataset `{path}` successfully loaded')
+        logging.info(f"Dataset `{path}` successfully loaded")
 
     def declareSubDataset(self, parent, model, idx, subName):
         subs = self.getAllDatasets(subOnly=True)
@@ -398,12 +399,12 @@ class Environment(EventClass):
 
         return False
 
-    def addToGenerationQueue(self, key, dataset = None, model = None):
+    def addToGenerationQueue(self, key, dataset=None, model=None):
         dataType = self.getDataType(key)
         cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
         self.generationQueue.add(cacheKey)
         if self.headless:
-            print(f'Added {cacheKey} to generation queue', flush = True)
+            print(f"Added {cacheKey} to generation queue", flush=True)
 
     async def handleGenerationQueue(self, *args):
 
@@ -652,35 +653,39 @@ class Environment(EventClass):
 
         self.lookForGhosts()
 
-    async def waitForTasks(self, verbose = False, dt = 1):
+    async def waitForTasks(self, verbose=False, dt=1):
         tm = self.tm
-        while ((tm.taskQueue.qsize()>0) or (len(tm.runningTasks)>0) or (len(self.generationQueue)>0)) and not self.quitReady:
+        while (
+            (tm.taskQueue.qsize() > 0)
+            or (len(tm.runningTasks) > 0)
+            or (len(self.generationQueue) > 0)
+        ) and not self.quitReady:
             if verbose:
-                print('-'*20)
+                print("-" * 20)
                 lTaskQueue = tm.taskQueue.qsize()
-                if (lTaskQueue>0):
-                    print(f'{lTaskQueue} tasks queued.\n')
+                if lTaskQueue > 0:
+                    print(f"{lTaskQueue} tasks queued.\n")
 
                 lRunningTasks = len(tm.runningTasks)
                 if lRunningTasks > 0:
-                    print(f'{lRunningTasks} tasks running:')
+                    print(f"{lRunningTasks} tasks running:")
                     for taskID in tm.runningTasks:
                         task = tm.getTask(taskID)
-                        prog = '?%'
-                        if task['progress'] is not None:
+                        prog = "?%"
+                        if task["progress"] is not None:
                             prog = f'{task["progress"]*100:.0f}%'
 
-                        print(f'{prog:<4} {task["name"]:<20}  {task["progressMessage"]}')
+                        print(
+                            f'{prog:<4} {task["name"]:<20}  {task["progressMessage"]}'
+                        )
                     print()
 
                 lGenQueue = len(self.generationQueue)
                 if lGenQueue > 0:
-                    print(f'{lGenQueue} tasks in generation queue:')
+                    print(f"{lGenQueue} tasks in generation queue:")
                     for i in self.generationQueue:
                         print(i)
 
                 print(flush=True)
 
             await asyncio.sleep(dt)
-
-

@@ -1,10 +1,11 @@
 import hashlib
 import re
 import numpy as np
-import glob 
+import glob
 import importlib
 import os
 import logging
+
 
 def setupLogger():
     logging.basicConfig(
@@ -15,7 +16,7 @@ def setupLogger():
     logger = logging.getLogger("FFAST")
 
 
-def loadModules(UI, env, headless = False):
+def loadModules(UI, env, headless=False):
     for path in glob.glob(os.path.join("modules", "*.py")):
         name = os.path.basename(path).replace(".py", "")
         name = f"module_{name}"
@@ -23,7 +24,11 @@ def loadModules(UI, env, headless = False):
         spec = importlib.util.spec_from_file_location(name, path)
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
-        foo.load(UI, env, headless = headless)
+
+        foo.loadData(env)
+        if not headless:
+            foo.loadUI(UI, env)
+
 
 def md5FromArraysAndStrings(*args):
     fp = hashlib.md5()

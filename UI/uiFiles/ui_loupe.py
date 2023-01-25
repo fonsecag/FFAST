@@ -8,17 +8,54 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QHBoxLayout, QLabel, QPushButton, QSizePolicy,
-    QSpacerItem, QTabWidget, QToolButton, QVBoxLayout,
-    QWidget)
+from PySide6.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QLocale,
+    QMetaObject,
+    QObject,
+    QPoint,
+    QRect,
+    QSize,
+    QTime,
+    QUrl,
+    Qt,
+)
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QConicalGradient,
+    QCursor,
+    QFont,
+    QFontDatabase,
+    QGradient,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QLinearGradient,
+    QPainter,
+    QPalette,
+    QPixmap,
+    QRadialGradient,
+    QTransform,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QSpacerItem,
+    QTabWidget,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -42,7 +79,9 @@ class Ui_Form(object):
         self.headerLayout = QHBoxLayout(self.header)
         self.headerLayout.setObjectName(u"headerLayout")
         self.headerLayout.setContentsMargins(9, 0, 9, 0)
-        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_4 = QSpacerItem(
+            40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.headerLayout.addItem(self.horizontalSpacer_4)
 
@@ -51,7 +90,9 @@ class Ui_Form(object):
 
         self.headerLayout.addWidget(self.datasetLabel)
 
-        self.horizontalSpacer_3 = QSpacerItem(352, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_3 = QSpacerItem(
+            352, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.headerLayout.addItem(self.horizontalSpacer_3)
 
@@ -79,19 +120,24 @@ class Ui_Form(object):
         self.horizontalLayout_5 = QHBoxLayout(self.infoFrame)
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.currentAtomSelectionLabel = QLabel(self.infoFrame)
-        self.currentAtomSelectionLabel.setObjectName(u"currentAtomSelectionLabel")
+        self.currentAtomSelectionLabel.setObjectName(
+            u"currentAtomSelectionLabel"
+        )
 
         self.horizontalLayout_5.addWidget(self.currentAtomSelectionLabel)
 
-        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_6 = QSpacerItem(
+            40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.horizontalLayout_5.addItem(self.horizontalSpacer_6)
 
         self.cancelAtomSelectionButton = QPushButton(self.infoFrame)
-        self.cancelAtomSelectionButton.setObjectName(u"cancelAtomSelectionButton")
+        self.cancelAtomSelectionButton.setObjectName(
+            u"cancelAtomSelectionButton"
+        )
 
         self.horizontalLayout_5.addWidget(self.cancelAtomSelectionButton)
-
 
         self.mainFrameLayout.addWidget(self.infoFrame)
 
@@ -117,7 +163,9 @@ class Ui_Form(object):
         self.toolbar.setObjectName(u"toolbar")
         self.horizontalLayout = QHBoxLayout(self.toolbar)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalSpacer = QSpacerItem(275, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(
+            275, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
@@ -141,10 +189,11 @@ class Ui_Form(object):
 
         self.horizontalLayout.addWidget(self.rightButton)
 
-        self.horizontalSpacer_2 = QSpacerItem(275, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(
+            275, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
-
 
         self.mainFrameLayout.addWidget(self.toolbar)
 
@@ -166,10 +215,11 @@ class Ui_Form(object):
         self.bottomHeaderLayout = QHBoxLayout(self.bottomHeader)
         self.bottomHeaderLayout.setObjectName(u"bottomHeaderLayout")
         self.bottomHeaderLayout.setContentsMargins(0, 0, 0, 0)
-        self.horizontalSpacer_8 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_8 = QSpacerItem(
+            40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.bottomHeaderLayout.addItem(self.horizontalSpacer_8)
-
 
         self.verticalLayout_5.addWidget(self.bottomHeader)
 
@@ -178,13 +228,11 @@ class Ui_Form(object):
 
         self.verticalLayout_5.addWidget(self.bottomTabWidget)
 
-
         self.verticalLayout_2.addWidget(self.bottomFrame)
 
         self.verticalLayout_2.setStretch(0, 1)
 
         self.verticalLayout_3.addWidget(self.leftContent)
-
 
         self.horizontalLayout_3.addWidget(self.leftContainer)
 
@@ -221,7 +269,9 @@ class Ui_Form(object):
 
         self.horizontalLayout_4.addWidget(self.bondsTextEditLabel)
 
-        self.horizontalSpacer_5 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_5 = QSpacerItem(
+            40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.horizontalLayout_4.addItem(self.horizontalSpacer_5)
 
@@ -231,10 +281,11 @@ class Ui_Form(object):
 
         self.horizontalLayout_4.addWidget(self.selectBondsButton)
 
-
         self.bondsTabLayout.addWidget(self.frame)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer = QSpacerItem(
+            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
+        )
 
         self.bondsTabLayout.addItem(self.verticalSpacer)
 
@@ -260,7 +311,9 @@ class Ui_Form(object):
 
         self.horizontalLayout_6.addWidget(self.label)
 
-        self.horizontalSpacer_7 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_7 = QSpacerItem(
+            40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
 
         self.horizontalLayout_6.addItem(self.horizontalSpacer_7)
 
@@ -270,10 +323,11 @@ class Ui_Form(object):
 
         self.horizontalLayout_6.addWidget(self.selectAlignAtomsButton)
 
-
         self.verticalLayout.addWidget(self.frame_2)
 
-        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_2 = QSpacerItem(
+            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
+        )
 
         self.verticalLayout.addItem(self.verticalSpacer_2)
 
@@ -294,17 +348,23 @@ class Ui_Form(object):
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.colorTabModelFrame.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.colorTabModelFrame.sizePolicy().hasHeightForWidth()
+        )
         self.colorTabModelFrame.setSizePolicy(sizePolicy)
         self.colorTabModelFrame.setMinimumSize(QSize(0, 0))
         self.colorTabModelFrame.setFrameShape(QFrame.StyledPanel)
         self.colorTabModelFrame.setFrameShadow(QFrame.Raised)
         self.colorTabModelFrameLayout = QHBoxLayout(self.colorTabModelFrame)
-        self.colorTabModelFrameLayout.setObjectName(u"colorTabModelFrameLayout")
+        self.colorTabModelFrameLayout.setObjectName(
+            u"colorTabModelFrameLayout"
+        )
 
         self.verticalLayout_4.addWidget(self.colorTabModelFrame)
 
-        self.verticalSpacer_3 = QSpacerItem(20, 876, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_3 = QSpacerItem(
+            20, 876, QSizePolicy.Minimum, QSizePolicy.Expanding
+        )
 
         self.verticalLayout_4.addItem(self.verticalSpacer_3)
 
@@ -318,14 +378,15 @@ class Ui_Form(object):
 
         self.imageTabLayout.addWidget(self.checkBox)
 
-        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_4 = QSpacerItem(
+            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
+        )
 
         self.imageTabLayout.addItem(self.verticalSpacer_4)
 
         self.sidebarWidget.addTab(self.imageTab, "")
 
         self.rightContainerLayout.addWidget(self.sidebarWidget)
-
 
         self.horizontalLayout_3.addWidget(self.rightContainer)
 
@@ -336,34 +397,68 @@ class Ui_Form(object):
         self.bottomTabWidget.setCurrentIndex(-1)
         self.sidebarWidget.setCurrentIndex(3)
 
-
         QMetaObject.connectSlotsByName(Form)
+
     # setupUi
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.datasetLabel.setText(QCoreApplication.translate("Form", u"Dataset:", None))
+        self.datasetLabel.setText(
+            QCoreApplication.translate("Form", u"Dataset:", None)
+        )
         self.currentAtomSelectionLabel.setText("")
-        self.cancelAtomSelectionButton.setText(QCoreApplication.translate("Form", u"Cancel", None))
+        self.cancelAtomSelectionButton.setText(
+            QCoreApplication.translate("Form", u"Cancel", None)
+        )
         self.selectedIndicesLabel.setText("")
         self.nFramesLabel.setText("")
         self.leftButton.setText("")
         self.startButton.setText("")
         self.pauseButton.setText("")
         self.rightButton.setText("")
-        self.dynamicBondsCB.setText(QCoreApplication.translate("Form", u"Dynamic Bonds", None))
-        self.bondsTextEditLabel.setText(QCoreApplication.translate("Form", u"Bonds:", None))
-        self.selectBondsButton.setText(QCoreApplication.translate("Form", u"Select", None))
-        self.sidebarWidget.setTabText(self.sidebarWidget.indexOf(self.bondsTab), QCoreApplication.translate("Form", u"Bonds", None))
-        self.alignConfigsCB.setText(QCoreApplication.translate("Form", u"Align Configurations", None))
-        self.label.setText(QCoreApplication.translate("Form", u"Align along:", None))
-        self.selectAlignAtomsButton.setText(QCoreApplication.translate("Form", u"Select", None))
-        self.sidebarWidget.setTabText(self.sidebarWidget.indexOf(self.alignTab), QCoreApplication.translate("Form", u"Align", None))
-        self.coloringComboBox.setItemText(0, QCoreApplication.translate("Form", u"Atomic Color", None))
-        self.coloringComboBox.setItemText(1, QCoreApplication.translate("Form", u"Force Error", None))
+        self.dynamicBondsCB.setText(
+            QCoreApplication.translate("Form", u"Dynamic Bonds", None)
+        )
+        self.bondsTextEditLabel.setText(
+            QCoreApplication.translate("Form", u"Bonds:", None)
+        )
+        self.selectBondsButton.setText(
+            QCoreApplication.translate("Form", u"Select", None)
+        )
+        self.sidebarWidget.setTabText(
+            self.sidebarWidget.indexOf(self.bondsTab),
+            QCoreApplication.translate("Form", u"Bonds", None),
+        )
+        self.alignConfigsCB.setText(
+            QCoreApplication.translate("Form", u"Align Configurations", None)
+        )
+        self.label.setText(
+            QCoreApplication.translate("Form", u"Align along:", None)
+        )
+        self.selectAlignAtomsButton.setText(
+            QCoreApplication.translate("Form", u"Select", None)
+        )
+        self.sidebarWidget.setTabText(
+            self.sidebarWidget.indexOf(self.alignTab),
+            QCoreApplication.translate("Form", u"Align", None),
+        )
+        self.coloringComboBox.setItemText(
+            0, QCoreApplication.translate("Form", u"Atomic Color", None)
+        )
+        self.coloringComboBox.setItemText(
+            1, QCoreApplication.translate("Form", u"Force Error", None)
+        )
 
-        self.sidebarWidget.setTabText(self.sidebarWidget.indexOf(self.colorTab), QCoreApplication.translate("Form", u"Color", None))
-        self.checkBox.setText(QCoreApplication.translate("Form", u"Periodic images", None))
-        self.sidebarWidget.setTabText(self.sidebarWidget.indexOf(self.imageTab), QCoreApplication.translate("Form", u"Image", None))
+        self.sidebarWidget.setTabText(
+            self.sidebarWidget.indexOf(self.colorTab),
+            QCoreApplication.translate("Form", u"Color", None),
+        )
+        self.checkBox.setText(
+            QCoreApplication.translate("Form", u"Periodic images", None)
+        )
+        self.sidebarWidget.setTabText(
+            self.sidebarWidget.indexOf(self.imageTab),
+            QCoreApplication.translate("Form", u"Image", None),
+        )
+
     # retranslateUi
-

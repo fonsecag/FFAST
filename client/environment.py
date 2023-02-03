@@ -406,6 +406,18 @@ class Environment(EventClass):
         if self.headless:
             print(f"Added {cacheKey} to generation queue", flush=True)
 
+    def getKeyFromPath(self, path):
+        # check dataset
+        for dataset in self.getAllDatasets(excludeSubs=True):
+            if dataset.path == path:
+                return dataset.fingerprint
+        
+        for model in self.getAllModels():
+            if model.path == path:
+                return model.fingerprint
+
+        return None
+
     async def handleGenerationQueue(self, *args):
 
         queue = self.generationQueue
@@ -689,3 +701,5 @@ class Environment(EventClass):
                 print(flush=True)
 
             await asyncio.sleep(dt)
+
+    

@@ -79,9 +79,9 @@ async def eventLoop(UI, env):
 
         # env.taskLoadDataset("private/ethanol_spl_100.npz")
         # env.taskLoadDataset("private/ethanol_spl_200.npz")
-        env.taskLoadDataset("private/sal_smol.npz")
-        env.taskLoadModel("private/neq_sal_1000.pth")
-        env.taskLoadModel("private/spook_sal_1000.pt")
+        env.taskLoadDataset("private/salicylic.npz")
+        # env.taskLoadModel("private/neq_sal_1000.pth")
+        # env.taskLoadModel("private/spook_sal_1000.pt")
         # env.taskLoadModel("private/ethanol_def_1000.npz")
         # env.taskLoadModel("private/eth_il_1000.npz")
 

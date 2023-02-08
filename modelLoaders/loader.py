@@ -140,7 +140,7 @@ class ModelLoaderACE(ModelLoader):
                     taskID,
                     progMax=len(R),
                     prog=i,
-                    message=f"P{self.modelName} batch predictions",
+                    message=f"{self.modelName} batch predictions",
                     quiet=True,
                     percent=True,
                 )

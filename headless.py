@@ -4,16 +4,25 @@ from Utils.misc import setupLogger
 
 async def main(env):
 
-    env.taskLoadModel("private/eth_il_1000.npz")
-    # env.taskLoadModel("private/mace_sal_1000.model")
+    # m1path, m2path = "private/neq_stachyose_1000.pth", "private/neq_DHA_1000.pth"
+    # env.taskLoadModel(m1path)
+    # env.taskLoadModel(m2path)
+
+    d1path, d2path = "private/stach_2000.npz", "private/DHA_2000.npz"
+    env.taskLoadDataset(d1path)
+    env.taskLoadDataset(d2path)
     await env.waitForTasks()
 
-    key = env.getKeyFromPath("private/eth_il_1000.npz")
-    
-    for model in env.getAllModelKeys():
-        for dataset in env.getAllDatasetKeys():
-            env.addToGenerationQueue("forces", model=model, dataset=dataset)
-            # env.addToGenerationQueue("energyErrorDist",model=model, dataset=dataset)
+    # m1 = env.getKeyFromPath(m1path)
+    # m2 = env.getKeyFromPath(m2path)
+    d1 = env.getKeyFromPath(d1path)
+    d2 = env.getKeyFromPath(d2path)
+
+    # env.addToGenerationQueue("forces", model=m1, dataset=d1)
+    # env.addToGenerationQueue("forces", model=m2, dataset=d2)
+
+    for dataset in env.getAllDatasetKeys():
+        env.addToGenerationQueue("datasetCluster", model=None, dataset=dataset)
 
     await env.waitForTasks(verbose=True)
     env.save("savetest")

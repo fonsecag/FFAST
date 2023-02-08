@@ -135,6 +135,7 @@ def loadData(env):
 
                 clinds = newClinds
 
+            clinds = np.array(clinds, dtype='object')
             labels = self.clindToLabels(dataset, clinds)
 
             de = self.newDataEntity(clind=clinds, labels=labels)

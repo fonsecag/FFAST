@@ -327,6 +327,7 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
         self.plotItems = []
 
     def plot(self, x, y, scatter=False, **kwargs):
+        self.plotItem.disableAutoRange()
         colors = self.handler.env.getConfig("plotColors")
         N = len(self.plotItems) % len(colors)
         color = colors[N]
@@ -340,14 +341,13 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
         # plotItem = self.plotWidget.plot(x, y, pen=pg.mkPen(color, width=2.5))
         if scatter:
             brush = pg.mkBrush(color)
-            plotItem = pg.PlotDataItem(
-                x, y, symbolBrush=brush, symbolPen=pen, pen=None, symbolSize=2
-            )
+            plotItem = pg.ScatterPlotItem(x,y, symbolBrush=brush)
         else:
             plotItem = pg.PlotDataItem(x, y, pen=pen, **kwargs)
 
         self.plotItem.addItem(plotItem)
         self.plotItems.append(plotItem)
+        self.plotItem.autoRange()
 
     def stepPlot(self, x, y, width=1, **kwargs):
         xLeft, xRight = (x - width / 2, x + width / 2)

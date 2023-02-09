@@ -607,12 +607,21 @@ class Environment(EventClass):
                 **entity.data,
             )
 
+    def taskLoad(self, path):
+        self.newTask(
+            self.load,
+            args=(path,),
+            visual=True,
+            name="Loading dataset",
+            threaded=True,
+        )
+
     def load(self, path, taskID=None):
 
         ## LOAD CACHE
         cacheDir = os.path.join(path, "cache")
         for path in glob.glob(os.path.join(cacheDir, "*.npz")):
-            d = dict(np.load(path))
+            d = dict(np.load(path,allow_pickle=True))
             dataTypeKey = str(d.pop("entityDataTypeKey"))
             cacheKey = str(d.pop("cacheKey"))
             dataType = self.getDataType(dataTypeKey)

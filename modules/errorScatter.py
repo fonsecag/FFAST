@@ -38,6 +38,7 @@ def loadUI(UIHandler, env):
                     fTrue.flatten(), fPred.flatten(), scatter=True, symbol="o"
                 )
 
+
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()
             N = dataset.getN()
@@ -81,6 +82,7 @@ def loadUI(UIHandler, env):
                 eTrue = dataset.getEnergies()
 
                 self.plot(eTrue, ePred, scatter=True, symbol="o")
+                # self.plot(eTrue, ePred, symbol = "o", pen=None)
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()

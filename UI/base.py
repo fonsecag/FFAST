@@ -141,7 +141,7 @@ class UIHandler(EventClass):
     def initialisePlotConfigs(self):
 
         pg.setConfigOptions(
-            antialias=False,
+            antialias=True,
             leftButtonPan=False,
             crashWarning=True,
             foreground=self.config["envs"].get("TextColor1"),

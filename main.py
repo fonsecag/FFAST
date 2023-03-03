@@ -76,7 +76,9 @@ async def eventLoop(UI, env):
 
     # Temporarily putting some preliminary tasks here
     if os.path.exists("private"):
-        env.taskLoadDataset("/Users/me/ownCloud/Uni/datasplitter/md22_stachyose.npz")
+        env.taskLoadDataset(
+            "/Users/me/ownCloud/Uni/datasplitter/md22_stachyose.npz"
+        )
         env.taskLoadDataset("/Users/me/ownCloud/Uni/datasplitter/md22_DHA.npz")
         env.taskLoad("private/saves/savetest")
         pass

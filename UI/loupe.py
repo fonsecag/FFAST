@@ -1,9 +1,7 @@
 from events import EventChildClass
 import os
 from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6.QtUiTools import QUiLoader
 from Utils.uiLoader import loadUi
-from collections import defaultdict
 import logging
 import numpy as np
 from vispy import scene
@@ -16,12 +14,13 @@ from UI.utils import (
     DatasetModelComboBox,
     DataLoaderButton,
 )
-import vispy
 import ast
 from client.mathUtils import alignConfiguration
 from UI.loupeAtomSelect import BondSelect, AtomAlignSelect
 from UI.loupeAtomColorMode import AtomicColoring, ForceErrorColoring
 from client.dataWatcher import DataWatcher
+from time import process_time
+import asyncio 
 
 logger = logging.getLogger("FFAST")
 lightGrayValue = 0.7
@@ -262,16 +261,10 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.n = 0
         self.updateCurrentR()
 
+    videoInterval = 0.1
     def initialiseVideoPlayback(self):
         self.leftButton.clicked.connect(self.onPrevious)
         self.rightButton.clicked.connect(self.onNext)
-
-        # TODO fps user controlled etc
-        # Set timer for animation
-        timer = QtCore.QTimer()
-        timer.timeout.connect(self.onNext)
-        timer.setInterval(int((1 / 20) * 1000))  # milliseconds
-        self.timer = timer
 
         self.startButton.clicked.connect(self.onStart)
         self.pauseButton.clicked.connect(self.onPause)
@@ -407,17 +400,30 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
             return idx
 
     def onStart(self):
-        self.timer.start()
+        # self.timer.start()
+        self.videoPaused = False
+        self.videoTask = asyncio.create_task(self.runOnNext())
+
+    videoPaused = True
+    async def runOnNext(self):
+        while not self.videoPaused:
+            self.onNext()
+            await asyncio.sleep(self.videoInterval)
 
     def onPause(self):
-        self.timer.stop()
+        self.videoPaused = True
 
     def onPrevious(self):
         self.n = max(0, self.n - 1)
         self.updateCurrentR()
         self.refresh()
 
+    lastFrameTime = 0
     def onNext(self):
+        t = process_time()
+        dt = t- self.lastFrameTime 
+        self.lastFrameTime = t
+        print(f'dt={dt:.3f}, dt0={self.videoInterval:.3f}')
         nMax = self.getNMax() - 1
         self.n = min(nMax, self.n + 1)
         if self.n == nMax:

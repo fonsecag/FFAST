@@ -190,6 +190,9 @@ class Environment(EventClass):
         return [x.fingerprint for x in ds]
         # return list(self.datasets.keys())
 
+    def datasetExists(self, key):
+        return key in self.datasets.keys()
+
     def getAllDatasets(self, subOnly=False, excludeSubs=False):
         ds = [x for x in self.datasets.values() if x.active]
         if subOnly:
@@ -227,6 +230,7 @@ class Environment(EventClass):
         key = dataset.fingerprint
         self.setNewDataset(dataset)
         logging.info(f"Dataset `{path}` successfully loaded")
+        self.lookForGhosts()
 
     def declareSubDataset(self, parent, model, idx, subName):
         subs = self.getAllDatasets(subOnly=True)
@@ -642,10 +646,14 @@ class Environment(EventClass):
         for cacheKey in self.cache.keys():
             (dataKey, modelKey, datasetKey) = cacheKey.split("__")
 
-            if modelKey not in self.models:
+            if (dataKey == 'forces' or dataKey == 'energy') \
+                and (modelKey not in self.models)\
+                and self.datasetExists(datasetKey):
                 model = GhostModelLoader(self, modelKey)
                 model.initialise()
                 self.setNewModel(modelKey, model)
+
+        print("DONE LOOKING FOR GHOSTS")
 
     def loadPrepredictedDataset(self, path, datasetKey):
         d = np.load(path, allow_pickle=True)
@@ -711,4 +719,4 @@ class Environment(EventClass):
 
             await asyncio.sleep(dt)
 
-    
+

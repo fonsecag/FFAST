@@ -222,7 +222,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
             size=1,
             spherical=True,
             scaling=True,
-            antialias=1,
+            antialias=0,
             # edge_width=0.0015,
             edge_width=0,
             light_color=(1 - l, 1 - l, 1 - l),
@@ -261,7 +261,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.n = 0
         self.updateCurrentR()
 
-    videoInterval = 0.1
+    videoInterval = 0.05
     def initialiseVideoPlayback(self):
         self.leftButton.clicked.connect(self.onPrevious)
         self.rightButton.clicked.connect(self.onNext)
@@ -420,10 +420,6 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
 
     lastFrameTime = 0
     def onNext(self):
-        t = process_time()
-        dt = t- self.lastFrameTime 
-        self.lastFrameTime = t
-        print(f'dt={dt:.3f}, dt0={self.videoInterval:.3f}')
         nMax = self.getNMax() - 1
         self.n = min(nMax, self.n + 1)
         if self.n == nMax:
@@ -635,7 +631,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
             pos=r,
             size=size,
             face_color=atomColors,
-            edge_width=0.003,
+            edge_width=0.02, # 0.003
             edge_color=ec,
         )
         self.bondsVis.visible = True  # TODO dependent on config or w/e

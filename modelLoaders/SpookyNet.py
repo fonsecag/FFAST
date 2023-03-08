@@ -90,7 +90,7 @@ class SpookyNetBatcher:
             Z = self.z[idx]
 
             yield {
-                "R": R.view(-1, 3),
+                "R": R.reshape(-1, 3),
                 "Z": Z.view(-1),
                 "Q": Q.view(-1),
                 "S": S.view(-1),

@@ -1,5 +1,4 @@
 import logging
-from UI.base import UIHandler
 from client.environment import Environment
 import qasync
 import asyncio
@@ -77,9 +76,9 @@ async def eventLoop(UI, env):
     # Temporarily putting some preliminary tasks here
     if os.path.exists("private"):
         env.taskLoadDataset(
-            "/Users/me/ownCloud/Uni/datasplitter/md22_stachyose.npz"
+            "D:/ownCloud/Uni/datasplitter/md22_stachyose.npz"
         )
-        env.taskLoadDataset("/Users/me/ownCloud/Uni/datasplitter/md22_DHA.npz")
+        env.taskLoadDataset("D:/ownCloud/Uni/datasplitter/md22_DHA.npz")
         env.taskLoad("private/saves/savetest")
         pass
 
@@ -100,6 +99,9 @@ async def eventLoop(UI, env):
 
 
 async def main():
+
+    from UI.base import UIHandler
+
     UI = UIHandler()
     UI.launch()
 
@@ -110,7 +112,6 @@ async def main():
     loadModules(UI, env)
 
     await eventLoop(UI, env)
-
 
 if __name__ == "__main__":
 

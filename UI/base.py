@@ -9,7 +9,7 @@ import time
 from Utils.uiLoader import loadUi
 from UI.sidebar import Sidebar
 import pyqtgraph as pg
-from UI.loupe import Loupe
+from UI.loupe.loupe import Loupe
 from UI.menuHandler import MenuHandler
 from PySide6.QtCore import QDir
 

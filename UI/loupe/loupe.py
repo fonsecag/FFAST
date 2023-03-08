@@ -16,8 +16,8 @@ from UI.utils import (
 )
 import ast
 from client.mathUtils import alignConfiguration
-from UI.loupeAtomSelect import BondSelect, AtomAlignSelect
-from UI.loupeAtomColorMode import AtomicColoring, ForceErrorColoring
+from UI.loupe.atomSelect import BondSelect, AtomAlignSelect
+from UI.loupe.atomColorMode import AtomicColoring, ForceErrorColoring
 from client.dataWatcher import DataWatcher
 from time import process_time
 import asyncio 

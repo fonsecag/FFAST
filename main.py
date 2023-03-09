@@ -74,7 +74,7 @@ async def eventLoop(UI, env):
     taskManager = env.tm
 
     # Temporarily putting some preliminary tasks here
-    if os.path.exists("private"):
+    if False and os.path.exists("private"):
         env.taskLoadDataset(
             "D:/ownCloud/Uni/datasplitter/md22_stachyose.npz"
         )
@@ -98,7 +98,7 @@ async def eventLoop(UI, env):
     await taskManager.eventHandle()
 
 
-async def main():
+async def mainOld():
 
     from UI.base import UIHandler
 
@@ -112,6 +112,22 @@ async def main():
     loadModules(UI, env)
 
     await eventLoop(UI, env)
+
+
+async def main():
+
+    from UI.UIHandler import UIHandler
+
+    UI = UIHandler()
+    UI.launch()
+
+    env = Environment(headless=False)
+    UI.setEnvironment(env)
+
+    # loadModules(UI, env)
+
+    await eventLoop(UI, env)
+
 
 if __name__ == "__main__":
 

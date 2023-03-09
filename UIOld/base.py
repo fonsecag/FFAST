@@ -102,6 +102,9 @@ class UIHandler(EventClass):
         app.setApplicationDisplayName("FFAST")
         app.setQuitOnLastWindowClosed(False)
 
+        # Load icons
+        QDir.addSearchPath("icon", "theme")
+
         window = MainWindow(self)
         window.show()
         window.resize(1800, 1200)
@@ -114,9 +117,6 @@ class UIHandler(EventClass):
         styleSheet = self.applyConfigToStyleSheet(styleSheet)
 
         app.setStyleSheet(styleSheet)
-
-        # Load icons
-        QDir.addSearchPath("icon", "theme")
 
         self.window = window
         self.app = app

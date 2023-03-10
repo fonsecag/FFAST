@@ -19,6 +19,7 @@ config = {
         "TextColorHover": "#dbdde4",
     },
     "icons": defaultdict(lambda : "default.png"),
+    "borderDragSize":5,
 }
 
 config['icons'].update(

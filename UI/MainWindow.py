@@ -1,7 +1,8 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import QEvent
-from UI.Templates import MenuButton, FramelessResizableWindow, MenuBar
+from UI.Templates import MenuButton, FramelessResizableWindow, MenuBar, Widget
 from config.uiConfig import configStyleSheet
+from UI.SideBar import SideBar
 
 class Color(QtWidgets.QWidget):
 
@@ -21,24 +22,31 @@ class MainWindow(FramelessResizableWindow):
         self.handler = handler
         self.setWindowTitle("FFAST")
 
-        # icon = QtGui.QIcon("tempIcon.png")
-        # self.setWindowIcon(icon)
         self.setFocus()
         self.setGeometry(200, 200, 800, 600)
-        # self.window = QtWidgets.QWidget()
 
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0,0,0,0)
         self.setLayout(self.layout)
 
-        # self.setCentralWidget(self.window)
-
         self.menuBar = MenuBar(handler, self)
         self.menuBar.onClose = self.handler.quitEvent
         self.layout.addWidget(self.menuBar)
-        self.layout.addWidget(Color("blue"))
-        self.layout.addWidget(Color("blue"))
+
+        self.mainContainer = Widget()
+        self.containerLayout = QtWidgets.QHBoxLayout()
+        self.mainContainer.setLayout(self.containerLayout)
+        self.containerLayout.setContentsMargins(0,0,0,0)
+        self.containerLayout.setSpacing(0)
+        self.layout.addWidget(self.mainContainer)
+
+        self.sideBar = SideBar(self.handler)
+        self.containerLayout.addWidget(self.sideBar)
+
+        self.mainWidget = Widget(layout='vertical', color = '@BGColor2')
+        self.mainLayout = self.mainWidget.layout
+        self.containerLayout.addWidget(self.mainWidget)
 
         self.setupMenuBar()
 

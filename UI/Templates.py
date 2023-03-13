@@ -2,9 +2,43 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from config.uiConfig import config, configStyleSheet
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import QWidget, QApplication
-from config.uiConfig import config
+from config.uiConfig import config, getIcon
+from PySide6.QtWidgets import QSizePolicy
 
 BORDER_DRAG_SIZE = config['borderDragSize']
+WIDGET_ID = 0
+
+class Widget(QWidget):
+
+    def __init__(self, layout = None, color = None):
+        super().__init__()
+        global WIDGET_ID
+        self.setMouseTracking(True)
+        self.id = WIDGET_ID
+        self.objectName = f'WIDGET_{self.id}'
+        WIDGET_ID += 1
+        self.setObjectName(self.objectName)
+
+        if layout == 'vertical':
+            self.layout = QtWidgets.QVBoxLayout()
+        elif layout == 'horizontal':
+            self.layout = QtWidgets.QHBoxLayout()
+
+        if layout == 'vertical' or layout == 'horizontal':
+            self.setLayout(self.layout)
+            self.layout.setContentsMargins(0,0,0,0)
+            self.layout.setSpacing(0)
+        
+
+        if color is not None:
+            self.setAttribute(Qt.WA_StyledBackground, True)
+            styleSheet = '''
+                QWidget#__ID__{
+                background-color:__COLOR__;
+                }
+            '''.replace('__ID__', self.objectName).replace("__COLOR__", color)
+            self.setStyleSheet(configStyleSheet(styleSheet))
+
 
 class MenuButton(QtWidgets.QPushButton):
 
@@ -19,14 +53,13 @@ class MenuButton(QtWidgets.QPushButton):
     def addAction(self, *args):
         self.menu.addAction(*args)
 
-class MovingHandle(QWidget):
+class MovingHandle(Widget):
 
     _mousePressed = False
 
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
-        self.setMouseTracking(True)
 
     def mousePressEvent(self, event):
         self._mousePressed = True
@@ -43,7 +76,7 @@ class MovingHandle(QWidget):
         window.move(window.x() + delta.x(), window.y() + delta.y())
         self.oldPos = event.globalPos()
 
-class MenuBar(QWidget):
+class MenuBar(Widget):
 
     def __init__(self, handler, parent):
         super().__init__()
@@ -60,9 +93,7 @@ class MenuBar(QWidget):
         self.layout = QtWidgets.QHBoxLayout()
         self.window.setLayout(self.layout)        
         self.layout.setContentsMargins(0,0,0,BORDER_DRAG_SIZE)
-        self.setMaximumHeight(30)
-
-        self.setMouseTracking(True)
+        self.setMaximumHeight(40)
 
         self.layout.addStretch()
 
@@ -76,11 +107,12 @@ class MenuBar(QWidget):
             }
         '''
         self.setStyleSheet(configStyleSheet(styleSheet))
+        self.parentWidget = parent
 
     def closeFunc(self):
         if hasattr(self, "onClose"):
             self.onClose()
-        self.parent.close()
+        self.parentWidget.close()
 
     def sizeHint(self):
         return QtCore.QSize(super().sizeHint().width(),self.maximumHeight())
@@ -92,10 +124,10 @@ class ToolButton(QtWidgets.QToolButton):
         self.handler = handler
         super().__init__()
         self.clicked.connect(func)
-        icon = config['icons'][icon]
-        self.setIcon(QtGui.QIcon(f'icon:{icon}'))
+        icon = getIcon(icon)
+        self.setIcon(QtGui.QIcon(icon))
 
-class FramelessResizableWindow(QWidget):
+class FramelessResizableWindow(Widget):
 
     _mouseButtonPressed = False
     _dragTop = False
@@ -108,8 +140,6 @@ class FramelessResizableWindow(QWidget):
 
         self.setWindowFlag(Qt.FramelessWindowHint)
         self._startGeometry = self.geometry()
-
-        self.setMouseTracking(True)
 
         self.installEventFilter(self)
 
@@ -218,3 +248,71 @@ class FramelessResizableWindow(QWidget):
         return QWidget.eventFilter(self, obj, event)
     
 
+done = False
+class CollapsibleWidget(Widget):
+
+    def __init__(self, handler, name = 'N/A', titleHeight = 25):
+        super().__init__(layout = 'vertical')
+        self.handler = handler
+        self.titleHeight = titleHeight
+
+        # make title button
+        self.titleButton = QtWidgets.QPushButton(name)
+        self.titleButton.setObjectName("collapseButton") # for styling
+        self.titleButton.setFixedHeight(self.titleHeight)
+
+        self.titleButton.setIcon(QtGui.QIcon(getIcon("expanded")))
+        self.layout.addWidget(self.titleButton)
+
+
+        self.scrollArea = QtWidgets.QScrollArea()
+        self.scrollWidget = Widget(layout='vertical', color = 'green')
+        self.scrollArea.setWidgetResizable(True)
+
+        # self.scrollArea.setMaximumHeight(10000)
+        # self.scrollWidget.setMaximumHeight(10000)
+
+        # self.scrollArea.setWidget(self.scrollWidget)
+        # self.layout.addWidget(self.scrollArea)
+        self.scrollLayout = self.scrollWidget.layout
+        self.layout.addWidget(self.scrollWidget)
+
+        # for some reason gotta set a minimum height for expanding to work
+        # see https://doc.qt.io/qtforpython/PySide6/QtWidgets/QScrollArea.html
+        # "Size Hints and Layouts":
+        # "If a standard QWidget is used for the child widget, it may be necessary to call setMinimumSize() to ensure that the contents of the widget are shown correctly within the scroll area."
+        # self.scrollWidget.setMinimumHeight(40)
+
+        self.scrollArea.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # self.scrollWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        global done
+        if not done:
+            for i in range(20):
+                dial = QtWidgets.QDial()
+                dial.setFixedHeight(55)
+                self.scrollLayout.addWidget(dial)
+
+            done = True
+
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        self.setExpanded()
+        
+        self.titleButton.clicked.connect(self.onClick)
+
+    def sizeHint(self):
+        return QtCore.QSize(super().sizeHint().width(),super().sizeHint().height())
+
+    def setCollapsed(self):
+        self.expanded = False
+        self.scrollArea.hide()
+
+    def setExpanded(self):
+        self.expanded = True
+        self.scrollArea.show()
+
+    def onClick(self):
+        if self.expanded:
+            self.setCollapsed()
+        else:
+            self.setExpanded()

@@ -228,6 +228,17 @@ QPushButton:flat {
   font-weight: bold;
 }
 
+QPushButton#collapseButton { 
+  margin: 0px;
+  color: @TextColor1;
+  border: none;
+  background-color: @BGColor3;
+  padding-left: 2px;
+  font-weight: bold;
+  border-radius: 0px;
+  text-align: left;
+}
+
 QPushButton:flat:pressed,
 QPushButton:flat:checked,
 QPushButton:flat:hover {

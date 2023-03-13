@@ -18,10 +18,13 @@ config = {
         "TextColor2": "#ffffff",
         "TextColorHover": "#dbdde4",
     },
-    "icons": defaultdict(lambda : "default.png"),
+    "icons": {
+        "close":"close.png"
+    },
     "borderDragSize":5,
 }
 
-config['icons'].update(
-    {"close":"close.png"}
-)
+
+def getIcon(name):
+    icon = config['icons'].get(name,"default.png")
+    return f'icon:{icon}'

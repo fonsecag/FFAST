@@ -27,15 +27,16 @@ def loadUI(UIHandler, env):
             self.setXLabel("True MA Force", "kcal/mol A")
             self.setYLabel("Predicted MA Force", "kcal/mol A")
 
+        # TODO random? idk, worst?
         def addPlots(self):
             for x in self.getWatchedData():
                 de = x["dataEntry"]
                 fPred = de.get()
                 dataset = x["dataset"]
-                fTrue = dataset.getForces()
+                fTrue = dataset.getForces()[:10000]
 
                 self.plot(
-                    fTrue.flatten(), fPred.flatten(), scatter=True, symbol="o"
+                    fTrue.flatten()[:10000], fPred.flatten()[:10000], scatter=True, symbol="o"
                 )
 
 

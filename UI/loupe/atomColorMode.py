@@ -12,8 +12,8 @@ class AtomColoringModeBase:
     hasColorBar = False
     colorMap = None
     colorBarVisible = False
-    minValue = ""
-    maxValue = ""
+    minValue = 0
+    maxValue = 0
     label = ""
 
     def onGeometryUpdate(self):
@@ -23,7 +23,6 @@ class AtomColoringModeBase:
         pass
 
     def updateColorBar(self, minValue=None, maxValue=None, label=None):
-
         if minValue is not None:
             self.minValue = minValue
         if maxValue is not None:
@@ -34,12 +33,14 @@ class AtomColoringModeBase:
             self.colorBarVisible
             and (self.hasColorBar)
             and (self.colorMap is not None)
-        ):
+        ):  
+            maxV = f'{self.maxValue:.2f}'
+            minV = f'{self.minValue:.2f}'
             if self.loupe.colorBar is None:
                 cb = ColorBarVisual(
                     orientation="right",
                     cmap=self.colorMap,
-                    clim=(self.minValue, self.maxValue),
+                    clim=(minV, maxV),
                     label_color="lightgray",
                     label=self.label,
                     parent=self.loupe.scene,
@@ -47,14 +48,12 @@ class AtomColoringModeBase:
                 )
                 self.colorBar = cb
                 self.loupe.colorBar = cb
-
             else:
                 self.loupe.showColorBar()
                 cb = self.loupe.colorBar
                 cb.visual.cmap = self.colorMap
-                cb.visual.clim = (self.minValue, self.maxValue)
+                cb.visual.clim = (minV, maxV)
                 cb.onUpdate()
-
         else:
             self.loupe.hideColorBar()
 
@@ -79,7 +78,7 @@ class AtomicColoring(AtomColoringModeBase):
 
 
 class ForceErrorColoring(AtomColoringModeBase):
-    def __init__(self, loupe):
+    def __init__(self, loupe, average = True):
         super().__init__(loupe)
         self.atomColors = None
         # self.colorGradient = ColorGradient((0.1,0.9,0.1),(0.9,0.9,0.1),(0.5,0.1,0.1),(0.9,0.1,0.1))
@@ -91,6 +90,7 @@ class ForceErrorColoring(AtomColoringModeBase):
                 (0.9, 0.1, 0.1),
             ]
         )
+        self.average = average
 
     hasColorBar = True
 
@@ -112,8 +112,12 @@ class ForceErrorColoring(AtomColoringModeBase):
             self.atomColors = None
             return
 
-        d = err.get()[self.loupe.getCurrentIndex()]
-        d = np.mean(np.abs(d), axis=1)
+        if self.average:
+            d = self.fixedValues
+        else:
+            d = err.get()[self.loupe.getCurrentIndex()]
+            d = np.mean(np.abs(d), axis=1)
+        d = (d - self.minValue) / (self.maxValue - self.minValue)
         colors = self.colorMap[d]
         self.atomColors = colors
 
@@ -136,11 +140,15 @@ class ForceErrorColoring(AtomColoringModeBase):
         err = env.getData("forcesError", dataset=dataset, model=model)
         if err is not None:
             d = np.mean(np.abs(err.get()), axis=2)
+            if self.average:
+                d = np.mean(d, axis = 0)
+                self.fixedValues = d
             self.maxValue = np.max(d)
+            self.minValue = np.min(d)
             self.colorBarVisible = True
             self.updateColorBar(
-                minValue=0,
-                maxValue=f"{self.maxValue:.2f}",
+                minValue=self.minValue,
+                maxValue=self.maxValue,
                 label="Force MAE [kcal/mol A]",
             )
         else:

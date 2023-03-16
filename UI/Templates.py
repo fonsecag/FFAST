@@ -270,7 +270,7 @@ class ExpandingScrollArea(QtWidgets.QScrollArea):
 done = False
 class CollapsibleWidget(Widget):
 
-    def __init__(self, handler, name = 'N/A', titleHeight = 25):
+    def __init__(self, handler, name = 'N/A', titleHeight = 25, widget = None):
         super().__init__(layout = 'vertical')
         self.handler = handler
         self.titleHeight = titleHeight
@@ -283,12 +283,16 @@ class CollapsibleWidget(Widget):
         self.titleButton.setIcon(QtGui.QIcon(getIcon("expanded")))
         self.layout.addWidget(self.titleButton)
 
+        if widget is None:
+            self.scrollWidget = Widget(layout='vertical')
+            self.scrollLayout = self.scrollWidget.layout
+        else:
+            self.scrollWidget = widget
+
         self.scrollArea = ExpandingScrollArea()
-        self.scrollWidget = Widget(layout='vertical')
         self.scrollArea.setContent(self.scrollWidget)
 
         self.layout.addWidget(self.scrollArea)
-        self.scrollLayout = self.scrollWidget.layout
 
         self.setExpanded()
    
@@ -310,3 +314,22 @@ class CollapsibleWidget(Widget):
             self.setCollapsed()
         else:
             self.setExpanded()
+
+class ContentBar(Widget):
+    def __init__(self, handler):
+        super().__init__(color = "@BGColor1")
+        self.handler = handler
+
+        self.layout = QtWidgets.QVBoxLayout()
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0,0,0,0)
+        self.setLayout(self.layout)
+
+        self.setFixedWidth(300)
+        self.layout.addStretch()
+
+    def addContent(self, name, widget = None):
+        content = CollapsibleWidget(self.handler, name = name, widget = widget)
+        self.layout.insertWidget(self.layout.count() - 1, content)
+
+

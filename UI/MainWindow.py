@@ -4,6 +4,8 @@ from UI.Templates import MenuButton, FramelessResizableWindow, MenuBar, Widget
 from config.uiConfig import configStyleSheet
 from UI.SideBar import SideBar
 
+# from qframelesswindow import FramelessWindow
+
 class Color(QtWidgets.QWidget):
 
     def __init__(self, color):
@@ -16,7 +18,7 @@ class Color(QtWidgets.QWidget):
 
         self.setMouseTracking(True)
 
-class MainWindow(FramelessResizableWindow):
+class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, handler):
         super().__init__()
         self.handler = handler
@@ -30,16 +32,12 @@ class MainWindow(FramelessResizableWindow):
         self.layout.setContentsMargins(0,0,0,0)
         self.setLayout(self.layout)
 
-        self.menuBar = MenuBar(handler, self)
-        self.menuBar.onClose = self.handler.quitEvent
-        self.layout.addWidget(self.menuBar)
-
-        self.mainContainer = Widget()
-        self.containerLayout = QtWidgets.QHBoxLayout()
-        self.mainContainer.setLayout(self.containerLayout)
-        self.containerLayout.setContentsMargins(0,0,0,0)
-        self.containerLayout.setSpacing(0)
-        self.layout.addWidget(self.mainContainer)
+        self.mainContainer = Widget(layout='horizontal')
+        # self.layout.addWidget(self.mainContainer)
+        self.setCentralWidget(self.mainContainer)
+        self.containerLayout = self.mainContainer.layout
+        # self.containerLayout.setContentsMargins(0,0,0,0)
+        # self.containerLayout.setSpacing(0)
 
         self.sideBar = SideBar(self.handler)
         self.containerLayout.addWidget(self.sideBar)
@@ -48,9 +46,21 @@ class MainWindow(FramelessResizableWindow):
         self.mainLayout = self.mainWidget.layout
         self.containerLayout.addWidget(self.mainWidget)
 
-        self.setupMenuBar()
+        # self.setupMenuBar()
 
-    def setupMenuBar(self):
+    def setTitleBar(self, titleBar):
+        """ set custom title bar
+        Parameters
+        ----------
+        titleBar: TitleBar
+            title bar
+        """
+        self.titleBar.deleteLater()
+        self.titleBar = titleBar
+        self.titleBar.setParent(self)
+        self.titleBar.raise_()
+
+    def setupMenuBarOld(self):
         layout = self.menuBar.layout
 
         # MENU BUTTON 1
@@ -59,6 +69,14 @@ class MainWindow(FramelessResizableWindow):
 
         mb1.addAction("test")
         mb1.addAction("test2", lambda:print("test"), "Ctrl+n")
+
+    def setupMenuBar(self):
+        mb = self.menuBar()
+        file =  mb.addMenu("&File")
+        file.addAction("hello", self.exit)
+
+    def exit(self):
+        self.close()
 
     def closeEvent(self, event):
         self.handler.quitEvent()

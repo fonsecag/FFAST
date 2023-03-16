@@ -4,6 +4,7 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import QDir
 import pyqtgraph 
 from UI.MainWindow import MainWindow
+import os
 
 class UIHandler(EventClass):
     """
@@ -53,7 +54,7 @@ class UIHandler(EventClass):
         self.env = env
 
     def launch(self):
-
+        
         from config.uiConfig import config, configStyleSheet
 
         self.config = config
@@ -87,6 +88,7 @@ class UIHandler(EventClass):
         self.app = app
         self.mainWindow = window
 
+      
         self.initialisePlotConfigs()
 
     def initialisePlotConfigs(self):

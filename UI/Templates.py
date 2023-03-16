@@ -247,6 +247,25 @@ class FramelessResizableWindow(Widget):
 
         return QWidget.eventFilter(self, obj, event)
     
+class ExpandingScrollArea(QtWidgets.QScrollArea):
+    def __init__(self):
+        super().__init__()
+        self.setWidgetResizable(True)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.setMaximumHeight(0)
+        self.setMinimumHeight(0)
+
+    contentWidget = None
+    def setContent(self, widget):
+        self.setWidget(widget)
+        self.contentWidget = widget
+        self.setMaximumHeight(16777215)
+
+    def sizeHint(self):
+        h = 0
+        if self.contentWidget is not None:
+            h = self.contentWidget.height()
+        return QtCore.QSize(super().sizeHint().width(),h)
 
 done = False
 class CollapsibleWidget(Widget):
@@ -264,40 +283,15 @@ class CollapsibleWidget(Widget):
         self.titleButton.setIcon(QtGui.QIcon(getIcon("expanded")))
         self.layout.addWidget(self.titleButton)
 
+        self.scrollArea = ExpandingScrollArea()
+        self.scrollWidget = Widget(layout='vertical')
+        self.scrollArea.setContent(self.scrollWidget)
 
-        self.scrollArea = QtWidgets.QScrollArea()
-        self.scrollWidget = Widget(layout='vertical', color = 'green')
-        self.scrollArea.setWidgetResizable(True)
-
-        # self.scrollArea.setMaximumHeight(10000)
-        # self.scrollWidget.setMaximumHeight(10000)
-
-        # self.scrollArea.setWidget(self.scrollWidget)
-        # self.layout.addWidget(self.scrollArea)
+        self.layout.addWidget(self.scrollArea)
         self.scrollLayout = self.scrollWidget.layout
-        self.layout.addWidget(self.scrollWidget)
 
-        # for some reason gotta set a minimum height for expanding to work
-        # see https://doc.qt.io/qtforpython/PySide6/QtWidgets/QScrollArea.html
-        # "Size Hints and Layouts":
-        # "If a standard QWidget is used for the child widget, it may be necessary to call setMinimumSize() to ensure that the contents of the widget are shown correctly within the scroll area."
-        # self.scrollWidget.setMinimumHeight(40)
-
-        self.scrollArea.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        # self.scrollWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        global done
-        if not done:
-            for i in range(20):
-                dial = QtWidgets.QDial()
-                dial.setFixedHeight(55)
-                self.scrollLayout.addWidget(dial)
-
-            done = True
-
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         self.setExpanded()
-        
+   
         self.titleButton.clicked.connect(self.onClick)
 
     def sizeHint(self):

@@ -130,7 +130,6 @@ async def main():
 
 
 if __name__ == "__main__":
-
     logger = logging.getLogger("FFAST")
 
     setupLogger()

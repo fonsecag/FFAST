@@ -29,9 +29,9 @@ class SideBar(Widget):
     def setupContent(self):
         # dataset
         self.datasetsWidget = CollapsibleWidget(self.handler, name = 'DATASETS')
-        self.layout.addWidget(self.datasetsWidget) 
+        self.layout.addWidget(self.datasetsWidget)
 
         self.modelsWidget = CollapsibleWidget(self.handler, name = 'MODELS')
-        self.layout.addWidget(self.modelsWidget) 
+        self.layout.addWidget(self.modelsWidget)
 
         self.layout.addStretch()

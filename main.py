@@ -74,12 +74,10 @@ async def eventLoop(UI, env):
     taskManager = env.tm
 
     # Temporarily putting some preliminary tasks here
-    if False and os.path.exists("private"):
-        env.taskLoadDataset(
-            "D:/ownCloud/Uni/datasplitter/md22_stachyose.npz"
-        )
-        env.taskLoadDataset("D:/ownCloud/Uni/datasplitter/md22_DHA.npz")
-        env.taskLoad("private/saves/savetest")
+    if True and os.path.exists("private"):
+        env.taskLoadDataset("private/ethanol_spl_100.npz")
+        env.taskLoadDataset("private/ethanol_spl_200.npz")
+        env.taskLoadModel("private/ethanol_def_1000.npz")
         pass
 
     # env.newTask(nh.taskWatchDog, name="TaskWatchDog", visual=True)

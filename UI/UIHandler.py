@@ -80,7 +80,6 @@ class UIHandler(EventClass):
             styleSheet = configStyleSheet(styleSheet)
             app.setStyleSheet(styleSheet)
 
-
         window = MainWindow(self)
         window.show()
 
@@ -88,7 +87,6 @@ class UIHandler(EventClass):
         self.app = app
         self.mainWindow = window
 
-      
         self.initialisePlotConfigs()
 
     def initialisePlotConfigs(self):

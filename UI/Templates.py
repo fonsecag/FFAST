@@ -4,9 +4,12 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import QWidget, QApplication
 from config.uiConfig import config, getIcon
 from PySide6.QtWidgets import QSizePolicy
+import logging
 
 BORDER_DRAG_SIZE = config['borderDragSize']
 WIDGET_ID = 0
+
+logger = logging.getLogger("FFAST")
 
 class Widget(QWidget):
 
@@ -332,4 +335,23 @@ class ContentBar(Widget):
         content = CollapsibleWidget(self.handler, name = name, widget = widget)
         self.layout.insertWidget(self.layout.count() - 1, content)
 
+class ObjectListItem(Widget):
+    def __init__(self, handler, id, color = None, layout = 'vertical'):
+        self.handler = handler
+        self.objectID = id
+        super().__init__(color = color, layout = layout)
 
+class ObjectList(Widget):
+    def __init__(self, handler, widgetType, color = None):
+        super().__init__(color=color, layout = 'vertical')
+        self.handler = handler
+        self.widgetType = widgetType
+        self.widgets = {}
+
+    def newObject(self, id, **kwargs):
+        if id in self.widgets:
+            logger.error(f'ID {id} already exists for ObjectList {self} and widgetType {self.widgetType}.')
+            return
+        w = self.widgetType(self.handler, id, **kwargs)
+        self.widgets[id] = w
+        self.layout.addWidget(w)

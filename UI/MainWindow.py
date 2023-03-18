@@ -1,6 +1,6 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import QEvent
-from UI.Templates import MenuButton, FramelessResizableWindow, MenuBar, Widget
+from UI.Templates import Widget
 from config.uiConfig import configStyleSheet
 from UI.SideBar import SideBar
 
@@ -32,17 +32,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.layout.setContentsMargins(0,0,0,0)
         self.setLayout(self.layout)
 
-        self.mainContainer = Widget(layout='horizontal')
+        self.mainContainer = Widget(layout='horizontal', parent = None)
         # self.layout.addWidget(self.mainContainer)
         self.setCentralWidget(self.mainContainer)
         self.containerLayout = self.mainContainer.layout
         # self.containerLayout.setContentsMargins(0,0,0,0)
         # self.containerLayout.setSpacing(0)
 
-        self.sideBar = SideBar(self.handler)
+        self.sideBar = SideBar(self.handler, parent = self)
         self.containerLayout.addWidget(self.sideBar)
 
-        self.mainWidget = Widget(layout='vertical', color = '@BGColor2')
+        self.mainWidget = Widget(layout='vertical', color = '@BGColor2', parent = self)
         self.mainLayout = self.mainWidget.layout
         self.containerLayout.addWidget(self.mainWidget)
 
@@ -59,16 +59,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.titleBar = titleBar
         self.titleBar.setParent(self)
         self.titleBar.raise_()
-
-    def setupMenuBarOld(self):
-        layout = self.menuBar.layout
-
-        # MENU BUTTON 1
-        mb1 = MenuButton("File")
-        layout.insertWidget(0, mb1)
-
-        mb1.addAction("test")
-        mb1.addAction("test2", lambda:print("test"), "Ctrl+n")
 
     def setupMenuBar(self):
         mb = self.menuBar()

@@ -5,7 +5,6 @@ import os
 
 class MenuHandler(EventClass):
     def __init__(self, handler):
-
         self.handler = handler
         self.window = handler.window
         self.connectActions()

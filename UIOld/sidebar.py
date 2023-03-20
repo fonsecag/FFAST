@@ -58,7 +58,6 @@ class TaskWidget(QtWidgets.QWidget):
 
 class LoaderWidget(EventChildClass, QtWidgets.QWidget):
     def __init__(self, handler, loadee, *args, **kwargs):
-
         self.loadee = loadee
         self.handler = handler
         self.loadeeType = loadee.loadeeType
@@ -289,7 +288,6 @@ class Sidebar(EventChildClass, QtWidgets.QWidget):
     tasks = {}
 
     def onTaskCreated(self, taskID):
-
         task = self.handler.env.getTask(taskID)
 
         if not task["visual"]:
@@ -301,7 +299,6 @@ class Sidebar(EventChildClass, QtWidgets.QWidget):
         self.tasks[taskID] = taskWidget
 
     def onTaskDone(self, taskID):
-
         if taskID not in self.tasks:
             return
 

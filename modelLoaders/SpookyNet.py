@@ -28,7 +28,6 @@ class SpookyNetBatcher:
 
         nidx_i, nidx_j, segs = [], [], []
         for i in range(N):
-
             i_batch = i % self.batchSize
             na_total_batch = i_batch * nA
 
@@ -105,7 +104,6 @@ class SpookyNetBatcher:
 
 
 class SpookyNetModelLoader(ModelLoader):
-
     singlePredict = True
 
     def __init__(self, env, path):
@@ -130,13 +128,12 @@ class SpookyNetModelLoader(ModelLoader):
         return fp
 
     def predict(self, dataset, indices=None, batchSize=50, taskID=None):
-
         R = dataset.getCoordinates()
         if indices is not None:
             R = R[indices]
 
         batcher = SpookyNetBatcher(
-            R, dataset.getElements(), batchSize=batchSize, cutoff=self.cutoff,
+            R, dataset.getElements(), batchSize=batchSize, cutoff=self.cutoff
         )
 
         E, F, i = [], [], 0

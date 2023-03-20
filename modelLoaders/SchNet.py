@@ -27,7 +27,7 @@ class SchNetModelLoader(ModelLoader):
 
         self.model = torch.load(path, map_location=torch.device("cpu"))
         self.model.requires_stress = False
-        for (name, mod) in self.model.named_modules():
+        for name, mod in self.model.named_modules():
             if isinstance(mod, schnetpack.atomistic.output_modules.Atomwise):
                 mod.stress = None
 
@@ -80,7 +80,7 @@ class SchNetModelLoader(ModelLoader):
 
         # molecules = schnetpack.AtomsData(molecules)
         loader = schnetpack.AtomsLoader(d, batch_size=10)
-        for (count, batch) in enumerate(loader):
+        for count, batch in enumerate(loader):
             results = self.model(batch)
             e = results["energy"].detach().cpu().numpy()
             f = results["forces"].detach().cpu().numpy()

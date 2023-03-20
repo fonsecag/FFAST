@@ -6,8 +6,8 @@ from UI.SideBar import SideBar
 
 # from qframelesswindow import FramelessWindow
 
-class Color(QtWidgets.QWidget):
 
+class Color(QtWidgets.QWidget):
     def __init__(self, color):
         super(Color, self).__init__()
         self.setAutoFillBackground(True)
@@ -17,6 +17,7 @@ class Color(QtWidgets.QWidget):
         self.setPalette(palette)
 
         self.setMouseTracking(True)
+
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, handler):
@@ -29,27 +30,29 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
 
-        self.mainContainer = Widget(layout='horizontal', parent = None)
+        self.mainContainer = Widget(layout="horizontal", parent=None)
         # self.layout.addWidget(self.mainContainer)
         self.setCentralWidget(self.mainContainer)
         self.containerLayout = self.mainContainer.layout
         # self.containerLayout.setContentsMargins(0,0,0,0)
         # self.containerLayout.setSpacing(0)
 
-        self.sideBar = SideBar(self.handler, parent = self)
+        self.sideBar = SideBar(self.handler, parent=self)
         self.containerLayout.addWidget(self.sideBar)
 
-        self.mainWidget = Widget(layout='vertical', color = '@BGColor2', parent = self)
+        self.mainWidget = Widget(
+            layout="vertical", color="@BGColor2", parent=self
+        )
         self.mainLayout = self.mainWidget.layout
         self.containerLayout.addWidget(self.mainWidget)
 
         # self.setupMenuBar()
 
     def setTitleBar(self, titleBar):
-        """ set custom title bar
+        """set custom title bar
         Parameters
         ----------
         titleBar: TitleBar
@@ -62,7 +65,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setupMenuBar(self):
         mb = self.menuBar()
-        file =  mb.addMenu("&File")
+        file = mb.addMenu("&File")
         file.addAction("hello", self.exit)
 
     def exit(self):

@@ -69,7 +69,6 @@ class NathHorthath(EventClass):
 
 
 async def eventLoop(UI, env):
-
     nh = NathHorthath(env)
     taskManager = env.tm
 
@@ -97,7 +96,6 @@ async def eventLoop(UI, env):
 
 
 async def mainOld():
-
     from UI.base import UIHandler
 
     UI = UIHandler()
@@ -113,7 +111,6 @@ async def mainOld():
 
 
 async def main():
-
     from UI.UIHandler import UIHandler
 
     UI = UIHandler()

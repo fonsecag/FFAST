@@ -18,7 +18,6 @@ import numpy as np
 # https://www.geeksforgeeks.org/pyqt5-adding-action-to-combobox-with-checkable-items/
 # new check-able combo box
 class CheckableComboBox(QComboBox):
-
     # constructor
     def __init__(self, parent=None):
         super(CheckableComboBox, self).__init__(parent)
@@ -44,7 +43,6 @@ class CheckableComboBox(QComboBox):
 
     # when any item get pressed
     def handleItemPressed(self, index):
-
         index = index.row()
         key = self.cbKeys[index]
 
@@ -272,7 +270,6 @@ class DataLoaderButton(EventChildClass, QPushButton):
     lastUpdatedTimestamp = -1
 
     def onWidgetRefresh(self, widget):
-
         if self is not widget:
             return
 

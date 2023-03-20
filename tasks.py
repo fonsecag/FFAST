@@ -36,7 +36,7 @@ class TaskManager(EventClass):
 
     async def quit(self):
         tasks = []
-        for (k, v) in self.runningTasks.items():
+        for k, v in self.runningTasks.items():
             await self.cancelTask(k)
             tasks.append(v["task"])
 
@@ -158,7 +158,6 @@ class TaskManager(EventClass):
         self.eventPush("TASK_CREATED", taskID)
 
     def handleTaskResult(self, task):
-
         # https://quantlane.com/blog/ensure-asyncio-task-exceptions-get-logged/
         try:
             task.result()

@@ -23,7 +23,6 @@ class AtomColoringModeBase:
         pass
 
     def updateColorBar(self, minValue=None, maxValue=None, label=None):
-
         if minValue is not None:
             self.minValue = minValue
         if maxValue is not None:

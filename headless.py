@@ -3,7 +3,6 @@ from Utils.misc import setupLogger
 
 
 async def main(env):
-
     # m1path, m2path = "private/neq_stachyose_1000.pth", "private/neq_DHA_1000.pth"
     # env.taskLoadModel(m1path)
     # env.taskLoadModel(m2path)

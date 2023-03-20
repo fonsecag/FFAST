@@ -120,7 +120,6 @@ class DataWatcher(EventChildClass):
         self.setDatasetDependencies(*self.datasetDependencies.copy())
 
     def refreshDependencyList(self, *args):
-
         # args because event
         self.dependencyList = []
         env = self.env
@@ -183,7 +182,6 @@ class DataWatcher(EventChildClass):
         self.refreshWidgets.append(widget)
 
     def refresh(self):
-
         missingKeys = self.getMissingDependencies()
         self.currentlyMissingKeys = missingKeys
 
@@ -219,7 +217,6 @@ class DataWatcher(EventChildClass):
 
         for key in self.dependencyList:
             if env.hasCacheKey(key):
-
                 if dataOnly:
                     allData.append(env.getCacheByKey(key))
                 else:

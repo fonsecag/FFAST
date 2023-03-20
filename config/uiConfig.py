@@ -1,10 +1,12 @@
 from collections import defaultdict
 
+
 def configStyleSheet(sheet):
-    for (key, value) in config["envs"].items():
+    for key, value in config["envs"].items():
         sheet = sheet.replace(f"@{key}", value)
 
     return sheet
+
 
 config = {
     "envs": {
@@ -19,12 +21,14 @@ config = {
         "TextColorHover": "#dbdde4",
     },
     "icons": {
-        "close":"close.png"
+        "close": "close.png",
+        "expanded": "expanded.png",
+        "collapsed": "collapsed.png",
     },
-    "borderDragSize":5,
+    "borderDragSize": 5,
 }
 
 
 def getIcon(name):
-    icon = config['icons'].get(name,"default.png")
-    return f'icon:{icon}'
+    icon = config["icons"].get(name, "default.png")
+    return f"icon:{icon}"

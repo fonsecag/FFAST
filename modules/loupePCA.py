@@ -9,7 +9,6 @@ logger = logging.getLogger("FFAST")
 
 def loadData(env):
     class DatasetKernelPCA3(DataType):
-
         modelDependent = False
         datasetDependent = True
         key = "kpca3"
@@ -42,7 +41,6 @@ def loadData(env):
 
 
 def loadUI(UIHandler, env):
-
     from UI.plots import LoupePlot
 
     class LoupeKPCA3Plot(LoupePlot):

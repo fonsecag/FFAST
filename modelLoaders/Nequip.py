@@ -6,7 +6,6 @@ import torch
 
 
 class NequipModelLoader(ModelLoaderACE):
-
     singlePredict = True
     modelName = "Nequip"
 

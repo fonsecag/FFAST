@@ -44,7 +44,7 @@ def runHeadless(func):
     env = Environment()
     loadModules(None, env, headless=True)
 
-    tasks = asyncio.gather(headlessEventLoop(env), funcWrapper(env),)
+    tasks = asyncio.gather(headlessEventLoop(env), funcWrapper(env))
 
     loop.run_until_complete(tasks)
 
@@ -275,7 +275,6 @@ class Environment(EventClass):
         isComponent=False,
         componentParent=None,
     ):
-
         # for models that predict energies and forces at the same time (e.g. sGDML)
         # convert force tasks to energy tasks to avoid duplicates
         if (
@@ -328,7 +327,6 @@ class Environment(EventClass):
             )
 
     def onTaskDone(self, taskID):
-
         if taskID in self.queuedTasks:
             self.queuedTasks.remove(taskID)
 
@@ -415,7 +413,7 @@ class Environment(EventClass):
         for dataset in self.getAllDatasets(excludeSubs=True):
             if dataset.path == path:
                 return dataset.fingerprint
-        
+
         for model in self.getAllModels():
             if model.path == path:
                 return model.fingerprint
@@ -423,7 +421,6 @@ class Environment(EventClass):
         return None
 
     async def handleGenerationQueue(self, *args):
-
         queue = self.generationQueue
 
         if len(queue) == 0:
@@ -460,7 +457,7 @@ class Environment(EventClass):
                             key
                         ] = cacheKey  # indicates the parent key
 
-        for (key, parentKey) in keysToGenerate.items():
+        for key, parentKey in keysToGenerate.items():
             (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
 
             self.taskGenerateData(
@@ -600,7 +597,7 @@ class Environment(EventClass):
         if not os.path.exists(cacheDir):
             os.mkdir(cacheDir)
 
-        for (key, entity) in self.cache.items():
+        for key, entity in self.cache.items():
             if isinstance(entity, SubDataEntity):
                 continue
 
@@ -621,11 +618,10 @@ class Environment(EventClass):
         )
 
     def load(self, path, taskID=None):
-
         ## LOAD CACHE
         cacheDir = os.path.join(path, "cache")
         for path in glob.glob(os.path.join(cacheDir, "*.npz")):
-            d = dict(np.load(path,allow_pickle=True))
+            d = dict(np.load(path, allow_pickle=True))
             dataTypeKey = str(d.pop("entityDataTypeKey"))
             cacheKey = str(d.pop("cacheKey"))
             dataType = self.getDataType(dataTypeKey)
@@ -642,13 +638,14 @@ class Environment(EventClass):
         self.lookForGhosts()
 
     def lookForGhosts(self):
-
         for cacheKey in self.cache.keys():
             (dataKey, modelKey, datasetKey) = cacheKey.split("__")
 
-            if (dataKey == 'forces' or dataKey == 'energy') \
-                and (modelKey not in self.models)\
-                and self.datasetExists(datasetKey):
+            if (
+                (dataKey == "forces" or dataKey == "energy")
+                and (modelKey not in self.models)
+                and self.datasetExists(datasetKey)
+            ):
                 model = GhostModelLoader(self, modelKey)
                 model.initialise()
                 self.setNewModel(modelKey, model)
@@ -718,5 +715,3 @@ class Environment(EventClass):
                 print(flush=True)
 
             await asyncio.sleep(dt)
-
-

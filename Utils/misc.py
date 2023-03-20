@@ -58,11 +58,14 @@ def removeExtension(path):
     else:
         return match.group(1).replace(".", "")
 
+
 def rgbToHex(r, g, b):
-    return '#{:02x}{:02x}{:02x}'.format(r, g, b)
+    return "#{:02x}{:02x}{:02x}".format(r, g, b)
+
 
 def mixColors(c1, c2):
-    return np.array((np.array(c1) + np.array(c2))/2).astype(int)
+    return np.array((np.array(c1) + np.array(c2)) / 2).astype(int)
+
 
 class ColorGradient:
     # DEPRECATED, NOW USING VISPY'S COLORMAP
@@ -94,4 +97,3 @@ class ColorGradient:
         c1, c2 = (self.colors[nFork], self.colors[nFork + 1])
 
         return c2 * fact + c1 * (1 - fact)
-

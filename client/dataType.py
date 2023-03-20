@@ -6,7 +6,6 @@ logger = logging.getLogger("FFAST")
 
 
 class DataEntity:
-
     unitType = None
     unit = None
     timestamp = 0
@@ -15,7 +14,7 @@ class DataEntity:
     def __init__(self, dataType, **kwargs):
         self.dataType = dataType
         self.data = {}
-        for (k, v) in kwargs.items():
+        for k, v in kwargs.items():
             self.data[k] = v
 
         self.timestamp = time.time()
@@ -51,12 +50,10 @@ class SubDataEntity(DataEntity):
         self.data = parent.data
 
     def get(self, key=None):
-
         return self.parent.get(key=key)[self.indices]
 
 
 class DataType(EventClass):
-
     modelDependent = False
     datasetDependent = False
     key = None
@@ -105,7 +102,6 @@ class DataType(EventClass):
         return key
 
     def generateData(self, dataset=None, model=None, taskID=None):
-
         if self.datasetDependent and (dataset is None):
             logger.error(
                 f"Getting data of dataset dependent DataType"
@@ -190,7 +186,6 @@ class DataType(EventClass):
 
 
 class EnergyPredictionData(DataType):
-
     modelDependent = True
     datasetDependent = True
     key = "energy"
@@ -217,7 +212,6 @@ class EnergyPredictionData(DataType):
 
 
 class ForcesPredictionData(DataType):
-
     modelDependent = True
     datasetDependent = True
     key = "forces"

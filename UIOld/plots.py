@@ -228,7 +228,7 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
             return
 
         subDatasets = self.getValidSubDatasets()
-        for (dataset, model, idx) in subDatasets:
+        for dataset, model, idx in subDatasets:
             self.declareSubDataset(dataset, model, idx)
 
     def declareSubDataset(self, dataset, model, idx):
@@ -276,7 +276,6 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
     lastUpdatedTimestamp = -1
 
     def visualRefresh(self):
-
         # when many refresh events happen in a single loop, no need to
         # refresh every time since information won't change
         if self.eventClockTimestamp <= self.lastUpdatedTimestamp:
@@ -341,7 +340,7 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
         # plotItem = self.plotWidget.plot(x, y, pen=pg.mkPen(color, width=2.5))
         if scatter:
             brush = pg.mkBrush(color)
-            plotItem = pg.ScatterPlotItem(x,y, symbolBrush=brush)
+            plotItem = pg.ScatterPlotItem(x, y, symbolBrush=brush)
         else:
             plotItem = pg.PlotDataItem(x, y, pen=pen, **kwargs)
 
@@ -367,7 +366,6 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
 
 class LoupePlot(BasicPlotContainer):
     def __init__(self, handler, loupe, title="N/A", name="N/A"):
-
         super().__init__(
             handler,
             title=title,

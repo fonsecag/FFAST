@@ -23,7 +23,6 @@ class Tab(EventChildClass, QtWidgets.QWidget):
         singleModel=False,
         **kwargs,
     ):
-
         self.handler = handler
         super().__init__(*args, **kwargs)
         self.handler.addEventChild(self)

@@ -4,7 +4,6 @@ from Utils.misc import md5FromArraysAndStrings
 
 
 class GhostDatasetLoader(DatasetLoader):
-
     isGhost = True
 
     def __init__(self, env, fingerprint, *args, **kwargs):

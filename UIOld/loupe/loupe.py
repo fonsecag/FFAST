@@ -20,7 +20,7 @@ from UI.loupe.atomSelect import BondSelect, AtomAlignSelect
 from UI.loupe.atomColorMode import AtomicColoring, ForceErrorColoring
 from client.dataWatcher import DataWatcher
 from time import process_time
-import asyncio 
+import asyncio
 
 logger = logging.getLogger("FFAST")
 lightGrayValue = 0.7
@@ -35,7 +35,6 @@ class BottomTabWindow(QtWidgets.QWidget):
 
 
 class InteractiveCanvas(scene.SceneCanvas):
-
     plotWidget = None
 
     def __init__(self, plotWidget):
@@ -77,7 +76,6 @@ class InteractiveCanvas(scene.SceneCanvas):
         return img
 
     def getPointAtPosition(self, pos, refresh=True):
-
         img = self.getPickingRender(refresh=refresh, pos=pos)
         # single pixel right in the middle
         color = img[0, 0]
@@ -98,7 +96,6 @@ class InteractiveCanvas(scene.SceneCanvas):
         self.plotWidget.setSelectedPoint(point)
 
     def on_mouse_move(self, event):
-
         if self.plotWidget.selectedDatasetKey is None:
             return
 
@@ -209,7 +206,6 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.refresh()
 
     def initialise3DPlot(self):
-
         canvas = InteractiveCanvas(self)
         view = canvas.central_widget.add_view()
         self.grid = canvas.central_widget.add_grid(margin=10)
@@ -262,6 +258,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.updateCurrentR()
 
     videoInterval = 0.05
+
     def initialiseVideoPlayback(self):
         self.leftButton.clicked.connect(self.onPrevious)
         self.rightButton.clicked.connect(self.onNext)
@@ -270,14 +267,12 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.pauseButton.clicked.connect(self.onPause)
 
     def connectBottom(self):
-
         self.collapseBottomButton = CollapseButton(
             self.handler, self.bottomTabWidget, "down"
         )
         self.bottomHeaderLayout.insertWidget(0, self.collapseBottomButton)
 
     def connectSidebar(self):
-
         # add collapse button
         self.collapseSidebarButton = CollapseButton(
             self.handler, self.rightContainer, "right"
@@ -333,7 +328,6 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
             self.loupePlotWidget = lpw
 
     def updateColorMode(self, index):
-
         if index == 0:
             self.setActiveAtomColorMode(AtomicColoring)
             self.colorTabDataWatcher.setDataDependencies()
@@ -405,6 +399,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.videoTask = asyncio.create_task(self.runOnNext())
 
     videoPaused = True
+
     async def runOnNext(self):
         while not self.videoPaused:
             self.onNext()
@@ -419,6 +414,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.refresh()
 
     lastFrameTime = 0
+
     def onNext(self):
         nMax = self.getNMax() - 1
         self.n = min(nMax, self.n + 1)
@@ -429,7 +425,6 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.refresh()
 
     def getNMax(self):
-
         activeIndices = self.getActiveIndices()
         if activeIndices is None:
             return self.dataset.getN()
@@ -596,7 +591,6 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
             self.colorBar.onUpdate()
 
     def refresh(self, bonds=True, renderReset=False):
-
         if self.dataset is None:
             return
 
@@ -631,7 +625,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
             pos=r,
             size=size,
             face_color=atomColors,
-            edge_width=0.02, # 0.003
+            edge_width=0.02,  # 0.003
             edge_color=ec,
         )
         self.bondsVis.visible = True  # TODO dependent on config or w/e
@@ -670,7 +664,6 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.onActiveIndicesChanged()
 
     def onActiveIndicesChanged(self):
-
         if self.currentNMax != self.getNMax():
             self.n = 0
 

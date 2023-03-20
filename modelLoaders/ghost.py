@@ -4,7 +4,6 @@ from Utils.misc import md5FromArraysAndStrings
 
 
 class GhostModelLoader(ModelLoader):
-
     isGhost = True
 
     def __init__(self, env, fingerprint, *args, **kwargs):

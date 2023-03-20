@@ -129,7 +129,6 @@ zIntToZStr = {v: k for k, v in zStrToZInt.items()}
 
 
 def toDistance(R):
-
     shape = R.shape
     try:
         dim = shape[2]
@@ -196,6 +195,8 @@ class DatasetLoader(EventClass):
 
     color = (0, 0, 0, 255)
 
+    datasetType = "N/A"
+
     name = "N/A"
     loaded = False
     active = True
@@ -233,7 +234,6 @@ class DatasetLoader(EventClass):
         return s
 
     def getFingerprint(self):
-
         z = self.getElements()
         r = self.getCoordinates()
         e = self.getEnergies()
@@ -266,7 +266,6 @@ class DatasetLoader(EventClass):
         return toDistance(R)
 
     def getDisplayName(self):
-
         tag = ""
         if self.isSubDataset:
             tag = "*"
@@ -282,9 +281,19 @@ class DatasetLoader(EventClass):
     def onDelete(self):
         pass
 
+    def getBaseInfo(self):
+        return [
+            ("N. conf.", f"{self.getN()}"),
+            ("N. atoms", f"{self.getNAtoms()}"),
+            ("Chem. form.", self.getChemicalFormula()),
+        ]
+
+    def getInfo(self):
+        # specific info to be overwritten by specific dataset types
+        return []
+
 
 class SubDataset(DatasetLoader):
-
     loadeeType = "dataset"
     isSubDataset = True
     color = (0, 0, 0, 255)

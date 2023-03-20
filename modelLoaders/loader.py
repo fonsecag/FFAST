@@ -73,7 +73,6 @@ class ModelLoader(EventClass):
     """
 
     def __init__(self, env, path):
-
         super().__init__()
         self.env = env
 
@@ -111,7 +110,6 @@ class ModelLoader(EventClass):
 
 
 class ModelLoaderACE(ModelLoader):
-
     modelName = "?"
 
     def __init__(self, env, path):

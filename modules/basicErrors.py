@@ -8,7 +8,6 @@ logger = logging.getLogger("FFAST")
 
 def loadData(env):
     class EnergyPredictionError(DataType):
-
         modelDependent = True
         datasetDependent = True
         key = "energyError"
@@ -30,7 +29,6 @@ def loadData(env):
             return True
 
     class ForcesPredictionError(DataType):
-
         modelDependent = True
         datasetDependent = True
         key = "forcesError"
@@ -41,7 +39,6 @@ def loadData(env):
             super().__init__(*args)
 
         def data(self, dataset=None, model=None, taskID=None):
-
             env = self.env
 
             fPred = env.getData("forces", model=model, dataset=dataset)
@@ -83,7 +80,6 @@ def loadData(env):
             return True
 
     class ForcesErrorDist(DataType):
-
         modelDependent = True
         datasetDependent = True
         key = "forcesErrorDist"

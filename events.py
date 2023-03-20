@@ -51,7 +51,7 @@ class EventClass:
         if not quiet:
             logger.debug(f"Event pushed: {event} by {type(self)}")
 
-        for (obj, func, asynchronous) in subs[event]:
+        for obj, func, asynchronous in subs[event]:
             obj.eventQueue.append(
                 (event, func, asynchronous, quiet, args, kwargs)
             )
@@ -78,14 +78,7 @@ class EventClass:
         if self.eventBusy is not None:
             self.eventPush(self.eventBusy)
 
-        for (
-            event,
-            func,
-            asynchronous,
-            quiet,
-            args,
-            kwargs,
-        ) in self.eventQueue:
+        for event, func, asynchronous, quiet, args, kwargs in self.eventQueue:
             if not quiet:
                 logger.debug(
                     f"{self} handling event {event}, function: {func}"
@@ -126,3 +119,6 @@ class EventChildClass(EventClass):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        if hasattr(self, "handler"):
+            self.handler.addEventChild(self)

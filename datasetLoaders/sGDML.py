@@ -3,6 +3,8 @@ import numpy as np
 
 
 class sGDMLDatasetLoader(DatasetLoader):
+    datasetType = "npz (sGDML)"
+
     def __init__(self, path, *args, **kwargs):
         super().__init__(path)
         self.data = np.load(path, allow_pickle=True)

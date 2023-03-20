@@ -9,7 +9,6 @@ def loadData(env):
 
 
 def loadUI(UIHandler, env):
-
     from UI.plots import BasicPlotContainer
     from UI.tab import Tab
     import pyqtgraph as pg
@@ -37,7 +36,6 @@ def loadUI(UIHandler, env):
                 self.plot(
                     fTrue.flatten(), fPred.flatten(), scatter=True, symbol="o"
                 )
-
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()

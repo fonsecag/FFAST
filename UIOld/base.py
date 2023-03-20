@@ -83,13 +83,12 @@ class UIHandler(EventClass):
         self.env = env
 
     def applyConfigToStyleSheet(self, sheet):
-        for (key, value) in self.config["envs"].items():
+        for key, value in self.config["envs"].items():
             sheet = sheet.replace(f"@{key}", value)
 
         return sheet
 
     def launch(self):
-
         from config.uiConfig import config
 
         self.config = config
@@ -139,7 +138,6 @@ class UIHandler(EventClass):
         self.window.setStyleSheet(self.applyConfigToStyleSheet(sheet))
 
     def initialisePlotConfigs(self):
-
         pg.setConfigOptions(
             antialias=True,
             leftButtonPan=False,
@@ -160,7 +158,6 @@ class UIHandler(EventClass):
         self.loupeAddonFunctions.append(func)
 
     def loadPrepredictPopup(self):
-
         dlg = LoadPrepredictFileDialog(self)
         dlg.run()
 

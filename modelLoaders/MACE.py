@@ -5,7 +5,6 @@ import torch
 
 
 class MACEModelLoader(ModelLoaderACE):
-
     singlePredict = True
     modelName = "MACE"
 

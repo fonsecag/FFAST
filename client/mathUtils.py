@@ -13,7 +13,6 @@ def getVV0Angle(v, v0, directionVector=None):
 
 
 def getVV0RotationMatrix(v, v0):
-
     vPerp = np.cross(v, v0)
     vPerp /= np.linalg.norm(vPerp)
     angle = getVV0Angle(v, v0)

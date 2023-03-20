@@ -1,5 +1,4 @@
 class AtomSelectionBase:
-
     multiselect = 1
     cycle = False
     label = "N/A"
@@ -38,7 +37,6 @@ class AtomSelectionBase:
 
 
 class BondSelect(AtomSelectionBase):
-
     multiselect = 2
     label = "Bond Selection"
 

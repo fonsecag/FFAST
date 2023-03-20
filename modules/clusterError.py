@@ -71,7 +71,6 @@ def kMeans(desc, n):
 
 def loadData(env):
     class DatasetCluster(DataType):
-
         modelDependent = False
         datasetDependent = True
         key = "datasetCluster"
@@ -135,7 +134,7 @@ def loadData(env):
 
                 clinds = newClinds
 
-            clinds = np.array(clinds, dtype='object')
+            clinds = np.array(clinds, dtype="object")
             labels = self.clindToLabels(dataset, clinds)
 
             de = self.newDataEntity(clind=clinds, labels=labels)
@@ -143,7 +142,6 @@ def loadData(env):
             return True
 
     class ClusterForceError(DataType):
-
         modelDependent = True
         datasetDependent = True
         key = "clusterForceError"
@@ -172,7 +170,6 @@ def loadData(env):
             return True
 
     class ClusterEnergyError(DataType):
-
         modelDependent = True
         datasetDependent = True
         key = "clusterEnergyError"
@@ -206,7 +203,6 @@ def loadData(env):
 
 
 def loadUI(UIHandler, env):
-
     from UI.plots import BasicPlotContainer
     from UI.tab import Tab
     import pyqtgraph as pg
@@ -379,7 +375,6 @@ def loadUI(UIHandler, env):
             self.updateRegionBrushes()
 
         def getDatasetSubIndices(self, dataset, model):
-
             indices = self.modelOrder[model.fingerprint][self.selectedRegions]
 
             if (not self.isOrdered()) and (

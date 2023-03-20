@@ -2,9 +2,10 @@ from events import EventClass
 import os
 from PySide6 import QtWidgets
 from PySide6.QtCore import QDir
-import pyqtgraph 
+import pyqtgraph
 from UI.MainWindow import MainWindow
 import os
+
 
 class UIHandler(EventClass):
     """
@@ -54,7 +55,6 @@ class UIHandler(EventClass):
         self.env = env
 
     def launch(self):
-        
         from config.uiConfig import config, configStyleSheet
 
         self.config = config
@@ -68,10 +68,10 @@ class UIHandler(EventClass):
 
         # Load icons
         QDir.addSearchPath("icon", "theme")
-        
-        #TODO
+
+        # TODO
         if True:
-            app.setStyle("Fusion")  
+            app.setStyle("Fusion")
             # Load styles
             with open("style.qss", "r") as file:
                 styleSheet = file.read()
@@ -90,7 +90,6 @@ class UIHandler(EventClass):
         self.initialisePlotConfigs()
 
     def initialisePlotConfigs(self):
-
         pyqtgraph.setConfigOptions(
             antialias=True,
             leftButtonPan=False,
@@ -111,7 +110,5 @@ class UIHandler(EventClass):
         self.loupeAddonFunctions.append(func)
 
     def loadPrepredictPopup(self):
-
         dlg = LoadPrepredictFileDialog(self)
         dlg.run()
-

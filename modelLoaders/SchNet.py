@@ -11,6 +11,7 @@ class SchNetModelLoader(ModelLoader):
     # when True, implements just one predict function for forces and energies
     # when False, it's separate
     singlePredict = True
+    modelName = "SchNet"
 
     def __init__(self, env, path, *args, **kwargs):
         """

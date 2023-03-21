@@ -77,6 +77,8 @@ async def eventLoop(UI, env):
         env.taskLoadDataset("private/ethanol_spl_100.npz")
         env.taskLoadDataset("private/ethanol_spl_200.npz")
         env.taskLoadModel("private/ethanol_def_1000.npz")
+        # env.taskLoadModel("private/eth_schnet")
+        env.taskLoadModel("private/eth_il_1000.npz")
         pass
 
     # env.newTask(nh.taskWatchDog, name="TaskWatchDog", visual=True)
@@ -119,7 +121,7 @@ async def main():
     env = Environment(headless=False)
     UI.setEnvironment(env)
 
-    # loadModules(UI, env)
+    loadModules(UI, env)
 
     await eventLoop(UI, env)
 

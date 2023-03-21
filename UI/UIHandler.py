@@ -45,12 +45,6 @@ class UIHandler(EventClass):
 
         self.eventPush("LOUPES_UPDATE")
 
-    def addPlotToTab(self, plw):
-        tab = self.tabs[0]
-        layout = tab.mainLayout
-
-        layout.insertWidget(layout.count() - 1, plw)
-
     def setEnvironment(self, env):
         self.env = env
 
@@ -68,6 +62,9 @@ class UIHandler(EventClass):
 
         # Load icons
         QDir.addSearchPath("icon", "theme")
+
+        # pyqtgraph configs
+        self.initialisePlotConfigs()
 
         # TODO
         if True:
@@ -87,28 +84,17 @@ class UIHandler(EventClass):
         self.app = app
         self.mainWindow = window
 
-        self.initialisePlotConfigs()
-
     def initialisePlotConfigs(self):
         pyqtgraph.setConfigOptions(
             antialias=True,
             leftButtonPan=False,
             crashWarning=True,
             foreground=self.config["envs"].get("TextColor1"),
+            background=self.config["envs"].get("BGColor2"),
             useOpenGL=True,
             enableExperimental=True,
             exitCleanup=True,
         )
 
-    def addTab(self, widget, name):
-        self.tabs.append(widget)
-        self.window.centerTabs.addTab(widget, name)
-
-    loupeAddonFunctions = []
-
-    def addLoupeAddon(self, func):
-        self.loupeAddonFunctions.append(func)
-
-    def loadPrepredictPopup(self):
-        dlg = LoadPrepredictFileDialog(self)
-        dlg.run()
+    def addContentTab(self, widget, name):
+        self.mainWindow.mainContent.addTab(widget, name)

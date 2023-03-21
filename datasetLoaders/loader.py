@@ -5,8 +5,11 @@ from Utils.misc import md5FromArraysAndStrings, removeExtension
 import logging
 from events import EventClass
 from scipy.spatial.distance import pdist
+from config.userConfig import config
+from Utils.misc import hexToRGB
 
 logger = logging.getLogger("FFAST")
+GLOBAL_DATASETS_COUNTER = 0
 
 zStrToZInt = {
     "H": 1,
@@ -188,12 +191,18 @@ class DatasetLoader(EventClass):
     def __init__(self, path):
         self.path = path
 
+        global GLOBAL_DATASETS_COUNTER
+
+        colors = config["datasetColors"]
+        nColors = len(colors)
+        self.color = hexToRGB(colors[GLOBAL_DATASETS_COUNTER % nColors])
+
+        GLOBAL_DATASETS_COUNTER += 1
+
     loadeeType = "dataset"
 
     zIntToZStr = zIntToZStr
     zStrToZInt = zStrToZInt
-
-    color = (0, 0, 0, 255)
 
     datasetType = "N/A"
 
@@ -291,6 +300,10 @@ class DatasetLoader(EventClass):
     def getInfo(self):
         # specific info to be overwritten by specific dataset types
         return []
+
+    def setColor(self, r, g, b):
+        self.color = [r, g, b]
+        self.eventPush("DATASET_COLOR_CHANGED", self.fingerprint)
 
 
 class SubDataset(DatasetLoader):

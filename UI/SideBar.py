@@ -16,7 +16,6 @@ class DatasetModelItem(ObjectListItem):
         background-color: @COLOR;
         border-radius: 20;
     """
-    color = (150, 150, 150)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, layout="vertical", **kwargs)
@@ -70,14 +69,26 @@ class DatasetModelItem(ObjectListItem):
         self.applyInfo()
 
     def applyStyle(self):
+        obj = self.getObject()
         # button color
-        ss = self.buttonStyleSheet.replace("@COLOR", rgbToHex(*self.color))
-        self.colorButton.setStyleSheet(configStyleSheet(ss))
+        if obj is not None:
+            ss = self.buttonStyleSheet.replace("@COLOR", rgbToHex(*obj.color))
+            self.colorButton.setStyleSheet(configStyleSheet(ss))
+
+    def getColor(self):
+        obj = self.getObject()
+        if obj is not None:
+            return obj.color
+        return None
 
     def chooseColor(self):
-        initialColor = QtGui.QColor.fromRgb(*self.color)
+        obj = self.getObject()
+        if obj is None:
+            return
+
+        initialColor = QtGui.QColor.fromRgb(*obj.color)
         newColor = QtWidgets.QColorDialog.getColor(initialColor)
-        self.color = newColor.getRgb()[:3]
+        obj.setColor(*newColor.getRgb()[:3])
         self.applyStyle()
 
     def setName(self, name):
@@ -86,14 +97,31 @@ class DatasetModelItem(ObjectListItem):
     def setInfoLabel(self, label):
         self.infoButton.setText(label)
 
+    def getObject(self):
+        dataset = self.handler.env.getDataset(self.id)
+        if dataset is None:
+            return self.handler.env.getModel(self.id)
+        else:
+            return dataset
+
     def applyInfo(self):
         dataset = self.handler.env.getDataset(self.id)
+        if dataset is not None:
+            self.setName(dataset.getDisplayName())
+            self.setInfoLabel(dataset.datasetType)
 
-        self.setName(dataset.getDisplayName())
-        self.setInfoLabel(dataset.datasetType)
+            info = dataset.getBaseInfo() + dataset.getInfo()
+            self.infoWidget.setInfo(*info)
 
-        info = dataset.getBaseInfo() + dataset.getInfo()
-        self.infoWidget.setInfo(*info)
+        else:
+            model = self.handler.env.getModel(self.id)
+            if model is None:
+                return
+            self.setName(model.getDisplayName())
+            self.setInfoLabel(model.modelName)
+
+            info = model.getInfo()
+            self.infoWidget.setInfo(*info)
 
 
 class DatasetObjectList(ObjectList, EventChildClass):
@@ -110,6 +138,20 @@ class DatasetObjectList(ObjectList, EventChildClass):
         self.newObject(id)
 
 
+class ModelsObjectList(ObjectList, EventChildClass):
+    def __init__(self, handler, **kwargs):
+        self.handler = handler
+        super().__init__(handler, DatasetModelItem, **kwargs)
+        EventChildClass.__init__(self)
+        self.eventSubscribe("MODEL_LOADED", self.onModelLoaded)
+
+    def onModelLoaded(self, id):
+        if self.getWidget(id) is not None:
+            return
+
+        self.newObject(id)
+
+
 class SideBar(ContentBar):
     def __init__(self, handler, **kwargs):
         super().__init__(handler, **kwargs)
@@ -117,7 +159,9 @@ class SideBar(ContentBar):
         self.setupContent()
 
     def setupContent(self):
-        # dataset
+
+        self.modelsList = ModelsObjectList(self.handler, parent=self)
+        self.addContent("MODELS", widget=self.modelsList)
+
         self.datasetsList = DatasetObjectList(self.handler, parent=self)
         self.addContent("DATASETS", widget=self.datasetsList)
-        self.addContent("MODELS")

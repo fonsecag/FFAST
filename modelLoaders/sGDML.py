@@ -11,6 +11,7 @@ class sGDMLModelLoader(ModelLoader):
     # when True, implements just one predict function for forces and energies
     # when False, it's separate
     singlePredict = True
+    modelName = "sGDML"
 
     def __init__(self, env, path, *args, **kwargs):
         """
@@ -90,3 +91,10 @@ class sGDMLModelLoader(ModelLoader):
         fp = md5FromArraysAndStrings(*self.fpArrays)
 
         return fp
+
+    def getInfo(self):
+        return [
+            ("N. perms", f"{self.model.n_perms}"),
+            ("Sigma", f"{self.model.sig}"),
+            ("N. atoms", f"{self.model.n_atoms}"),
+        ]

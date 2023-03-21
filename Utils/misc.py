@@ -63,6 +63,17 @@ def rgbToHex(r, g, b):
     return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
 
+def hexToRGB(sHex):
+    sHex = sHex.lstrip("#")
+
+    r = int(sHex[0:2], 16)
+    g = int(sHex[2:4], 16)
+    b = int(sHex[4:6], 16)
+
+    # return the RGB tuple as an array with values between 0 and 255
+    return [r, g, b]
+
+
 def mixColors(c1, c2):
     return np.array((np.array(c1) + np.array(c2)) / 2).astype(int)
 

@@ -105,6 +105,7 @@ class SpookyNetBatcher:
 
 class SpookyNetModelLoader(ModelLoader):
     singlePredict = True
+    modelName = "SpookyNet"
 
     def __init__(self, env, path):
         super().__init__(env, path)

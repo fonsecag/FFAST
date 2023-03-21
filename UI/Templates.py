@@ -1,12 +1,13 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 from config.uiConfig import config, configStyleSheet
 from PySide6.QtCore import QEvent, Qt
-from PySide6.QtWidgets import QWidget, QApplication
+from PySide6.QtWidgets import QWidget, QTabWidget
 from config.uiConfig import config, getIcon
 from PySide6.QtWidgets import QSizePolicy
+from events import EventChildClass
+import pyqtgraph
 import logging
 
-BORDER_DRAG_SIZE = config["borderDragSize"]
 WIDGET_ID = 0
 
 logger = logging.getLogger("FFAST")
@@ -20,7 +21,6 @@ class Widget(QWidget):
             logger.warn(f"Parent not being set for widget {self}")
 
         global WIDGET_ID
-        self.setMouseTracking(True)
         self.id = WIDGET_ID
         self.objectName = f"WIDGET_{self.id}"
         WIDGET_ID += 1
@@ -30,8 +30,14 @@ class Widget(QWidget):
             self.layout = QtWidgets.QVBoxLayout()
         elif layout == "horizontal":
             self.layout = QtWidgets.QHBoxLayout()
+        elif layout == "grid":
+            self.layout = QtWidgets.QGridLayout()
+        elif layout is not None:
+            logger.error(
+                f"Layout given to {self} but type {layout} not recognised"
+            )
 
-        if layout == "vertical" or layout == "horizontal":
+        if layout is not None:
             self.setLayout(self.layout)
             self.layout.setContentsMargins(0, 0, 0, 0)
             self.layout.setSpacing(0)
@@ -48,6 +54,39 @@ class Widget(QWidget):
                 "__COLOR__", color
             )
             self.setStyleSheet(configStyleSheet(styleSheet))
+
+
+class TabWidget(QTabWidget):
+    def __init__(self, parent=None, color=None):
+        super().__init__(parent=parent)
+
+        global WIDGET_ID
+        self.id = WIDGET_ID
+        self.objectName = f"WIDGET_{self.id}"
+        WIDGET_ID += 1
+        self.setObjectName(self.objectName)
+
+        if color is not None:
+            self.setAttribute(Qt.WA_StyledBackground, True)
+            styleSheet = """
+                QWidget#__ID__{
+                background-color:__COLOR__;
+                }
+            """.replace(
+                "__ID__", self.objectName
+            ).replace(
+                "__COLOR__", color
+            )
+            self.setStyleSheet(configStyleSheet(styleSheet))
+
+
+class ToolCheckButton(QtWidgets.QToolButton):
+    def __init__(self, handler, func, icon="default", **kwargs):
+        super().__init__(**kwargs)
+        self.handler = handler
+        self.clicked.connect(func)
+        icon = getIcon(icon)
+        self.setIcon(QtGui.QIcon(icon))
 
 
 class ToolButton(QtWidgets.QToolButton):
@@ -285,3 +324,16 @@ class InfoWidget(Widget):
             labelRight.setText(sRight)
 
         self.nRows = nRows
+
+
+class ContentTab(ExpandingScrollArea):
+    def __init__(self, layout=None, color="@BGColor2", **kwargs):
+        super().__init__(**kwargs)
+
+        self.widget = Widget(layout=layout, color=color, parent=self)
+        self.setContent(self.widget)
+
+        self.widget.layout.setContentsMargins(20,20,20,20)
+
+    def addWidget(self, *args, **kwargs):
+        self.widget.layout.addWidget(*args, **kwargs)

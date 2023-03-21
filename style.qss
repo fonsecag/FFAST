@@ -294,7 +294,7 @@ QTabBar::tab:right{
 
 QTabBar::tab:top:selected{
   color: @TextColor2;
-  border-bottom: 2px solid @HLColor1;
+  background-color: @BGColor3;
 }
 
 QTabBar::tab:top:hover{

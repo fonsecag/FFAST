@@ -1,5 +1,5 @@
 import numpy as np
-from client.dataType import DataType, DataEntity
+from client.dataType import DataType
 import logging
 from scipy.stats import gaussian_kde
 
@@ -115,108 +115,14 @@ def loadData(env):
 
 
 def loadUI(UIHandler, env):
-    from UI.plots import BasicPlotContainer
-    from UI.tab import Tab
+    from UI.Templates import ContentTab
+    from UI.Plots import BasicPlotWidget
+    from PySide6 import QtWidgets
 
-    class EnergyErrorDistPlot(BasicPlotContainer):
-        def __init__(self, handler, tab):
-            super().__init__(
-                handler,
-                parentSelector=True,
-                title="Energy MAE distribution",
-                isSubbable=False,
-                name="EnErrDist",
-            )
-            self.setDataDependencies("energyErrorDist")
-            self.setXLabel("Energy MAE", "kcal/mol")
-            self.setYLabel("Density")
+    ct = ContentTab(layout="grid")
+    UIHandler.addContentTab(ct, "Basic Errors")
 
-        def addPlots(self):
-            for x in self.getWatchedData():
-                de = x["dataEntry"]
-                x, y = de.get("distX"), de.get("distY")
-                self.plot(x, y)
-
-    class ForcesErrorDistPlot(BasicPlotContainer):
-        def __init__(self, handler, tab):
-            super().__init__(
-                handler,
-                parentSelector=True,
-                title="Forces MAE distribution",
-                isSubbable=False,
-                name="FoErrDist",
-            )
-            self.setDataDependencies("forcesErrorDist")
-            self.setXLabel("Forces MAE", "kcal/mol")
-            self.setYLabel("Density")
-
-        def addPlots(self):
-            for x in self.getWatchedData():
-                de = x["dataEntry"]
-                x, y = de.get("distX"), de.get("distY")
-                self.plot(x, y)
-
-    class EnergyErrorPlot(BasicPlotContainer):
-        def __init__(self, handler, tab):
-            super().__init__(
-                handler,
-                parentSelector=True,
-                title="Energy MAE timeline",
-                name="EnErr",
-            )
-            self.setDataDependencies("energyError")
-            self.setXLabel("Configuration index")
-            self.setYLabel("Energy MAE", "kcal/mol")
-
-        def addPlots(self):
-            for x in self.getWatchedData():
-                err = x["dataEntry"].get()
-                self.plot(np.arange(err.shape[0]), np.abs(err))
-
-        def getDatasetSubIndices(self, dataset, model):
-            (xRange, yRange) = self.getRanges()
-            N = dataset.getN()
-            x0, x1 = xRange
-            return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
-
-    class ForcesErrorPlot(BasicPlotContainer):
-        def __init__(self, handler, tab):
-            super().__init__(
-                handler,
-                parentSelector=True,
-                title="Forces MAE timeline",
-                name="FoErr",
-            )
-            self.setDataDependencies("forcesError")
-            self.setXLabel("Configuration index")
-            self.setYLabel("Forces MAE", "kcal/mol A")
-
-        def addPlots(self):
-            for x in self.getWatchedData():
-                err = x["dataEntry"].get()
-                mae = err.reshape(err.shape[0], -1)
-                mae = np.mean(np.abs(mae), axis=1)
-                self.plot(np.arange(mae.shape[0]), mae)
-
-        def getDatasetSubIndices(self, dataset, model):
-            (xRange, yRange) = self.getRanges()
-            N = dataset.getN()
-            x0, x1 = xRange
-            return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
-
-    tab = Tab(UIHandler, hasDatasetSelector=True, hasModelSelector=True)
-    UIHandler.addTab(tab, "Basic")
-
-    plot = EnergyErrorDistPlot(UIHandler, tab)
-    tab.addWidget(plot, 0, 0)
-
-    plot = ForcesErrorDistPlot(UIHandler, tab)
-    tab.addWidget(plot, 0, 1)
-
-    plot = EnergyErrorPlot(UIHandler, tab)
-    tab.addWidget(plot, 1, 0)
-
-    plot = ForcesErrorPlot(UIHandler, tab)
-    tab.addWidget(plot, 1, 1)
-
-    tab.addBottomVerticalSpacer()
+    for i in range(2):
+        for j in range(2):
+            a = BasicPlotWidget(UIHandler, env, parent=ct)
+            ct.addWidget(a, i, j)

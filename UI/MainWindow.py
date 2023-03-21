@@ -3,6 +3,7 @@ from PySide6.QtCore import QEvent
 from UI.Templates import Widget
 from config.uiConfig import configStyleSheet
 from UI.SideBar import SideBar
+from UI.MainContent import MainContentTabWidget
 
 # from qframelesswindow import FramelessWindow
 
@@ -43,11 +44,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sideBar = SideBar(self.handler, parent=self)
         self.containerLayout.addWidget(self.sideBar)
 
-        self.mainWidget = Widget(
-            layout="vertical", color="@BGColor2", parent=self
-        )
-        self.mainLayout = self.mainWidget.layout
-        self.containerLayout.addWidget(self.mainWidget)
+        # self.mainWidget = Widget(
+        #     layout="vertical", color="@BGColor2", parent=self
+        # )
+        self.mainContent = MainContentTabWidget(color="@BGColor1", parent=self)
+        self.mainLayout = self.mainContent.layout
+        self.containerLayout.addWidget(self.mainContent)
 
         # self.setupMenuBar()
 

@@ -25,7 +25,6 @@ config = {
         "expanded": "expanded.png",
         "collapsed": "collapsed.png",
     },
-    "borderDragSize": 5,
 }
 
 

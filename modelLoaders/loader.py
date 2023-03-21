@@ -4,8 +4,11 @@ from Utils.misc import removeExtension
 import torch
 import logging
 import numpy as np
+from config.userConfig import config
+from Utils.misc import hexToRGB
 
 logger = logging.getLogger("FFAST")
+GLOBAL_MODELS_COUNTER = 0
 
 
 def loadModel(env, path):
@@ -75,16 +78,23 @@ class ModelLoader(EventClass):
     def __init__(self, env, path):
         super().__init__()
         self.env = env
-
         self.path = path
 
-    color = (0, 0, 0, 255)
-    key = -1  # will be assigned by environment
+        global GLOBAL_MODELS_COUNTER
+
+        colors = config["modelColors"]
+        nColors = len(colors)
+        self.color = hexToRGB(colors[GLOBAL_MODELS_COUNTER % nColors])
+
+        GLOBAL_MODELS_COUNTER += 1
+
+    color = [255, 255, 255]
     fingerprint = None
     loadeeType = "model"
     loaded = False
     isGhost = False
     singlePredict = False
+    modelName = "N/A"
 
     def setName(self, name):
         if name == "":
@@ -107,6 +117,14 @@ class ModelLoader(EventClass):
 
     def onDelete(self):
         pass
+
+    # to be overwritten
+    def getInfo(self):
+        return []
+
+    def setColor(self, r, g, b):
+        self.color = [r, g, b]
+        self.eventPush("MODEL_COLOR_CHANGED", self.fingerprint)
 
 
 class ModelLoaderACE(ModelLoader):

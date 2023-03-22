@@ -25,7 +25,8 @@ class sGDMLModelLoader(ModelLoader):
 
         from sgdml.predict import GDMLPredict
 
-        model = np.load(path)
+        model = np.load(path, allow_pickle=True)
+        self.modelInfo = model
         self.fpArrays = (model["perms"], model["R_d_desc_alpha"])
         self.model = GDMLPredict(model)
 
@@ -93,8 +94,11 @@ class sGDMLModelLoader(ModelLoader):
         return fp
 
     def getInfo(self):
+        print(list(self.modelInfo.keys()))
         return [
-            ("N. perms", f"{self.model.n_perms}"),
-            ("Sigma", f"{self.model.sig}"),
+            ("N. perms", f"{len(self.modelInfo['perms'])}"),
+            ("Sigma", f"{self.modelInfo['sig']}"),
             ("N. atoms", f"{self.model.n_atoms}"),
+            ("N. train", f"{len(self.modelInfo['idxs_train'])}"),
+            ("Code ver.", f"{self.modelInfo['code_version']}")
         ]

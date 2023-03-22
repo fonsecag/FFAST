@@ -21,6 +21,7 @@ from UI.loupe.atomColorMode import AtomicColoring, ForceErrorColoring
 from client.dataWatcher import DataWatcher
 from time import process_time
 import asyncio 
+from vispy.scene.visuals import Text
 
 logger = logging.getLogger("FFAST")
 lightGrayValue = 0.7
@@ -637,6 +638,8 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         )
         self.bondsVis.visible = True  # TODO dependent on config or w/e
 
+        self.addLabels()
+
         if renderReset:
             # means the refresh got called after a canvas.getPickingRender
             # so labels dont need to get reset (nor bonds)
@@ -745,3 +748,23 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
                 s += "\n"
         self.bondsTextEdit.setText(f"[\n{s}]")
         self.readSelectedBonds()
+
+    def addingLabels(self):
+        return True
+
+    labels = []
+    def addLabels(self):
+        if not self.addingLabels():
+            return        
+
+        tr = self.canvas.transforms.get_transform("canvas", "scene")
+
+        R = self.getCurrentR()
+        for i in range(len(R)):
+            r = R[i]
+            if i >= len(self.labels):
+                self.labels.append(Text(f"{i}", parent=self.view.scene, color = 'green'))
+                self.labels[i].font_size = 50
+
+            self.labels[i].pos = r
+

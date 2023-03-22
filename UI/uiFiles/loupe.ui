@@ -361,7 +361,7 @@
          </size>
         </property>
         <property name="currentIndex">
-         <number>3</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="bondsTab">
          <attribute name="title">
@@ -433,6 +433,13 @@
               </widget>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="dynamicBondsButton">
+            <property name="text">
+             <string>Fill dynamic bonds</string>
+            </property>
            </widget>
           </item>
           <item>

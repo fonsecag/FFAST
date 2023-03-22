@@ -294,6 +294,7 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
         self.bondsTextEdit.setEnabled(False)
         self.bondsTabLayout.insertWidget(2, self.bondsTextEdit)
         self.bondsTextEdit.setReturnCallback(self.readSelectedBonds)
+        self.dynamicBondsButton.clicked.connect(self.onDynamicBondsButton)
 
         # ALIGN CONFIGS
         self.alignConfigsCB.stateChanged.connect(self.updateAlignConfigs)
@@ -536,8 +537,8 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
     def isDynamicBonds(self):
         return self.dynamicBondsCB.isChecked()
 
-    def getBonds(self, r):
-        if self.isDynamicBonds():
+    def getBonds(self, r, forceDynamic = False):
+        if forceDynamic or self.isDynamicBonds():
             d = distance_matrix(r, r)
             args = np.argwhere(d < self.bondSizes)
         else:
@@ -719,3 +720,28 @@ class Loupe(EventChildClass, QtWidgets.QWidget):
             return
 
         self.colorBar.visible = False
+
+    def onDynamicBondsButton(self):
+        # this is a HORRIBLE METHOD
+        # TEMPORARY ONLY
+        bonds = self.getBonds(self.getCurrentR(), forceDynamic = True)
+        s, l = ("",[])
+        for bond in bonds:
+            b1, b2 = bond
+            if b1 <= b2:
+                l.append((b1, b2))
+            else:
+                l.append((b2, b1))
+
+        l = list(set(l))
+        for i in range(len(l)):
+            bond = l[i]
+            if bond[0] == bond[1]:
+                continue
+            s += f"    [{bond[0]}, {bond[1]}]"
+            if i < len(l) - 1:
+                s += ",\n"
+            else:
+                s += "\n"
+        self.bondsTextEdit.setText(f"[\n{s}]")
+        self.readSelectedBonds()

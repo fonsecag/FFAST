@@ -10,14 +10,16 @@ def configStyleSheet(sheet):
 
 config = {
     "envs": {
-        "HLColor1": "#17a2b8",
-        "HLColor2": "#138294",
+        "HLColor1": "#4e747a",
+        "HLColor2": "#1ca6bb",
         "BGColor1": "#202225",
         "BGColor2": "#2F3136",
         "BGColor3": "#36393F",
         "BGColor4": "#494d55",
+        "BGColor5": "#575b63",
         "TextColor1": "#b9bbc2",
         "TextColor2": "#ffffff",
+        "TextColor3": "#b9bbc2",
         "TextColorHover": "#dbdde4",
     },
     "icons": {

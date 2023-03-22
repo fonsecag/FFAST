@@ -1,4 +1,4 @@
-from UI.Templates import Widget, ToolCheckButton
+from UI.Templates import Widget, ToolCheckButton, PushButton
 from PySide6 import QtCore, QtGui, QtWidgets
 from config.uiConfig import config, configStyleSheet
 from PySide6.QtCore import QEvent, Qt
@@ -9,12 +9,32 @@ from events import EventChildClass
 import pyqtgraph
 import logging
 from client.dataWatcher import DataWatcher
+import numpy as np
+
+class DataloaderButton(PushButton, EventChildClass):
+
+    styleSheet = '''
+        border: 1px solid @HLColor2;
+        color: @HLColor2;
+    '''
+
+    def __init__(self, handler, watcher, **kwargs):
+        super().__init__("Load", styleSheet=self.styleSheet, **kwargs)
+        self.handler = handler
+        EventChildClass.__init__(self)
+        self.dataWatcher = watcher
+
+        self.setIcon(QtGui.QIcon(getIcon("load")))
 
 
 class BasicPlotWidget(Widget, EventChildClass):
 
     dataWatcher = None
     lastUpdatedTimestamp = -1
+
+    styleSheet = '''
+        border-radius:10px;
+    '''
 
     def __init__(
         self,
@@ -29,14 +49,25 @@ class BasicPlotWidget(Widget, EventChildClass):
     ):
         self.handler = handler
         self.env = env
-        super().__init__(layout="vertical", color = '@BGColor3', **kwargs)
+        super().__init__(layout="vertical", color = '@BGColor3', styleSheet= self.styleSheet, **kwargs)
         EventChildClass.__init__(self)
+        self.colorString = color
+        self.layout.setContentsMargins(13,13,13,13)
+        self.layout.setSpacing(8)
+        self.name = name
+        self.initialiseWatcher()
 
         # TOOLBAR
-        self.toolbar = Widget(layout="horizontal")
+        self.toolbar = Widget(layout="horizontal", color = 'green')
         self.toolbar.setFixedHeight(30)
+        self.toolbar.setObjectName("plotToolbar")
         self.layout.addWidget(self.toolbar)
-        self.applyToolbar()
+        self.applyToolbar(title = title)
+
+        # DIVIDER
+        divider = Widget(color = '@TextColor3')
+        divider.setFixedHeight(1)
+        self.layout.addWidget(divider)
 
         # PLOTWIDGET
         self.plotWidget = pyqtgraph.PlotWidget(name=f"{name}PlotWidget")
@@ -46,28 +77,41 @@ class BasicPlotWidget(Widget, EventChildClass):
 
         # LEGEND
         self.applyLegend(hasLegend)
-
         self.applyStyle()
 
-    def applyToolbar(self):
+    def applyToolbar(self, title = 'N/A'):
         tb = self.toolbar
         layout = self.toolbar.layout
+        layout.setContentsMargins(20,0,0,0)
+        layout.setSpacing(8)
+
+        self.titleLabel = QtWidgets.QLabel(title)
+        self.titleLabel.setObjectName("plotTitleLabel")
+        layout.addWidget(self.titleLabel)
+
+        layout.addStretch()
 
         self.subCheckBox = ToolCheckButton(self.handler, lambda: None)
-        layout.addStretch()
         layout.addWidget(self.subCheckBox)
+
+        self.loadButton = DataloaderButton(self.handler, self.dataWatcher)
+        layout.addWidget(self.loadButton)
 
     def applyPlotWidget(self):
         pi = self.plotItem
         pw = self.plotWidget
 
-        pi.setContentsMargins(10, 10, 10, 10)  # fixes axis cutting
+        pi.setContentsMargins(7, 7, 7, 7)  # fixes axis cutting
 
     def applyStyle(self):
         self.setMinimumSize(400, 400)
         self.setSizePolicy(
             QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding
         )
+
+        color = config["envs"].get(self.colorString.replace("@", ""))
+        self.plotWidget.setBackground(color)
+
 
     def applyLegend(self, hasLegend):
         self.hasLegend = hasLegend
@@ -167,7 +211,7 @@ class BasicPlotWidget(Widget, EventChildClass):
 
         return ds
 
-    def updateSub(self, **kwargs):  # kwargs deprecated
+    def updateSub(self):
         if not self.isSubbing():
             return
 

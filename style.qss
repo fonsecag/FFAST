@@ -56,12 +56,11 @@ QDoubleSpinBox,
 QTextEdit,
 QLineEdit{
   height:24px;
-  background-color: @HLColor1;
+  background-color: transparent;
 }
 
 QPushButton {
-  background-color: @HLColor1;
-  height: 32px;
+  color: @TextColor1;
 }
 
 QDateTimeEdit,
@@ -205,7 +204,7 @@ QSpinBox::down-button:disabled {
 QPushButton {
   /* text-transform: uppercase; */
   margin: 0px;
-  padding: 1px 16px;
+  padding: 1px 4px;
   height: 24px;
   /* font-weight: bold; */
 
@@ -294,7 +293,7 @@ QTabBar::tab:right{
 
 QTabBar::tab:top:selected{
   color: @TextColor2;
-  background-color: @BGColor3;
+  background-color: @BGColor2;
 }
 
 QTabBar::tab:top:hover{
@@ -879,6 +878,11 @@ QLabel:disabled {
   color: rgba(255, 255, 255, 0.2)
 }
 
+QLabel#plotTitleLabel{
+  font-weight: bold;
+  font-size: 18px;
+}
+
 /*  ------------------------------------------------------------------------  */
 /*  VLines and HLinex  */
 
@@ -944,10 +948,7 @@ QToolButton:checked{
   border: none;
   height: 25px;
   width: 25px;
-  /* margin: 3px; */
-  /* padding: 3px; */
-  /* border-right: 12px solid @BGColor2; */
-  /* border-left: 12px solid @BGColor2; */
+  border-radius: 4px;
 }
 
 QToolButton:hover{
@@ -955,10 +956,14 @@ QToolButton:hover{
 }
 
 QToolButton:pressed,
-QToolButton:checked {
-  background: @BGColor4;
+QToolButton:checked,
+QToolButton:checked:hover{
+  background: @BGColor5;
 }
 
+QToolButton:hover{
+  background: @BGColor4;
+}
 
 /*  ------------------------------------------------------------------------  */
 /*  General viewers  */

@@ -14,7 +14,59 @@ logger = logging.getLogger("FFAST")
 
 
 class Widget(QWidget):
-    def __init__(self, layout=None, color=None, parent=None):
+    def __init__(self, layout=None, color=None, parent=None, styleSheet = ''):
+        super().__init__(parent=parent)
+
+        if parent is None:
+            logger.warn(f"Parent not being set for widget {self}")
+
+
+        self.applyDefaultName()
+        self.applyDefaultLayout(layout=layout)
+        self.applyDefaultStyleSheet(color=color, styleSheet=styleSheet)
+
+    def applyDefaultName(self):
+        global WIDGET_ID
+        self.id = WIDGET_ID
+        self.objectName = f"WIDGET_{self.id}"
+        WIDGET_ID += 1
+        self.setObjectName(self.objectName)
+
+    def applyDefaultLayout(self, layout = None):
+        if layout is None:
+            return
+        
+        if layout == "vertical":
+            self.layout = QtWidgets.QVBoxLayout()
+        elif layout == "horizontal":
+            self.layout = QtWidgets.QHBoxLayout()
+        elif layout == "grid":
+            self.layout = QtWidgets.QGridLayout()
+        elif layout is not None:
+            logger.error(
+                f"Layout given to {self} but type {layout} not recognised"
+            )
+
+        self.setLayout(self.layout)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+
+    def applyDefaultStyleSheet(self, color = None, styleSheet = ""):
+        ss = f'QWidget#{self.objectName}' + '{\n' # closing '}' later
+        if color is not None:
+            self.setAttribute(Qt.WA_StyledBackground, True)
+            ss = ss + f"background-color:{color};\n"
+
+        if len(styleSheet) > 0:
+            ss = ss + styleSheet + '\n'
+
+        ss = ss + '}'
+
+        self.setStyleSheet(configStyleSheet(ss))
+
+
+class WidgetOld(QWidget):
+    def __init__(self, layout=None, color=None, parent=None, styleSheet = ''):
         super().__init__(parent=parent)
 
         if parent is None:
@@ -37,50 +89,41 @@ class Widget(QWidget):
                 f"Layout given to {self} but type {layout} not recognised"
             )
 
-        if layout is not None:
-            self.setLayout(self.layout)
-            self.layout.setContentsMargins(0, 0, 0, 0)
-            self.layout.setSpacing(0)
+        self.setLayout(self.layout)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
 
+        ss = f'QWidget#{self.objectName}' + '{\n' # closing '}' later
         if color is not None:
             self.setAttribute(Qt.WA_StyledBackground, True)
-            styleSheet = """
-                QWidget#__ID__{
-                background-color:__COLOR__;
-                }
-            """.replace(
-                "__ID__", self.objectName
-            ).replace(
-                "__COLOR__", color
-            )
-            self.setStyleSheet(configStyleSheet(styleSheet))
+            ss = ss + f"background-color:{color};\n"
+
+        if len(styleSheet) > 0:
+            ss = ss + styleSheet + '\n'
+
+        ss = ss + '}'
+
+        self.setStyleSheet(configStyleSheet(ss))
 
 
 class TabWidget(QTabWidget):
-    def __init__(self, parent=None, color=None):
+    def __init__(self, parent=None, color=None, styleSheet = ""):
         super().__init__(parent=parent)
 
-        global WIDGET_ID
-        self.id = WIDGET_ID
-        self.objectName = f"WIDGET_{self.id}"
-        WIDGET_ID += 1
-        self.setObjectName(self.objectName)
+        Widget.applyDefaultName(self)
+        Widget.applyDefaultStyleSheet(self, color=color, styleSheet=styleSheet)
 
-        if color is not None:
-            self.setAttribute(Qt.WA_StyledBackground, True)
-            styleSheet = """
-                QWidget#__ID__{
-                background-color:__COLOR__;
-                }
-            """.replace(
-                "__ID__", self.objectName
-            ).replace(
-                "__COLOR__", color
-            )
-            self.setStyleSheet(configStyleSheet(styleSheet))
+
+class PushButton(QtWidgets.QPushButton):
+    def __init__(self, text, parent=None, color=None, styleSheet = ""):
+        super().__init__(text, parent=parent)
+
+        Widget.applyDefaultName(self)
+        Widget.applyDefaultStyleSheet(self, color=color, styleSheet=styleSheet)
 
 
 class ToolCheckButton(QtWidgets.QToolButton):
+    checked = False
     def __init__(self, handler, func, icon="default", **kwargs):
         super().__init__(**kwargs)
         self.handler = handler
@@ -88,6 +131,26 @@ class ToolCheckButton(QtWidgets.QToolButton):
         icon = getIcon(icon)
         self.setIcon(QtGui.QIcon(icon))
 
+        self.clicked.connect(self.onClicked)
+        self.setCheckable(True)
+
+    def onClicked(self):
+        self.setChecked(not self.isChecked())        
+
+    def setChecked(self, checked):
+        if self.checked == checked:
+            return 
+        
+        self.checked = checked
+        self.onStateChanged()
+
+        self.setChecked(checked)
+
+    def isChecked(self):
+        return self.checked
+
+    def onStateChanged(self):
+        pass
 
 class ToolButton(QtWidgets.QToolButton):
     def __init__(self, handler, func, icon="default", **kwargs):
@@ -333,7 +396,9 @@ class ContentTab(ExpandingScrollArea):
         self.widget = Widget(layout=layout, color=color, parent=self)
         self.setContent(self.widget)
 
-        self.widget.layout.setContentsMargins(20,20,20,20)
+        self.widget.layout.setContentsMargins(40, 40, 40, 40)
+        self.widget.layout.setSpacing(40)
 
     def addWidget(self, *args, **kwargs):
         self.widget.layout.addWidget(*args, **kwargs)
+

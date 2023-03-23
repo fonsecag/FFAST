@@ -4,22 +4,25 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import QWidget, QTabWidget
 from config.uiConfig import config, getIcon
 from PySide6.QtWidgets import QSizePolicy
-from events import EventChildClass
 import pyqtgraph
 import logging
+from Utils.misc import rgbToHex
 
 WIDGET_ID = 0
-
 logger = logging.getLogger("FFAST")
 
 
 class Widget(QWidget):
-    def __init__(self, layout=None, color=None, parent=None, styleSheet = ''):
-        super().__init__(parent=parent)
 
+    frozen = False  # sometimes used to prevent callbacks while frozen
+
+    def __init__(
+        self, layout=None, color=None, parent=None, frozen=False, styleSheet=""
+    ):
+        super().__init__(parent=parent)
+        self.frozen = frozen
         if parent is None:
             logger.warn(f"Parent not being set for widget {self}")
-
 
         self.applyDefaultName()
         self.applyDefaultLayout(layout=layout)
@@ -32,51 +35,9 @@ class Widget(QWidget):
         WIDGET_ID += 1
         self.setObjectName(self.objectName)
 
-    def applyDefaultLayout(self, layout = None):
+    def applyDefaultLayout(self, layout=None):
         if layout is None:
             return
-        
-        if layout == "vertical":
-            self.layout = QtWidgets.QVBoxLayout()
-        elif layout == "horizontal":
-            self.layout = QtWidgets.QHBoxLayout()
-        elif layout == "grid":
-            self.layout = QtWidgets.QGridLayout()
-        elif layout is not None:
-            logger.error(
-                f"Layout given to {self} but type {layout} not recognised"
-            )
-
-        self.setLayout(self.layout)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
-
-    def applyDefaultStyleSheet(self, color = None, styleSheet = ""):
-        ss = f'QWidget#{self.objectName}' + '{\n' # closing '}' later
-        if color is not None:
-            self.setAttribute(Qt.WA_StyledBackground, True)
-            ss = ss + f"background-color:{color};\n"
-
-        if len(styleSheet) > 0:
-            ss = ss + styleSheet + '\n'
-
-        ss = ss + '}'
-
-        self.setStyleSheet(configStyleSheet(ss))
-
-
-class WidgetOld(QWidget):
-    def __init__(self, layout=None, color=None, parent=None, styleSheet = ''):
-        super().__init__(parent=parent)
-
-        if parent is None:
-            logger.warn(f"Parent not being set for widget {self}")
-
-        global WIDGET_ID
-        self.id = WIDGET_ID
-        self.objectName = f"WIDGET_{self.id}"
-        WIDGET_ID += 1
-        self.setObjectName(self.objectName)
 
         if layout == "vertical":
             self.layout = QtWidgets.QVBoxLayout()
@@ -93,21 +54,28 @@ class WidgetOld(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
 
-        ss = f'QWidget#{self.objectName}' + '{\n' # closing '}' later
+    def applyDefaultStyleSheet(self, color=None, styleSheet=""):
+        ss = f"QWidget#{self.objectName}" + "{\n"  # closing '}' later
         if color is not None:
             self.setAttribute(Qt.WA_StyledBackground, True)
             ss = ss + f"background-color:{color};\n"
 
         if len(styleSheet) > 0:
-            ss = ss + styleSheet + '\n'
+            ss = ss + styleSheet + "\n"
 
-        ss = ss + '}'
+        ss = ss + "}"
 
         self.setStyleSheet(configStyleSheet(ss))
+
+    def freeze(self):
+        self.frozen = True
+
+    def unfreeze(self):
+        self.frozen = False
 
 
 class TabWidget(QTabWidget):
-    def __init__(self, parent=None, color=None, styleSheet = ""):
+    def __init__(self, parent=None, color=None, styleSheet=""):
         super().__init__(parent=parent)
 
         Widget.applyDefaultName(self)
@@ -115,15 +83,101 @@ class TabWidget(QTabWidget):
 
 
 class PushButton(QtWidgets.QPushButton):
-    def __init__(self, text, parent=None, color=None, styleSheet = ""):
+    def __init__(self, text, parent=None, color=None, styleSheet=""):
         super().__init__(text, parent=parent)
 
         Widget.applyDefaultName(self)
         Widget.applyDefaultStyleSheet(self, color=color, styleSheet=styleSheet)
 
 
+class WidgetButton(Widget):
+
+    checked = False
+
+    def __init__(
+        self,
+        color=None,
+        hoverColor=None,
+        checkedColor=None,
+        checkedHoverColor=None,
+        styleSheet="",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+        self.updateFunc = lambda x: None
+        self.applyStyleSheet(
+            color=color,
+            hoverColor=hoverColor,
+            checkedColor=checkedColor,
+            checkedHoverColor=checkedHoverColor,
+            styleSheet="",
+        )
+
+        self.setProperty("checked", False)
+
+    def setOnClick(self, func):
+        self.updateFunc = func
+
+    def applyDefaultStyleSheet(self, **kwargs):
+        # We'll do that ourselves here
+        pass
+
+    def applyStyleSheet(
+        self,
+        color=None,
+        hoverColor=None,
+        checkedColor=None,
+        checkedHoverColor=None,
+        styleSheet="",
+    ):
+
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+        ss = f"QWidget#{self.objectName}" + "{\n"  # closing '}' later
+        if color is not None:
+            ss = ss + f"background-color:{color};\n"
+        ss = ss + "border-radius: 10px;"
+        if len(styleSheet) > 0:
+            ss = ss + styleSheet + "\n"
+        ss = ss + "}\n"
+
+        # HOVER
+        ss = ss + f"QWidget#{self.objectName}:hover" + "{\n"
+        if hoverColor is not None:
+            ss = ss + f"background-color:{hoverColor};\n"
+        ss = ss + "}\n"
+
+        # CHECKED
+        ss = ss + f"QWidget#{self.objectName}[checked=true]" + "{\n"
+        if checkedColor is not None:
+            ss = ss + f"background-color:{checkedColor};\n"
+        ss = ss + "}\n"
+
+        # CHECKED & HOVER
+        ss = ss + f"QWidget#{self.objectName}[checked=true]:hover" + "{\n"
+        if checkedHoverColor is not None:
+            ss = ss + f"background-color:{checkedHoverColor};\n"
+        ss = ss + "}\n"
+
+        self.setStyleSheet(configStyleSheet(ss))
+
+    def mousePressEvent(self, event):
+        self.setChecked(not self.checked)
+
+    def setChecked(self, checked):
+        self.checked = checked
+        self.updateFunc()
+
+        # https://wiki.qt.io/Dynamic_Properties_and_Stylesheets
+        self.setProperty("checked", checked)
+        self.style().unpolish(self)
+        self.style().polish(self)
+
+
 class ToolCheckButton(QtWidgets.QToolButton):
     checked = False
+
     def __init__(self, handler, func, icon="default", **kwargs):
         super().__init__(**kwargs)
         self.handler = handler
@@ -135,12 +189,12 @@ class ToolCheckButton(QtWidgets.QToolButton):
         self.setCheckable(True)
 
     def onClicked(self):
-        self.setChecked(not self.isChecked())        
+        self.setChecked(not self.isChecked())
 
     def setChecked(self, checked):
         if self.checked == checked:
-            return 
-        
+            return
+
         self.checked = checked
         self.onStateChanged()
 
@@ -151,6 +205,7 @@ class ToolCheckButton(QtWidgets.QToolButton):
 
     def onStateChanged(self):
         pass
+
 
 class ToolButton(QtWidgets.QToolButton):
     def __init__(self, handler, func, icon="default", **kwargs):
@@ -389,16 +444,68 @@ class InfoWidget(Widget):
         self.nRows = nRows
 
 
-class ContentTab(ExpandingScrollArea):
-    def __init__(self, layout=None, color="@BGColor2", **kwargs):
-        super().__init__(**kwargs)
+class FlexibleHList(Widget):
 
-        self.widget = Widget(layout=layout, color=color, parent=self)
-        self.setContent(self.widget)
+    currentNElementsPerRow = 0
 
-        self.widget.layout.setContentsMargins(40, 40, 40, 40)
-        self.widget.layout.setSpacing(40)
+    def __init__(self, elementSize=150, **kwargs):
+        super().__init__(layout="horizontal", **kwargs)
+        self.gridWidget = Widget(layout="grid")
+        self.gridWidget.layout.setSpacing(5)
+        self.spacerWidget = Widget()
+        self.gridLayout = self.gridWidget.layout
 
-    def addWidget(self, *args, **kwargs):
-        self.widget.layout.addWidget(*args, **kwargs)
+        self.gridWidget.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Preferred
+        )
 
+        self.layout.addWidget(self.gridWidget)
+        self.layout.addWidget(self.spacerWidget)
+        self.elementSize = elementSize
+        self.widgets = []
+
+        # self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+
+    def resizeEvent(self, event):
+        if self.frozen:
+            return
+        if self.nElementsPerRow() != self.currentNElementsPerRow:
+            self.adjustLayout()
+        QWidget.resizeEvent(self, event)
+
+    def adjustLayout(self):
+        self.removeWidgets()
+        self.readdWidgets()
+        self.currentNElementsPerRow = self.nElementsPerRow()
+
+    def removeWidgets(self, clear=False):
+        for w in self.widgets:
+            self.gridLayout.removeWidget(w)
+
+        if clear:
+            for w in self.widgets:
+                w.deleteLater()
+            del self.widgets
+            self.widgets = []
+
+    def nElementsPerRow(self):
+        return self.width() // self.elementSize
+
+    def indexToGridIndices(self, index):
+        return divmod(index, self.nElementsPerRow())
+
+    def readdWidgets(self):
+        for i in range(len(self.widgets)):
+            w = self.widgets[i]
+            i, j = self.indexToGridIndices(i)
+            self.gridLayout.addWidget(w, i, j)
+
+    def addWidget(self, w):
+        index = len(self.widgets)
+        self.widgets.append(w)
+        # w.setFixedWidth(self.elementSize)
+
+        i, j = self.indexToGridIndices(index)
+        self.gridLayout.addWidget(w, i, j)
+
+        self.gridWidget.setMaximumWidth(len(self.widgets) * self.elementSize)

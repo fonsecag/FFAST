@@ -94,11 +94,10 @@ class sGDMLModelLoader(ModelLoader):
         return fp
 
     def getInfo(self):
-        print(list(self.modelInfo.keys()))
         return [
             ("N. perms", f"{len(self.modelInfo['perms'])}"),
             ("Sigma", f"{self.modelInfo['sig']}"),
             ("N. atoms", f"{self.model.n_atoms}"),
             ("N. train", f"{len(self.modelInfo['idxs_train'])}"),
-            ("Code ver.", f"{self.modelInfo['code_version']}")
+            ("Code ver.", f"{self.modelInfo['code_version']}"),
         ]

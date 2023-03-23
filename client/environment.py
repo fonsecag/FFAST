@@ -182,6 +182,13 @@ class Environment(EventClass):
         dataset.loaded = True
         self.eventPush("DATASET_LOADED", dataset.fingerprint)
 
+    def getModelOrDataset(self, key):
+        model = self.getModel(key)
+        if model is None:
+            return self.getDataset(key)
+        else:
+            return model
+
     def getDataset(self, key):
         return self.datasets.get(key, None)
 

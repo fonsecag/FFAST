@@ -11,12 +11,13 @@ import logging
 from client.dataWatcher import DataWatcher
 import numpy as np
 
+
 class DataloaderButton(PushButton, EventChildClass):
 
-    styleSheet = '''
+    styleSheet = """
         border: 1px solid @HLColor2;
         color: @HLColor2;
-    '''
+    """
 
     def __init__(self, handler, watcher, **kwargs):
         super().__init__("Load", styleSheet=self.styleSheet, **kwargs)
@@ -32,9 +33,9 @@ class BasicPlotWidget(Widget, EventChildClass):
     dataWatcher = None
     lastUpdatedTimestamp = -1
 
-    styleSheet = '''
+    styleSheet = """
         border-radius:10px;
-    '''
+    """
 
     def __init__(
         self,
@@ -49,23 +50,28 @@ class BasicPlotWidget(Widget, EventChildClass):
     ):
         self.handler = handler
         self.env = env
-        super().__init__(layout="vertical", color = '@BGColor3', styleSheet= self.styleSheet, **kwargs)
+        super().__init__(
+            layout="vertical",
+            color="@BGColor3",
+            styleSheet=self.styleSheet,
+            **kwargs,
+        )
         EventChildClass.__init__(self)
         self.colorString = color
-        self.layout.setContentsMargins(13,13,13,13)
+        self.layout.setContentsMargins(13, 13, 13, 13)
         self.layout.setSpacing(8)
         self.name = name
         self.initialiseWatcher()
 
         # TOOLBAR
-        self.toolbar = Widget(layout="horizontal", color = 'green')
+        self.toolbar = Widget(layout="horizontal", color="green")
         self.toolbar.setFixedHeight(30)
         self.toolbar.setObjectName("plotToolbar")
         self.layout.addWidget(self.toolbar)
-        self.applyToolbar(title = title)
+        self.applyToolbar(title=title)
 
         # DIVIDER
-        divider = Widget(color = '@TextColor3')
+        divider = Widget(color="@TextColor3")
         divider.setFixedHeight(1)
         self.layout.addWidget(divider)
 
@@ -79,10 +85,10 @@ class BasicPlotWidget(Widget, EventChildClass):
         self.applyLegend(hasLegend)
         self.applyStyle()
 
-    def applyToolbar(self, title = 'N/A'):
+    def applyToolbar(self, title="N/A"):
         tb = self.toolbar
         layout = self.toolbar.layout
-        layout.setContentsMargins(20,0,0,0)
+        layout.setContentsMargins(20, 0, 0, 0)
         layout.setSpacing(8)
 
         self.titleLabel = QtWidgets.QLabel(title)
@@ -111,7 +117,6 @@ class BasicPlotWidget(Widget, EventChildClass):
 
         color = config["envs"].get(self.colorString.replace("@", ""))
         self.plotWidget.setBackground(color)
-
 
     def applyLegend(self, hasLegend):
         self.hasLegend = hasLegend

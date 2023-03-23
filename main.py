@@ -97,21 +97,6 @@ async def eventLoop(UI, env):
     await taskManager.eventHandle()
 
 
-async def mainOld():
-    from UI.base import UIHandler
-
-    UI = UIHandler()
-    UI.launch()
-
-    env = Environment(headless=False)
-    UI.setEnvironment(env)
-    UI.loadUiElements()
-
-    loadModules(UI, env)
-
-    await eventLoop(UI, env)
-
-
 async def main():
     from UI.UIHandler import UIHandler
 

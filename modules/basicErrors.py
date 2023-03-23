@@ -115,11 +115,10 @@ def loadData(env):
 
 
 def loadUI(UIHandler, env):
-    from UI.Templates import ContentTab
+    from UI.ContentTab import ContentTab
     from UI.Plots import BasicPlotWidget
-    from PySide6 import QtWidgets
 
-    ct = ContentTab(layout="grid")
+    ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Basic Errors")
 
     for i in range(2):

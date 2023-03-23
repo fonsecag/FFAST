@@ -65,8 +65,6 @@ class LoaderWidget(EventChildClass, QtWidgets.QWidget):
         self.handler.addEventChild(self)
         loadUi(os.path.join(self.handler.uiFilesPath, "loaderWidget.ui"), self)
 
-        # self.pathValueLabel.setText(loadee.path)
-
         regExp = QtCore.QRegularExpression("^[^.\\\/]*$")
         validator = QtGui.QRegularExpressionValidator(regExp)
         self.nameValueEdit.setValidator(validator)

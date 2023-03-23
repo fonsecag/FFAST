@@ -883,6 +883,12 @@ QLabel#plotTitleLabel{
   font-size: 18px;
 }
 
+QLabel#titleLabel{
+  font-weight: bold;
+  font-size: 12px;
+}
+
+
 /*  ------------------------------------------------------------------------  */
 /*  VLines and HLinex  */
 
@@ -949,10 +955,6 @@ QToolButton:checked{
   height: 25px;
   width: 25px;
   border-radius: 4px;
-}
-
-QToolButton:hover{
-  background: @BGColor3;
 }
 
 QToolButton:pressed,

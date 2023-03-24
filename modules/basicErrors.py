@@ -121,7 +121,104 @@ def loadUI(UIHandler, env):
     ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Basic Errors")
 
-    for i in range(2):
-        for j in range(2):
-            a = BasicPlotWidget(UIHandler, env, parent=ct)
-            ct.addWidget(a, i, j)
+    class EnergyErrorDistPlot(BasicPlotWidget):
+        def __init__(self, handler, **kwargs):
+            super().__init__(
+                handler,
+                title="Energy MAE distribution",
+                isSubbable=False,
+                name="Energy Error Distribution",
+                **kwargs
+            )
+            self.setDataDependencies("energyErrorDist")
+            self.setXLabel("Energy MAE")
+            self.setYLabel("Density")
+
+        def addPlots(self):
+            for data in self.getWatchedData():
+                de = data["dataEntry"]
+                x, y = de.get("distX"), de.get("distY")
+                self.plot(x, y, autoColor=data)
+
+    class ForcesErrorDistPlot(BasicPlotWidget):
+        def __init__(self, handler, **kwargs):
+            super().__init__(
+                handler,
+                title="Forces MAE distribution",
+                isSubbable=False,
+                name="Force Error Distribution",
+                **kwargs
+            )
+            self.setDataDependencies("forcesErrorDist")
+            self.setXLabel("Forces MAE")
+            self.setYLabel("Density")
+
+        def addPlots(self):
+            for data in self.getWatchedData():
+                de = data["dataEntry"]
+                x, y = de.get("distX"), de.get("distY")
+                self.plot(x, y, autoColor=data)
+
+    class EnergyErrorPlot(BasicPlotWidget):
+        def __init__(self, handler, **kwargs):
+            super().__init__(
+                handler,
+                title="Energy MAE timeline",
+                name="Energy Error Timeline",
+                **kwargs
+            )
+            self.setDataDependencies("energyError")
+            self.setXLabel("Configuration index")
+            self.setYLabel("Energy MAE")
+
+        def addPlots(self):
+            for data in self.getWatchedData():
+                err = data["dataEntry"].get()
+                self.plot(np.arange(err.shape[0]), np.abs(err), autoColor=data)
+
+        def getDatasetSubIndices(self, dataset, model):
+            (xRange, yRange) = self.getRanges()
+            N = dataset.getN()
+            x0, x1 = xRange
+            return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
+
+    class ForcesErrorPlot(BasicPlotWidget):
+        def __init__(self, handler, **kwargs):
+            super().__init__(
+                handler,
+                title="Forces MAE timeline",
+                name="Force Error Timeline",
+                **kwargs
+            )
+            self.setDataDependencies("forcesError")
+            self.setXLabel("Configuration index")
+            self.setYLabel("Forces MAE")
+
+        def addPlots(self):
+            for data in self.getWatchedData():
+                err = data["dataEntry"].get()
+                mae = err.reshape(err.shape[0], -1)
+                mae = np.mean(np.abs(mae), axis=1)
+                self.plot(np.arange(mae.shape[0]), mae, autoColor=data)
+
+        def getDatasetSubIndices(self, dataset, model):
+            (xRange, yRange) = self.getRanges()
+            N = dataset.getN()
+            x0, x1 = xRange
+            return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
+
+    plt = EnergyErrorDistPlot(UIHandler, parent=ct)
+    ct.addWidget(plt, 0, 0)
+    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
+
+    plt = ForcesErrorDistPlot(UIHandler, parent=ct)
+    ct.addWidget(plt, 0, 1)
+    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
+
+    plt = EnergyErrorPlot(UIHandler, parent=ct)
+    ct.addWidget(plt, 1, 0)
+    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
+
+    plt = ForcesErrorPlot(UIHandler, parent=ct)
+    ct.addWidget(plt, 1, 1)
+    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)

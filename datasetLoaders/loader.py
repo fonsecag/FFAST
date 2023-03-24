@@ -303,7 +303,7 @@ class DatasetLoader(EventClass):
 
     def setColor(self, r, g, b):
         self.color = [r, g, b]
-        self.eventPush("DATASET_COLOR_CHANGED", self.fingerprint)
+        self.eventPush("OBJECT_COLOR_CHANGED", self.fingerprint)
 
 
 class SubDataset(DatasetLoader):

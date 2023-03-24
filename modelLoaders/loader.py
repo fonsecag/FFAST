@@ -124,7 +124,7 @@ class ModelLoader(EventClass):
 
     def setColor(self, r, g, b):
         self.color = [r, g, b]
-        self.eventPush("MODEL_COLOR_CHANGED", self.fingerprint)
+        self.eventPush("OBJECT_COLOR_CHANGED", self.fingerprint)
 
 
 class ModelLoaderACE(ModelLoader):

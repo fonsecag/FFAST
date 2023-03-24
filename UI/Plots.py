@@ -12,12 +12,50 @@ from client.dataWatcher import DataWatcher
 import numpy as np
 
 
+class DataDependentObject:
+
+    dataWatcher = None
+
+    def __init__(self):
+        self.initialiseWatcher()
+
+    def setDataDependencies(self, *args):
+        self.dataWatcher.setDataDependencies(*args)
+
+    def setDatasetDependencies(self, *args):
+        self.dataWatcher.setDatasetDependencies(*args)
+
+    def setModelDependencies(self, *args):
+        self.dataWatcher.setModelDependencies(*args)
+
+    def setModelDatasetDependencies(self, *args):
+        self.dataWatcher.setModelDatasetDependencies(*args)
+
+    def initialiseWatcher(self):
+        dw = DataWatcher(self.handler.env)
+        dw.addRefreshWidget(self)
+
+        self.dataWatcher = dw
+        self.dataWatcher.parentName = self.name
+
+
 class DataloaderButton(PushButton, EventChildClass):
 
     styleSheet = """
+    @OBJECT{
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    @OBJECT:enabled{
         border: 1px solid @HLColor2;
         color: @HLColor2;
+    }
+    @OBJECT:disabled{
+        border: 1px solid @BGColor4;
+        color: @BGColor4;
+    }
     """
+    lastUpdatedTimestamp = -1
 
     def __init__(self, handler, watcher, **kwargs):
         super().__init__("Load", styleSheet=self.styleSheet, **kwargs)
@@ -25,22 +63,35 @@ class DataloaderButton(PushButton, EventChildClass):
         EventChildClass.__init__(self)
         self.dataWatcher = watcher
 
-        self.setIcon(QtGui.QIcon(getIcon("load")))
+        # self.setIcon(QtGui.QIcon(getIcon("load")))
+        self.dataWatcher.addRefreshWidget(self)
+
+        self.eventSubscribe("WIDGET_REFRESH", self.onWidgetRefresh)
+        self.clicked.connect(self.dataWatcher.loadContent)
+
+    def onWidgetRefresh(self, widget):
+        if self is not widget:
+            return
+
+        missing = self.dataWatcher.currentlyMissingKeys
+        if len(missing) == 0:
+            self.setEnabled(False)
+        else:
+            self.setEnabled(True)
 
 
-class BasicPlotWidget(Widget, EventChildClass):
+class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
-    dataWatcher = None
     lastUpdatedTimestamp = -1
-
     styleSheet = """
+    @OBJECT{
         border-radius:10px;
+    }
     """
 
     def __init__(
         self,
         handler,
-        env,
         name="N/A",
         title="N/A",
         hasLegend=True,
@@ -49,7 +100,9 @@ class BasicPlotWidget(Widget, EventChildClass):
         **kwargs,
     ):
         self.handler = handler
-        self.env = env
+        self.env = handler.env
+        self.name = name
+
         super().__init__(
             layout="vertical",
             color="@BGColor3",
@@ -57,11 +110,14 @@ class BasicPlotWidget(Widget, EventChildClass):
             **kwargs,
         )
         EventChildClass.__init__(self)
+        DataDependentObject.__init__(self)
+
+        self.plotItems = []
+        self.hasLegend = hasLegend
+
         self.colorString = color
         self.layout.setContentsMargins(13, 13, 13, 13)
         self.layout.setSpacing(8)
-        self.name = name
-        self.initialiseWatcher()
 
         # TOOLBAR
         self.toolbar = Widget(layout="horizontal", color="green")
@@ -81,12 +137,16 @@ class BasicPlotWidget(Widget, EventChildClass):
         self.layout.addWidget(self.plotWidget)
         self.applyPlotWidget()
 
+        # REFRESH
+        self.eventSubscribe("WIDGET_REFRESH", self.onWidgetRefresh)
+        self.eventSubscribe("WIDGET_VISUAL_REFRESH", self.visualRefresh)
+        self.eventSubscribe("QUIT_READY", self.onQuit)
+
         # LEGEND
-        self.applyLegend(hasLegend)
+        self.applyLegend()
         self.applyStyle()
 
     def applyToolbar(self, title="N/A"):
-        tb = self.toolbar
         layout = self.toolbar.layout
         layout.setContentsMargins(20, 0, 0, 0)
         layout.setSpacing(8)
@@ -96,6 +156,12 @@ class BasicPlotWidget(Widget, EventChildClass):
         layout.addWidget(self.titleLabel)
 
         layout.addStretch()
+
+        if self.hasLegend:
+            self.legendCheckBox = ToolCheckButton(
+                self.handler, self.updateLegend, icon="legend"
+            )
+            layout.addWidget(self.legendCheckBox)
 
         self.subCheckBox = ToolCheckButton(self.handler, lambda: None)
         layout.addWidget(self.subCheckBox)
@@ -118,9 +184,8 @@ class BasicPlotWidget(Widget, EventChildClass):
         color = config["envs"].get(self.colorString.replace("@", ""))
         self.plotWidget.setBackground(color)
 
-    def applyLegend(self, hasLegend):
-        self.hasLegend = hasLegend
-        if not hasLegend:
+    def applyLegend(self):
+        if not self.hasLegend:
             return
 
         self.legend = pyqtgraph.LegendItem(
@@ -129,6 +194,17 @@ class BasicPlotWidget(Widget, EventChildClass):
             labelTextColor=self.handler.config["envs"].get("TextColor1"),
         )
         self.legend.setParentItem(self.plotWidget.graphicsItem())
+        self.updateLegend()
+
+    def updateLegend(self):
+        if not self.hasLegend:
+            return
+
+        if self.legendCheckBox.checked:
+            self.legend.show()
+            self.refreshLegend()
+        else:
+            self.legend.hide()
 
     def isSubbing(self):
         return self.subCheckBox.isChecked()
@@ -235,24 +311,8 @@ class BasicPlotWidget(Widget, EventChildClass):
             return
         self.refresh()
 
-    def setDataDependencies(self, *args, **kwargs):
-        self.dataWatcher.setDataDependencies(*args, **kwargs)
-
-    def setDatasetDependencies(self, *args, **kwargs):
-        self.dataWatcher.setDatasetDependencies(*args, **kwargs)
-
-    def setModelDependencies(self, *args, **kwargs):
-        self.dataWatcher.setModelDependencies(*args, **kwargs)
-
     def onQuit(self):
         self.plotWidget.close()
-
-    def initialiseWatcher(self):
-        dw = DataWatcher(self.handler.env)
-        dw.addRefreshWidget(self)
-
-        self.dataWatcher = dw
-        self.dataWatcher.parentName = self.name
 
     def getWatchedData(self):
         return self.dataWatcher.getWatchedData()
@@ -276,7 +336,7 @@ class BasicPlotWidget(Widget, EventChildClass):
 
         self.addPlots()
         if self.hasLegend:
-            self.refreshLegend()
+            self.updateLegend()
 
     def refreshLegend(self):
         dw = self.dataWatcher
@@ -314,24 +374,33 @@ class BasicPlotWidget(Widget, EventChildClass):
 
         self.plotItems = []
 
-    def plot(self, x, y, scatter=False, **kwargs):
+    def plot(
+        self,
+        x,
+        y,
+        scatter=False,
+        color=(255, 255, 255),
+        autoColor=None,
+        **kwargs,
+    ):
         self.plotItem.disableAutoRange()
-        colors = self.handler.env.getConfig("plotColors")
-        N = len(self.plotItems) % len(colors)
-        color = colors[N]
 
         if "pen" in kwargs:
             pen = kwargs["pen"]
             del kwargs["pen"]
         else:
-            pen = pg.mkPen(color, width=2.5)
+            if autoColor is not None:
+                color = self.env.getColorMix(
+                    dataset=autoColor["dataset"], model=autoColor["model"]
+                )
+            pen = pyqtgraph.mkPen(color, width=2.5)
 
-        # plotItem = self.plotWidget.plot(x, y, pen=pg.mkPen(color, width=2.5))
+        # plotItem = self.plotWidget.plot(x, y, pen=pyqtgraph.mkPen(color, width=2.5))
         if scatter:
-            brush = pg.mkBrush(color)
-            plotItem = pg.ScatterPlotItem(x, y, symbolBrush=brush)
+            brush = pyqtgraph.mkBrush(color)
+            plotItem = pyqtgraph.ScatterPlotItem(x, y, symbolBrush=brush)
         else:
-            plotItem = pg.PlotDataItem(x, y, pen=pen, **kwargs)
+            plotItem = pyqtgraph.PlotDataItem(x, y, pen=pen, **kwargs)
 
         self.plotItem.addItem(plotItem)
         self.plotItems.append(plotItem)

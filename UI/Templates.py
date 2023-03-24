@@ -15,6 +15,7 @@ logger = logging.getLogger("FFAST")
 class Widget(QWidget):
 
     frozen = False  # sometimes used to prevent callbacks while frozen
+    deleted = False
 
     def __init__(
         self, layout=None, color=None, parent=None, frozen=False, styleSheet=""
@@ -55,15 +56,12 @@ class Widget(QWidget):
         self.layout.setSpacing(0)
 
     def applyDefaultStyleSheet(self, color=None, styleSheet=""):
-        ss = f"QWidget#{self.objectName}" + "{\n"  # closing '}' later
+        ss = styleSheet
         if color is not None:
             self.setAttribute(Qt.WA_StyledBackground, True)
-            ss = ss + f"background-color:{color};\n"
+            ss = ss + f"@OBJECT{{background-color:{color};}}"
 
-        if len(styleSheet) > 0:
-            ss = ss + styleSheet + "\n"
-
-        ss = ss + "}"
+        ss = ss.replace("@OBJECT", f"QWidget#{self.objectName}")
 
         self.setStyleSheet(configStyleSheet(ss))
 
@@ -72,6 +70,12 @@ class Widget(QWidget):
 
     def unfreeze(self):
         self.frozen = False
+
+    def setDeleted(self):
+        self.deleted = True
+        self.deleteLater()
+        if self.isEventChild:
+            self.deleteEvents()
 
 
 class TabWidget(QTabWidget):
@@ -83,6 +87,7 @@ class TabWidget(QTabWidget):
 
 
 class PushButton(QtWidgets.QPushButton):
+    
     def __init__(self, text, parent=None, color=None, styleSheet=""):
         super().__init__(text, parent=parent)
 
@@ -95,72 +100,13 @@ class WidgetButton(Widget):
     checked = False
 
     def __init__(
-        self,
-        color=None,
-        hoverColor=None,
-        checkedColor=None,
-        checkedHoverColor=None,
-        styleSheet="",
-        **kwargs,
+        self, **kwargs,
     ):
         super().__init__(**kwargs)
-
-        self.updateFunc = lambda x: None
-        self.applyStyleSheet(
-            color=color,
-            hoverColor=hoverColor,
-            checkedColor=checkedColor,
-            checkedHoverColor=checkedHoverColor,
-            styleSheet="",
-        )
-
         self.setProperty("checked", False)
 
     def setOnClick(self, func):
         self.updateFunc = func
-
-    def applyDefaultStyleSheet(self, **kwargs):
-        # We'll do that ourselves here
-        pass
-
-    def applyStyleSheet(
-        self,
-        color=None,
-        hoverColor=None,
-        checkedColor=None,
-        checkedHoverColor=None,
-        styleSheet="",
-    ):
-
-        self.setAttribute(Qt.WA_StyledBackground, True)
-
-        ss = f"QWidget#{self.objectName}" + "{\n"  # closing '}' later
-        if color is not None:
-            ss = ss + f"background-color:{color};\n"
-        ss = ss + "border-radius: 10px;"
-        if len(styleSheet) > 0:
-            ss = ss + styleSheet + "\n"
-        ss = ss + "}\n"
-
-        # HOVER
-        ss = ss + f"QWidget#{self.objectName}:hover" + "{\n"
-        if hoverColor is not None:
-            ss = ss + f"background-color:{hoverColor};\n"
-        ss = ss + "}\n"
-
-        # CHECKED
-        ss = ss + f"QWidget#{self.objectName}[checked=true]" + "{\n"
-        if checkedColor is not None:
-            ss = ss + f"background-color:{checkedColor};\n"
-        ss = ss + "}\n"
-
-        # CHECKED & HOVER
-        ss = ss + f"QWidget#{self.objectName}[checked=true]:hover" + "{\n"
-        if checkedHoverColor is not None:
-            ss = ss + f"background-color:{checkedHoverColor};\n"
-        ss = ss + "}\n"
-
-        self.setStyleSheet(configStyleSheet(ss))
 
     def mousePressEvent(self, event):
         self.setChecked(not self.checked)
@@ -174,6 +120,9 @@ class WidgetButton(Widget):
         self.style().unpolish(self)
         self.style().polish(self)
 
+    def updateFunc(*args, **kwargs):
+        pass
+
 
 class ToolCheckButton(QtWidgets.QToolButton):
     checked = False
@@ -181,7 +130,7 @@ class ToolCheckButton(QtWidgets.QToolButton):
     def __init__(self, handler, func, icon="default", **kwargs):
         super().__init__(**kwargs)
         self.handler = handler
-        self.clicked.connect(func)
+        self.func = func
         icon = getIcon(icon)
         self.setIcon(QtGui.QIcon(icon))
 
@@ -204,7 +153,7 @@ class ToolCheckButton(QtWidgets.QToolButton):
         return self.checked
 
     def onStateChanged(self):
-        pass
+        self.func()
 
 
 class ToolButton(QtWidgets.QToolButton):
@@ -393,24 +342,20 @@ class ObjectList(Widget):
 
 class InfoWidget(Widget):
     nRows = 0
+    styleSheet = '''
+        QLabel#LeftLabel{
+            font-weight: bold;
+        }
+        QLabel{
+            qproperty-alignment: AlignLeft;
+        }
+        """
+    '''
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, styleSheet=self.styleSheet)
         self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
-
-        self.setStyleSheet(
-            configStyleSheet(
-                """
-                QLabel#LeftLabel{
-                    font-weight: bold;
-                }
-                QLabel{
-                    qproperty-alignment: AlignLeft;
-                }
-                """
-            )
-        )
 
     def setInfo(self, *args):
         # ADD LABELS
@@ -484,8 +429,7 @@ class FlexibleHList(Widget):
 
         if clear:
             for w in self.widgets:
-                w.deleteLater()
-            del self.widgets
+                w.setDeleted()
             self.widgets = []
 
     def nElementsPerRow(self):

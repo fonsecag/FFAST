@@ -61,7 +61,10 @@ class DataWatcher(EventChildClass):
 
         self.refreshDependencyList()
 
-    def setModelDependencies(self, *args):
+    def getDataDependencies(self):
+        return self.dataTypeDependencies
+
+    def setModelDependencies(self, *args, quiet=False):
         self.modelDependencies = []
 
         if len(args) == 0:
@@ -81,12 +84,17 @@ class DataWatcher(EventChildClass):
         for key in args:
             self.modelDependencies.append(key)
 
-        self.refreshDependencyList()
+        if not quiet:
+            self.refreshDependencyList()
 
     def getModelDependencies(self):
         return self.modelDependencies
 
-    def setDatasetDependencies(self, *args):
+    def setModelDatasetDependencies(self, modelKeys, datasetKeys):
+        self.setModelDependencies(*modelKeys, quiet=True)
+        self.setDatasetDependencies(*datasetKeys)
+
+    def setDatasetDependencies(self, *args, quiet=False):
         self.datasetDependencies = []
 
         if len(args) == 0:
@@ -111,7 +119,8 @@ class DataWatcher(EventChildClass):
                 continue
             self.datasetDependencies.append(key)
 
-        self.refreshDependencyList()
+        if not quiet:
+            self.refreshDependencyList()
 
     def getDatasetDependencies(self):
         return self.datasetDependencies

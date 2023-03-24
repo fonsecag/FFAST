@@ -53,7 +53,7 @@ class UIHandler(EventClass):
 
         self.config = config
 
-        # qasync creates its own QApplication instance, and as such you don't
+    # qasync creates its own QApplication instance, and as such you don't
         # need to create a new one, just access the created instance.
         # Also, we don't need app.exec() at the end, that's also handled
         app = QtWidgets.QApplication.instance()  # (sys.argv)

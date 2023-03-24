@@ -10,7 +10,7 @@ config = {
         "#7f7f7f",
         "#bcbd22",
     ],
-    "datasetColors": ["#FFFFFF", "#D0D0D0", "#909090", "#505050", "#101010",],
+    "datasetColors": ["#FFFFFF", "#909090", "#505050", "#101010"],
     "errorDistNKdePoints": 1000,
     "aggloNInitPoints": 10000,
     "clusterScheme": [

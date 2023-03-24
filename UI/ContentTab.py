@@ -18,23 +18,25 @@ class DatasetModelLabel(WidgetButton, EventChildClass):
         background-color: @COLOR;
         border-radius: 10;
     """
+    styleSheet = """
+        @OBJECT{border-radius:9px;}
+        @OBJECT:hover{background-color:@BGColor4}
+        @OBJECT[checked=true]{background-color:@BGColor4}
+        @OBJECT[checked=true]:hover{background-color:@BGColor5}
+    """
 
     def __init__(self, handler, key, type="label", onClick=None, **kwargs):
         self.handler = handler
         super().__init__(
             layout="horizontal",
             color="transparent",
-            hoverColor="@BGColor4",
-            checkedColor="@BGColor4",
-            checkedHoverColor="@BGColor5",
+            styleSheet=self.styleSheet,
             **kwargs
         )
         EventChildClass.__init__(self)
 
         self.env = handler.env
         self.key = key
-
-        self.setOnClick(self.onClick)
 
         self.layout.setContentsMargins(2, 2, 2, 2)
         self.layout.setSpacing(5)
@@ -49,6 +51,8 @@ class DatasetModelLabel(WidgetButton, EventChildClass):
 
         self.layout.addWidget(self.colorCircle)
         self.layout.addWidget(self.label)
+
+        self.eventSubscribe("OBJECT_COLOR_CHANGED", self.onDatasetModelChanged)
 
         self.applyStyle()
 
@@ -66,13 +70,14 @@ class DatasetModelLabel(WidgetButton, EventChildClass):
 
         self.label.setText(self.getName())
 
-    def onClick(self):
-        pass
-
+    def onDatasetModelChanged(self, key):
+        if key != self.key:
+            return
+        self.applyStyle()
 
 class ContentTab(ExpandingScrollArea):
     def __init__(
-        self, handler, hasDataLoader=True, color="@BGColor2", **kwargs
+        self, handler, hasDataSelector=True, color="@BGColor2", **kwargs
     ):
         self.handler = handler
         super().__init__(**kwargs)
@@ -88,10 +93,11 @@ class ContentTab(ExpandingScrollArea):
         self.widget.layout.addLayout(self.topLayout)
         self.widget.layout.addLayout(self.bottomLayout)
 
-        if hasDataLoader:
+        self.hasDataSelector = hasDataSelector
+        if hasDataSelector:
             self.widget.layout.setContentsMargins(40, 10, 40, 40)
             self.widget.layout.setSpacing(40)
-            self.addDataLoader()
+            self.addDataSelector()
 
         else:
             self.widget.layout.setContentsMargins(40, 40, 40, 40)
@@ -99,9 +105,12 @@ class ContentTab(ExpandingScrollArea):
     def addWidget(self, *args, **kwargs):
         self.bottomLayout.addWidget(*args, **kwargs)
 
-    def addDataLoader(self):
-        self.dataLoader = DatasetModelSelector(self.handler, parent=self)
-        self.topLayout.addWidget(self.dataLoader)
+    def addDataSelectionCallback(self, func):
+        return self.dataSelector.addUpdateCallback(func)
+
+    def addDataSelector(self):
+        self.dataSelector = DatasetModelSelector(self.handler, parent=self)
+        self.topLayout.addWidget(self.dataSelector)
 
 
 class DatasetModelSelector(Widget, EventChildClass):
@@ -110,6 +119,7 @@ class DatasetModelSelector(Widget, EventChildClass):
         self.env = handler.env
         super().__init__(layout="vertical", **kwargs)
         EventChildClass.__init__(self)
+        self.updateCallbacks = []
 
         self.env = handler.env
         self.layout.setSpacing(5)
@@ -145,13 +155,39 @@ class DatasetModelSelector(Widget, EventChildClass):
     def updateModelsList(self, key):
         self.modelsList.removeWidgets(clear=True)
         keys = self.env.getAllModelKeys()
+
         for key in keys:
             w = DatasetModelLabel(self.handler, key, type="button")
+            w.setOnClick(self.update)
             self.modelsList.addWidget(w)
 
     def updateDatasetsList(self, key):
         self.datasetsList.removeWidgets(clear=True)
         keys = self.env.getAllDatasetKeys()
+
         for key in keys:
             w = DatasetModelLabel(self.handler, key, type="button")
+            w.setOnClick(self.update)
             self.datasetsList.addWidget(w)
+
+    def addUpdateCallback(self, func):
+        self.updateCallbacks.append(func)
+
+    def getSelectedKeys(self):
+        modelKeys = []
+        for w in self.modelsList.widgets:
+            if w.checked:
+                modelKeys.append(w.key)
+
+        datasetKeys = []
+        for w in self.datasetsList.widgets:
+            if w.checked:
+                datasetKeys.append(w.key)
+
+        return modelKeys, datasetKeys
+
+    def update(self):
+        modelKeys, datasetKeys = self.getSelectedKeys()
+
+        for func in self.updateCallbacks:
+            func(modelKeys, datasetKeys)

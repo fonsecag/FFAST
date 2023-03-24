@@ -10,7 +10,7 @@ import logging
 import os, glob
 import numpy as np
 import asyncio
-from Utils.misc import loadModules
+from Utils.misc import loadModules, mixColors
 
 logger = logging.getLogger("FFAST")
 
@@ -722,3 +722,13 @@ class Environment(EventClass):
                 print(flush=True)
 
             await asyncio.sleep(dt)
+
+    def getColorMix(self, dataset=None, model=None):
+        if dataset is None and model is None:
+            return (255, 255, 255)
+        elif dataset is None:
+            return model.color
+        elif model is None:
+            return dataset.color
+        else:
+            return mixColors(model.color, dataset.color)

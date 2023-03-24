@@ -5,7 +5,9 @@ import os, time
 logger = logging.getLogger("FFAST")
 subs = defaultdict(list)
 
-REFRESH_EVENTS = ["WIDGET_REFRESH", "WIDGET_VISUAL_REFRESH"]
+# WANTED TO MAKE THEM ONLY ABLE TO HAPPEN ONCE PER CYCLE
+# FOR NOW IM STAGGERING INSIDE THE WIDGET REFRESH THINGY
+# REFRESH_EVENTS = ["WIDGET_REFRESH", "WIDGET_VISUAL_REFRESH"]
 
 
 def doNothing(*args):
@@ -26,6 +28,7 @@ class EventClass:
         super().__init__(*args, **kwargs)
         self.eventQueue = []
         self.eventChildren = []
+        self.subscribedTo = set()
 
     def eventSubscribe(self, event, func, asynchronous=False):
         """
@@ -36,6 +39,7 @@ class EventClass:
             func (func): Function to me called when event happens
         """
         subs[event].append((self, func, asynchronous))
+        self.subscribedTo.add(event)
 
     def eventPush(self, event, *args, quiet=False, **kwargs):
         """
@@ -122,3 +126,17 @@ class EventChildClass(EventClass):
 
         if hasattr(self, "handler"):
             self.handler.addEventChild(self)
+
+    def deleteEvents(self):
+        # REMOVE IT FROM HANDLER'S EVENT CHILDREN
+        eventChildren = self.eventParent.eventChildren
+        eventChildren.remove(self)
+
+        # REMOVE IT FROM SUBS
+        for event in self.subscribedTo:
+            eventSubs = subs[event]
+            for i in range(len(eventSubs) -1, -1, -1):
+                if eventSubs[i][0] is self:
+                    del eventSubs[i]
+
+        self.deleteLater()

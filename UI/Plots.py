@@ -142,6 +142,9 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.eventSubscribe("WIDGET_VISUAL_REFRESH", self.visualRefresh)
         self.eventSubscribe("QUIT_READY", self.onQuit)
 
+        # EVENTS
+        self.eventSubscribe("OBJECT_NAME_CHANGED", self.onModelDatasetNameChanged)
+        self.eventSubscribe("OBJECT_COLOR_CHANGED", self.onModelDatasetColorChanged)
         # LEGEND
         self.applyLegend()
         self.applyStyle()
@@ -420,3 +423,16 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         if arg2 is not None:
             arg1 = QtCore.QPointF(arg1, arg2)
         return self.plotItem.getViewBox().mapSceneToView(arg1)
+
+    def onModelDatasetNameChanged(self, key):
+        if not self.dataWatcher.isDependentOn(key):
+            return
+        
+        self.refreshLegend()
+
+    def onModelDatasetColorChanged(self, key):
+        if not self.dataWatcher.isDependentOn(key):
+            return
+        
+        self.visualRefresh() # includes legend
+

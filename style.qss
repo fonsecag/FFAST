@@ -93,11 +93,11 @@ QTextEdit {
   background-color: @BGColor1;
 }
 
+
 QDateTimeEdit:disabled,
 QSpinBox:disabled,
 QDoubleSpinBox:disabled,
-QTextEdit:disabled,
-QLineEdit:disabled {
+QTextEdit:disabled{
   color: rgba(77, 208, 225, 0.2);
   background-color: rgba(35, 38, 41, 0.75);
   border: 2px solid rgba(77, 208, 225, 0.2);
@@ -868,7 +868,8 @@ background: @HLColor1;
 /*  ------------------------------------------------------------------------  */
 /*  QLabel  */
 
-QLabel {
+QLabel,
+QLineEdit:disabled {
   border: none;
   background: transparent;
   color: @TextColor1
@@ -883,7 +884,8 @@ QLabel#plotTitleLabel{
   font-size: 18px;
 }
 
-QLabel#titleLabel{
+QLabel#titleLabel,
+QLineEdit#titleLabel{
   font-weight: bold;
   font-size: 12px;
 }

@@ -259,7 +259,7 @@ class DatasetLoader(EventClass):
             return self.setName(self.name)
         self.name = name
         if self.loaded:
-            self.eventPush("DATASET_NAME_CHANGED", self.fingerprint)
+            self.eventPush("OBJECT_NAME_CHANGED", self.fingerprint)
 
     def getName(self):
         return self.name

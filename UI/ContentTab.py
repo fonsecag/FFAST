@@ -53,6 +53,7 @@ class DatasetModelLabel(WidgetButton, EventChildClass):
         self.layout.addWidget(self.label)
 
         self.eventSubscribe("OBJECT_COLOR_CHANGED", self.onDatasetModelChanged)
+        self.eventSubscribe("OBJECT_NAME_CHANGED", self.onDatasetModelChanged)
 
         self.applyStyle()
 

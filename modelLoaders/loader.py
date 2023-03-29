@@ -101,7 +101,7 @@ class ModelLoader(EventClass):
             return self.setName(self.name)
         self.name = name
         if self.loaded:
-            self.eventPush("MODEL_NAME_CHANGED", self.fingerprint)
+            self.eventPush("OBJECT_NAME_CHANGED", self.fingerprint)
 
     def getDisplayName(self):
         return self.name

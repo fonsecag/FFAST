@@ -5,20 +5,23 @@ from UI.Templates import (
     ObjectList,
     CollapseButton,
     InfoWidget,
+    ToolButton
 )
 from config.uiConfig import configStyleSheet
 from Utils.misc import rgbToHex
 from events import EventChildClass
 
 
-class DatasetModelItem(ObjectListItem):
+class DatasetModelItem(ObjectListItem, EventChildClass):
     buttonStyleSheet = """
         background-color: @COLOR;
         border-radius: 20;
     """
 
     def __init__(self, *args, **kwargs):
+        # self.handler is set automatically
         super().__init__(*args, layout="vertical", **kwargs)
+        EventChildClass.__init__(self)
 
         self.setStyleSheet(
             configStyleSheet(
@@ -53,11 +56,19 @@ class DatasetModelItem(ObjectListItem):
 
         # TEXT INFO
         self.topLayout.addLayout(self.topRightLayout)
-        self.titleLabel = QtWidgets.QLabel("?", parent=self)
+        self.labelLayout = QtWidgets.QHBoxLayout()
+        self.labelLayout.setContentsMargins(0,5,0,0)
+        self.labelLayout.setSpacing(4)
+        self.titleLabel = QtWidgets.QLineEdit("?", parent=self)
+        self.titleLabel.setDisabled(True)
+        # self.titleLabel = QtWidgets.QLabel("?", parent=self)
+
         self.titleLabel.setObjectName("titleLabel")
         self.infoButton = CollapseButton(parent=self)
-        self.topRightLayout.addWidget(self.titleLabel)
+        self.topRightLayout.addLayout(self.labelLayout)
+        self.labelLayout.addWidget(self.titleLabel)
         self.topRightLayout.addWidget(self.infoButton)
+        self.applyToolbar()
 
         ## INFO WIDGET
         self.infoWidget = InfoWidget(parent=self)
@@ -67,6 +78,24 @@ class DatasetModelItem(ObjectListItem):
 
         self.applyStyle()
         self.applyInfo()
+
+    def applyToolbar(self):
+        layout = self.labelLayout
+
+        self.deleteButton = ToolButton(self.handler, self.deleteObject, icon = "delete")
+        self.renameButton = ToolButton(self.handler, self.renameObject, icon = "rename")
+        self.deleteButton.setFixedSize(25,25)
+        self.renameButton.setFixedSize(25,25)
+
+        # SET LINE EDIT PARAMETERS
+        regExp = QtCore.QRegularExpression("^[^.\\\/]*$")
+        validator = QtGui.QRegularExpressionValidator(regExp)
+        self.titleLabel.setValidator(validator)
+
+        self.titleLabel.editingFinished.connect(self.onNameEdited)
+
+        layout.addWidget(self.renameButton)
+        layout.addWidget(self.deleteButton)
 
     def applyStyle(self):
         obj = self.getObject()
@@ -123,6 +152,16 @@ class DatasetModelItem(ObjectListItem):
             info = model.getInfo()
             self.infoWidget.setInfo(*info)
 
+    def deleteObject(self):
+        print("DELETING")
+
+    def renameObject(self):
+        self.titleLabel.setDisabled(F.alse)
+        self.titleLabel.setFocus()
+
+    def onNameEdited(self):
+        self.titleLabel.setDisabled(True)
+        self.getObject().setName(self.titleLabel.text()) # also calls the event
 
 class DatasetObjectList(ObjectList, EventChildClass):
     def __init__(self, handler, **kwargs):

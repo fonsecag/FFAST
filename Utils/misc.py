@@ -7,9 +7,9 @@ import os
 import logging
 
 
-def setupLogger():
+def setupLogger(level = logging.INFO):
     logging.basicConfig(
-        level=logging.INFO,
+        level=level,
         format="[%(levelname)s] %(message)s",
         handlers=[logging.FileHandler("debug.log"), logging.StreamHandler()],
     )

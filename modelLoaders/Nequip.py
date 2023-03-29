@@ -9,6 +9,7 @@ class NequipModelLoader(ModelLoaderACE):
 
     singlePredict = True
     modelName = "Nequip"
+    inputType = np.float32
 
     def __init__(self, env, path):
         super().__init__(env, path)
@@ -18,6 +19,7 @@ class NequipModelLoader(ModelLoaderACE):
 
         calc = nequip_calculator(path)
         self.calculator = calc
+        self.calculator.model.to(torch.float32)
 
     def getFingerprint(self):
         from Utils.misc import md5FromArraysAndStrings

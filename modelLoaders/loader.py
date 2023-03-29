@@ -113,6 +113,7 @@ class ModelLoader(EventClass):
 class ModelLoaderACE(ModelLoader):
 
     modelName = "?"
+    inputType = np.float32 # can be overwritten
 
     def __init__(self, env, path):
         super().__init__(env, path)
@@ -125,11 +126,12 @@ class ModelLoaderACE(ModelLoader):
         else:
             R = dataset.getCoordinates(indices=indices)
         z = dataset.getElements()
+        R = R.astype(self.inputType)
 
         E, F = [], []
         for i in range(len(R)):
             r = R[i]
-            atoms = Atoms(numbers=z, positions=r)
+            atoms = Atoms(numbers=z.astype(self.inputType), positions=r)
             atoms.calc = self.calculator
             F.append(atoms.get_forces())
             E.append(atoms.get_potential_energy())

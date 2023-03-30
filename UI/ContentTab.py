@@ -1,7 +1,7 @@
 from UI.Templates import (
     Widget,
-    WidgetButton,
-    FlexibleHList,
+    ListCheckButton,
+    FlexibleListSelector,
     ExpandingScrollArea,
 )
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -13,63 +13,23 @@ from events import EventChildClass
 logger = logging.getLogger("FFAST")
 
 
-class DatasetModelLabel(WidgetButton, EventChildClass):
-    colorCircleStyleSheet = """
-        background-color: @COLOR;
-        border-radius: 10;
-    """
-    styleSheet = """
-        @OBJECT{border-radius:9px;}
-        @OBJECT:hover{background-color:@BGColor4}
-        @OBJECT[checked=true]{background-color:@BGColor4}
-        @OBJECT[checked=true]:hover{background-color:@BGColor5}
-    """
-
-    def __init__(self, handler, key, type="label", onClick=None, **kwargs):
+class DatasetModelLabel(ListCheckButton, EventChildClass):
+    def __init__(self, handler, key, **kwargs):
         self.handler = handler
-        super().__init__(
-            layout="horizontal",
-            color="transparent",
-            styleSheet=self.styleSheet,
-            **kwargs
-        )
-        EventChildClass.__init__(self)
-
         self.env = handler.env
         self.key = key
 
-        self.layout.setContentsMargins(2, 2, 2, 2)
-        self.layout.setSpacing(5)
-
-        # setting color to transparent forces the widget to have a background at all for changing later
-        self.colorCircle = Widget(parent=self, color="transparent")
-        self.colorCircle.setFixedHeight(20)
-        self.colorCircle.setFixedWidth(20)
-
-        self.label = QtWidgets.QLabel("?", parent=self)
-        self.label.setFixedHeight(20)
-
-        self.layout.addWidget(self.colorCircle)
-        self.layout.addWidget(self.label)
+        super().__init__(**kwargs)
+        EventChildClass.__init__(self)
 
         self.eventSubscribe("OBJECT_COLOR_CHANGED", self.onDatasetModelChanged)
         self.eventSubscribe("OBJECT_NAME_CHANGED", self.onDatasetModelChanged)
 
-        self.applyStyle()
-
     def getColor(self):
         return self.env.getModelOrDataset(self.key).color
 
-    def getName(self):
+    def getLabel(self):
         return self.env.getModelOrDataset(self.key).getDisplayName()
-
-    def applyStyle(self):
-        ss = self.colorCircleStyleSheet.replace(
-            "@COLOR", rgbToHex(*self.getColor())
-        )
-        self.colorCircle.setStyleSheet(configStyleSheet(ss))
-
-        self.label.setText(self.getName())
 
     def onDatasetModelChanged(self, key):
         if key != self.key:
@@ -125,27 +85,14 @@ class DatasetModelSelector(Widget, EventChildClass):
         self.env = handler.env
         self.layout.setSpacing(5)
 
-        # CREATE LAYOUTS AND ADD LIST LABELS
-        self.modelsLayout = QtWidgets.QHBoxLayout()
-        self.datasetsLayout = QtWidgets.QHBoxLayout()
-        self.layout.addLayout(self.modelsLayout)
-        self.layout.addLayout(self.datasetsLayout)
-
-        self.modelsLabel = QtWidgets.QLabel("Selected models")
-        self.datasetsLabel = QtWidgets.QLabel("Selected datasets")
-        self.modelsLayout.addWidget(self.modelsLabel)
-        self.datasetsLayout.addWidget(self.datasetsLabel)
-
-        self.modelsLabel.setFixedWidth(110)
-        self.modelsLabel.setObjectName("titleLabel")
-        self.datasetsLabel.setFixedWidth(110)
-        self.datasetsLabel.setObjectName("titleLabel")
-
         # CREATE LISTS AND ADD THEM TO THE LAYOUTS
-        self.modelsList = FlexibleHList()
-        self.datasetsList = FlexibleHList()
-        self.modelsLayout.addWidget(self.modelsList)
-        self.datasetsLayout.addWidget(self.datasetsList)
+        self.modelsList = FlexibleListSelector(label = 'Selected models')
+        self.datasetsList = FlexibleListSelector(label = 'Selected datasets')
+        self.datasetsList.singleSelection = True
+        self.modelsList.setOnUpdate(self.update)
+        self.datasetsList.setOnUpdate(self.update)
+        self.layout.addWidget(self.modelsList)
+        self.layout.addWidget(self.datasetsList)
 
         self.eventSubscribe("DATASET_LOADED", self.updateDatasetsList)
         self.eventSubscribe("DATASET_DELETED", self.updateDatasetsList)
@@ -158,8 +105,7 @@ class DatasetModelSelector(Widget, EventChildClass):
         keys = self.env.getAllModelKeys()
 
         for key in keys:
-            w = DatasetModelLabel(self.handler, key, type="button")
-            w.setOnClick(self.update)
+            w = DatasetModelLabel(self.handler, key, parent=self.modelsList)
             self.modelsList.addWidget(w)
 
     def updateDatasetsList(self, key):
@@ -167,8 +113,7 @@ class DatasetModelSelector(Widget, EventChildClass):
         keys = self.env.getAllDatasetKeys()
 
         for key in keys:
-            w = DatasetModelLabel(self.handler, key, type="button")
-            w.setOnClick(self.update)
+            w = DatasetModelLabel(self.handler, key, parent = self.datasetsList)
             self.datasetsList.addWidget(w)
 
     def addUpdateCallback(self, func):
@@ -176,12 +121,12 @@ class DatasetModelSelector(Widget, EventChildClass):
 
     def getSelectedKeys(self):
         modelKeys = []
-        for w in self.modelsList.widgets:
+        for w in self.modelsList.getWidgets():
             if w.checked:
                 modelKeys.append(w.key)
 
         datasetKeys = []
-        for w in self.datasetsList.widgets:
+        for w in self.datasetsList.getWidgets():
             if w.checked:
                 datasetKeys.append(w.key)
 

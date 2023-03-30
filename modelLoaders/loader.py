@@ -75,6 +75,8 @@ class ModelLoader(EventClass):
     or forces, etc... are instead found in the specific ModelLoader subclasses.
     """
 
+    isSubDataset = False # for object handlers
+
     def __init__(self, env, path):
         super().__init__()
         self.env = env

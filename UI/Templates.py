@@ -111,9 +111,11 @@ class WidgetButton(Widget):
     def mousePressEvent(self, event):
         self.setChecked(not self.checked)
 
-    def setChecked(self, checked):
+    def setChecked(self, checked, quiet=False):
         self.checked = checked
-        self.updateFunc()
+        
+        if not quiet:
+            self.updateFunc()
 
         # https://wiki.qt.io/Dynamic_Properties_and_Stylesheets
         self.setProperty("checked", checked)
@@ -339,6 +341,22 @@ class ObjectList(Widget):
     def getWidget(self, id):
         return self.widgets.get(id, None)
 
+    def removeObject(self, id):
+        w = self.getWidget(id)
+        if w is None:
+            return
+        
+        self.layout.removeWidget(w)
+        w.deleteLater()
+
+        # force udpate parents if they're collapsible scrollareas
+        parent = self.parent()
+        while parent is not None:
+            if isinstance(parent, CollapsibleWidget):
+                parent.forceUpdateLayout()
+                break
+            parent = parent.parent()
+
 
 class InfoWidget(Widget):
     nRows = 0
@@ -436,20 +454,125 @@ class FlexibleHList(Widget):
         return self.width() // self.elementSize
 
     def indexToGridIndices(self, index):
+        nelpr = self.nElementsPerRow()
+        if nelpr == 0:
+            return None, None
         return divmod(index, self.nElementsPerRow())
 
     def readdWidgets(self):
         for i in range(len(self.widgets)):
             w = self.widgets[i]
             i, j = self.indexToGridIndices(i)
+            if i is None:
+                continue
             self.gridLayout.addWidget(w, i, j)
 
     def addWidget(self, w):
         index = len(self.widgets)
         self.widgets.append(w)
-        # w.setFixedWidth(self.elementSize)
 
         i, j = self.indexToGridIndices(index)
-        self.gridLayout.addWidget(w, i, j)
 
+        if i is None:
+            return
+        
+        self.gridLayout.addWidget(w, i, j)
         self.gridWidget.setMaximumWidth(len(self.widgets) * self.elementSize)
+
+class ListCheckButton(WidgetButton):
+    colorCircleStyleSheet = """
+        background-color: @COLOR;
+        border-radius: 10;
+    """
+    styleSheet = """
+        @OBJECT{border-radius:9px;}
+        @OBJECT:hover{background-color:@BGColor4}
+        @OBJECT[checked=true]{background-color:@BGColor4}
+        @OBJECT[checked=true]:hover{background-color:@BGColor5}
+    """
+
+    def __init__(self, *args, label='N/A', color = (255, 255, 255), **kwargs):
+        super().__init__(*args, layout="horizontal",
+            color="transparent",
+            styleSheet=self.styleSheet, **kwargs)
+
+        self.label = label
+        self.color = color
+
+        self.colorCircle = Widget(parent=self, color="transparent")
+        self.colorCircle.setFixedHeight(20)
+        self.colorCircle.setFixedWidth(20)
+
+        self.layout.setContentsMargins(2, 2, 2, 2)
+        self.layout.setSpacing(5)
+
+        self.label = QtWidgets.QLabel("?", parent=self)
+        self.label.setFixedHeight(20)
+
+        self.layout.addWidget(self.colorCircle)
+        self.layout.addWidget(self.label)
+
+        self.applyStyle()
+        self.setOnClick(self.updateParent)
+
+    def applyStyle(self):
+        ss = self.colorCircleStyleSheet.replace(
+            "@COLOR", rgbToHex(*self.getColor())
+        )
+        self.colorCircle.setStyleSheet(configStyleSheet(ss))
+
+        self.label.setText(self.getLabel())
+
+    def getColor(self):
+        return self.color
+
+    def getLabel(self):
+        return self.label
+
+    def updateParent(self):
+        self.parent.update(self)
+
+
+class FlexibleListSelector(Widget):
+    def __init__(self, *args, elementSize = 150, label = None, singleSelection=False, **kwargs):
+        super().__init__(*args, layout = 'horizontal', **kwargs)
+
+        self.singleSelection = singleSelection
+
+        if label is not None:
+            self.label = QtWidgets.QLabel(parent = self)
+            self.label.setText(label)
+            self.layout.addWidget(self.label)
+            self.label.setFixedWidth(120)
+            self.label.setObjectName("titleLabel")
+
+        self.list = FlexibleHList(elementSize=elementSize, parent = self)
+        self.layout.addWidget(self.list)
+
+    def removeWidgets(self, **kwargs):
+        return self.list.removeWidgets(**kwargs)
+    
+    def addWidget(self, w, *args, **kwargs):
+        w.parent = self
+        return self.list.addWidget(w, *args, **kwargs)
+
+    def getWidgets(self):
+        return self.list.widgets
+
+    def getSelectedWidgets(self):
+        return [w for w in self.getWidgets() if w.checked]
+
+    def setOnUpdate(self, func):
+        self.updateFunc = func
+
+    def update(self, widget):
+
+        if self.singleSelection and len(self.getSelectedWidgets())>1:
+            for w in self.getWidgets():
+                if w is widget:
+                    continue
+                if w.checked:
+                    w.setChecked(False, quiet=True)
+        
+        self.updateFunc()
+

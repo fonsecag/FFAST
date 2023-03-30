@@ -38,6 +38,8 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
             )
         )
 
+        self.eventSubscribe("DATASET_UPDATED", self.applyInfo)
+
         ## TOP PART
         self.layout.setContentsMargins(8, 8, 8, 8)
         self.topLayout = QtWidgets.QHBoxLayout()
@@ -82,20 +84,22 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
     def applyToolbar(self):
         layout = self.labelLayout
 
-        self.deleteButton = ToolButton(self.handler, self.deleteObject, icon = "delete")
+
         self.renameButton = ToolButton(self.handler, self.renameObject, icon = "rename")
-        self.deleteButton.setFixedSize(25,25)
         self.renameButton.setFixedSize(25,25)
 
         # SET LINE EDIT PARAMETERS
         regExp = QtCore.QRegularExpression("^[^.\\\/]*$")
         validator = QtGui.QRegularExpressionValidator(regExp)
         self.titleLabel.setValidator(validator)
-
         self.titleLabel.editingFinished.connect(self.onNameEdited)
 
         layout.addWidget(self.renameButton)
-        layout.addWidget(self.deleteButton)
+
+        if not self.getObject().isSubDataset:
+            self.deleteButton = ToolButton(self.handler, self.deleteObject, icon = "delete")
+            self.deleteButton.setFixedSize(25,25)
+            layout.addWidget(self.deleteButton)
 
     def applyStyle(self):
         obj = self.getObject()
@@ -133,7 +137,11 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         else:
             return dataset
 
-    def applyInfo(self):
+    def applyInfo(self, key = None):
+        if key is not None:
+            if key != self.id:
+                return
+            
         dataset = self.handler.env.getDataset(self.id)
         if dataset is not None:
             self.setName(dataset.getDisplayName())
@@ -153,10 +161,10 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
             self.infoWidget.setInfo(*info)
 
     def deleteObject(self):
-        print("DELETING")
+        self.handler.env.deleteObject(self.id)
 
     def renameObject(self):
-        self.titleLabel.setDisabled(F.alse)
+        self.titleLabel.setDisabled(False)
         self.titleLabel.setFocus()
 
     def onNameEdited(self):
@@ -169,6 +177,7 @@ class DatasetObjectList(ObjectList, EventChildClass):
         super().__init__(handler, DatasetModelItem, **kwargs)
         EventChildClass.__init__(self)
         self.eventSubscribe("DATASET_LOADED", self.onDatasetLoaded)
+        self.eventSubscribe("DATASET_DELETED", self.onDatasetDeleted)
 
     def onDatasetLoaded(self, id):
         if self.getWidget(id) is not None:
@@ -176,6 +185,8 @@ class DatasetObjectList(ObjectList, EventChildClass):
 
         self.newObject(id)
 
+    def onDatasetDeleted(self, id):
+        self.removeObject(id)
 
 class ModelsObjectList(ObjectList, EventChildClass):
     def __init__(self, handler, **kwargs):
@@ -183,13 +194,15 @@ class ModelsObjectList(ObjectList, EventChildClass):
         super().__init__(handler, DatasetModelItem, **kwargs)
         EventChildClass.__init__(self)
         self.eventSubscribe("MODEL_LOADED", self.onModelLoaded)
+        self.eventSubscribe("MODEL_DELETED", self.onModelDeleted)
 
     def onModelLoaded(self, id):
         if self.getWidget(id) is not None:
             return
-
         self.newObject(id)
 
+    def onModelDeleted(self, id):
+        self.removeObject(id)
 
 class SideBar(ContentBar):
     def __init__(self, handler, **kwargs):

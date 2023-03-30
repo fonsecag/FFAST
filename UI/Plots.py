@@ -10,7 +10,7 @@ import pyqtgraph
 import logging
 from client.dataWatcher import DataWatcher
 import numpy as np
-
+from datasetLoaders.loader import SubDataset
 
 class DataDependentObject:
 
@@ -102,6 +102,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.handler = handler
         self.env = handler.env
         self.name = name
+        self.isSubbable = isSubbable
 
         super().__init__(
             layout="vertical",
@@ -124,7 +125,6 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.toolbar.setFixedHeight(30)
         self.toolbar.setObjectName("plotToolbar")
         self.layout.addWidget(self.toolbar)
-        self.applyToolbar(title=title)
 
         # DIVIDER
         divider = Widget(color="@TextColor3")
@@ -136,6 +136,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.plotItem = self.plotWidget.getPlotItem()
         self.layout.addWidget(self.plotWidget)
         self.applyPlotWidget()
+        self.applyToolbar(title=title) # needs the plotwidget to exist
 
         # REFRESH
         self.eventSubscribe("WIDGET_REFRESH", self.onWidgetRefresh)
@@ -166,8 +167,10 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
             )
             layout.addWidget(self.legendCheckBox)
 
-        self.subCheckBox = ToolCheckButton(self.handler, lambda: None)
-        layout.addWidget(self.subCheckBox)
+        if self.isSubbable:
+            self.subCheckBox = ToolCheckButton(self.handler, self.onSubStateChanged)
+            layout.addWidget(self.subCheckBox)
+            self.plotWidget.sigRangeChanged.connect(self.updateSub)
 
         self.loadButton = DataloaderButton(self.handler, self.dataWatcher)
         layout.addWidget(self.loadButton)

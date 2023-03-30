@@ -122,6 +122,9 @@ class Environment(EventClass):
     def getModel(self, key):
         return self.models.get(key, None)
 
+    def modelExists(self, key):
+        return key in self.models.keys()
+
     def getAllModelKeys(self):
         return list(self.models.keys())
 
@@ -156,6 +159,12 @@ class Environment(EventClass):
         key = model.fingerprint
         self.setNewModel(key, model)
         logging.info(f"Model `{path}` successfully loaded")
+
+    def deleteObject(self, key):
+        if self.datasetExists(key):
+            self.deleteDataset(key)
+        elif self.modelExists(key):
+            self.deleteModel(key)    
 
     def deleteModel(self, key):
         model = self.getModel(key)
@@ -240,21 +249,20 @@ class Environment(EventClass):
         self.lookForGhosts()
 
     def declareSubDataset(self, parent, model, idx, subName):
-        subs = self.getAllDatasets(subOnly=True)
 
         # check if already exists
         fp = SubDataset.getFingerprint(SubDataset, parent, model, subName)
         sub = self.getDataset(fp)
 
         # if doesnt exist yet
-        if (sub is None) and (idx is not None):
+        if (sub is None): # and (idx is not None):
             sub = SubDataset(parent, model, idx, subName)
             sub.initialise()
             self.setNewDataset(sub)
-        elif sub is None:
-            pass
-        elif idx is None:
-            sub.setActive(False)
+        # elif sub is None:
+        #     pass
+        # elif idx is None:
+        #     sub.setActive(False)
         else:
             sub.setIndices(idx)
             sub.setActive(True)

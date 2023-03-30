@@ -309,17 +309,17 @@ class DatasetLoader(EventClass):
 class SubDataset(DatasetLoader):
     loadeeType = "dataset"
     isSubDataset = True
-    color = (0, 0, 0, 255)
 
-    name = "N/A"
+    name = "Sub-dataset"
     loaded = False
     modelDep = None
     parent = None
 
     def __init__(self, parentDataset, model, indices, subName):
-        self.subName = subName
+        super().__init__('')
         self.parent = parentDataset
         self.modelDep = model
+        self.subName = subName
 
         self.indices = indices
         self.updatePath()

@@ -135,7 +135,7 @@ class EventChildClass(EventClass):
         # REMOVE IT FROM SUBS
         for event in self.subscribedTo:
             eventSubs = subs[event]
-            for i in range(len(eventSubs) -1, -1, -1):
+            for i in range(len(eventSubs) - 1, -1, -1):
                 if eventSubs[i][0] is self:
                     del eventSubs[i]
 

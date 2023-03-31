@@ -164,7 +164,7 @@ class Environment(EventClass):
         if self.datasetExists(key):
             self.deleteDataset(key)
         elif self.modelExists(key):
-            self.deleteModel(key)    
+            self.deleteModel(key)
 
     def deleteModel(self, key):
         model = self.getModel(key)
@@ -255,7 +255,7 @@ class Environment(EventClass):
         sub = self.getDataset(fp)
 
         # if doesnt exist yet
-        if (sub is None): # and (idx is not None):
+        if sub is None:  # and (idx is not None):
             sub = SubDataset(parent, model, idx, subName)
             sub.initialise()
             self.setNewDataset(sub)

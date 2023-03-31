@@ -74,7 +74,7 @@ class Widget(QWidget):
     def setDeleted(self):
         self.deleted = True
         self.deleteLater()
-        if self.isEventChild:
+        if hasattr(self, "isEventChild") and self.isEventChild:
             self.deleteEvents()
 
 
@@ -87,7 +87,6 @@ class TabWidget(QTabWidget):
 
 
 class PushButton(QtWidgets.QPushButton):
-    
     def __init__(self, text, parent=None, color=None, styleSheet=""):
         super().__init__(text, parent=parent)
 
@@ -99,9 +98,7 @@ class WidgetButton(Widget):
 
     checked = False
 
-    def __init__(
-        self, **kwargs,
-    ):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.setProperty("checked", False)
 
@@ -113,7 +110,7 @@ class WidgetButton(Widget):
 
     def setChecked(self, checked, quiet=False):
         self.checked = checked
-        
+
         if not quiet:
             self.updateFunc()
 
@@ -345,7 +342,7 @@ class ObjectList(Widget):
         w = self.getWidget(id)
         if w is None:
             return
-        
+
         self.layout.removeWidget(w)
         w.deleteLater()
 
@@ -410,6 +407,7 @@ class InfoWidget(Widget):
 class FlexibleHList(Widget):
 
     currentNElementsPerRow = 0
+    needsReadjusting = False
 
     def __init__(self, elementSize=150, **kwargs):
         super().__init__(layout="horizontal", **kwargs)
@@ -422,6 +420,10 @@ class FlexibleHList(Widget):
             QSizePolicy.Expanding, QSizePolicy.Preferred
         )
 
+        self.spacerWidget.setSizePolicy(
+            QSizePolicy.Ignored, QSizePolicy.Ignored
+        )
+
         self.layout.addWidget(self.gridWidget)
         self.layout.addWidget(self.spacerWidget)
         self.elementSize = elementSize
@@ -432,14 +434,21 @@ class FlexibleHList(Widget):
     def resizeEvent(self, event):
         if self.frozen:
             return
-        if self.nElementsPerRow() != self.currentNElementsPerRow:
+
+        if self.needsReadjusting:
+            self.updateMaximumWidth()
             self.adjustLayout()
+
+        elif self.nElementsPerRow() != self.currentNElementsPerRow:
+            self.adjustLayout()
+
         QWidget.resizeEvent(self, event)
 
     def adjustLayout(self):
         self.removeWidgets()
         self.readdWidgets()
         self.currentNElementsPerRow = self.nElementsPerRow()
+        self.needsReadjusting = False
 
     def removeWidgets(self, clear=False):
         for w in self.widgets:
@@ -460,24 +469,30 @@ class FlexibleHList(Widget):
         return divmod(index, self.nElementsPerRow())
 
     def readdWidgets(self):
-        for i in range(len(self.widgets)):
-            w = self.widgets[i]
-            i, j = self.indexToGridIndices(i)
+        for iw in range(len(self.widgets)):
+            w = self.widgets[iw]
+            i, j = self.indexToGridIndices(iw)
             if i is None:
                 continue
             self.gridLayout.addWidget(w, i, j)
 
     def addWidget(self, w):
         index = len(self.widgets)
-        self.widgets.append(w)
-
         i, j = self.indexToGridIndices(index)
 
+        self.widgets.append(w)
+        w.setMaximumWidth(self.elementSize)
+
         if i is None:
+            self.needsReadjusting = True
             return
-        
+
         self.gridLayout.addWidget(w, i, j)
+        self.updateMaximumWidth()
+
+    def updateMaximumWidth(self):
         self.gridWidget.setMaximumWidth(len(self.widgets) * self.elementSize)
+
 
 class ListCheckButton(WidgetButton):
     colorCircleStyleSheet = """
@@ -491,12 +506,16 @@ class ListCheckButton(WidgetButton):
         @OBJECT[checked=true]:hover{background-color:@BGColor5}
     """
 
-    def __init__(self, *args, label='N/A', color = (255, 255, 255), **kwargs):
-        super().__init__(*args, layout="horizontal",
+    def __init__(self, *args, label="N/A", color=(255, 255, 255), **kwargs):
+        super().__init__(
+            *args,
+            layout="horizontal",
             color="transparent",
-            styleSheet=self.styleSheet, **kwargs)
+            styleSheet=self.styleSheet,
+            **kwargs,
+        )
 
-        self.label = label
+        self.name = label
         self.color = color
 
         self.colorCircle = Widget(parent=self, color="transparent")
@@ -527,31 +546,38 @@ class ListCheckButton(WidgetButton):
         return self.color
 
     def getLabel(self):
-        return self.label
+        return self.name
 
     def updateParent(self):
         self.parent.update(self)
 
 
 class FlexibleListSelector(Widget):
-    def __init__(self, *args, elementSize = 150, label = None, singleSelection=False, **kwargs):
-        super().__init__(*args, layout = 'horizontal', **kwargs)
+    def __init__(
+        self,
+        *args,
+        elementSize=150,
+        label=None,
+        singleSelection=False,
+        **kwargs,
+    ):
+        super().__init__(*args, layout="horizontal", **kwargs)
 
         self.singleSelection = singleSelection
 
         if label is not None:
-            self.label = QtWidgets.QLabel(parent = self)
+            self.label = QtWidgets.QLabel(parent=self)
             self.label.setText(label)
             self.layout.addWidget(self.label)
             self.label.setFixedWidth(120)
             self.label.setObjectName("titleLabel")
 
-        self.list = FlexibleHList(elementSize=elementSize, parent = self)
+        self.list = FlexibleHList(elementSize=elementSize, parent=self)
         self.layout.addWidget(self.list)
 
     def removeWidgets(self, **kwargs):
         return self.list.removeWidgets(**kwargs)
-    
+
     def addWidget(self, w, *args, **kwargs):
         w.parent = self
         return self.list.addWidget(w, *args, **kwargs)
@@ -567,12 +593,14 @@ class FlexibleListSelector(Widget):
 
     def update(self, widget):
 
-        if self.singleSelection and len(self.getSelectedWidgets())>1:
+        if self.singleSelection and len(self.getSelectedWidgets()) > 1:
             for w in self.getWidgets():
                 if w is widget:
                     continue
                 if w.checked:
                     w.setChecked(False, quiet=True)
-        
+
         self.updateFunc()
 
+    def removeWidgets(self, *args, **kwargs):
+        return self.list.removeWidgets(*args, **kwargs)

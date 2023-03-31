@@ -115,7 +115,7 @@ def loadData(env):
 
 
 def loadUI(UIHandler, env):
-    from UI.ContentTab import ContentTab
+    from UI.ContentTab import ContentTab, DatasetModelSelector
     from UI.Plots import BasicPlotWidget
 
     ct = ContentTab(UIHandler)

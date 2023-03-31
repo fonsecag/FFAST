@@ -5,7 +5,7 @@ from UI.Templates import (
     ObjectList,
     CollapseButton,
     InfoWidget,
-    ToolButton
+    ToolButton,
 )
 from config.uiConfig import configStyleSheet
 from Utils.misc import rgbToHex
@@ -59,7 +59,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         # TEXT INFO
         self.topLayout.addLayout(self.topRightLayout)
         self.labelLayout = QtWidgets.QHBoxLayout()
-        self.labelLayout.setContentsMargins(0,5,0,0)
+        self.labelLayout.setContentsMargins(0, 5, 0, 0)
         self.labelLayout.setSpacing(4)
         self.titleLabel = QtWidgets.QLineEdit("?", parent=self)
         self.titleLabel.setDisabled(True)
@@ -84,9 +84,10 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
     def applyToolbar(self):
         layout = self.labelLayout
 
-
-        self.renameButton = ToolButton(self.handler, self.renameObject, icon = "rename")
-        self.renameButton.setFixedSize(25,25)
+        self.renameButton = ToolButton(
+            self.handler, self.renameObject, icon="rename"
+        )
+        self.renameButton.setFixedSize(25, 25)
 
         # SET LINE EDIT PARAMETERS
         regExp = QtCore.QRegularExpression("^[^.\\\/]*$")
@@ -97,8 +98,10 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         layout.addWidget(self.renameButton)
 
         if not self.getObject().isSubDataset:
-            self.deleteButton = ToolButton(self.handler, self.deleteObject, icon = "delete")
-            self.deleteButton.setFixedSize(25,25)
+            self.deleteButton = ToolButton(
+                self.handler, self.deleteObject, icon="delete"
+            )
+            self.deleteButton.setFixedSize(25, 25)
             layout.addWidget(self.deleteButton)
 
     def applyStyle(self):
@@ -137,11 +140,11 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         else:
             return dataset
 
-    def applyInfo(self, key = None):
+    def applyInfo(self, key=None):
         if key is not None:
             if key != self.id:
                 return
-            
+
         dataset = self.handler.env.getDataset(self.id)
         if dataset is not None:
             self.setName(dataset.getDisplayName())
@@ -169,7 +172,10 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
 
     def onNameEdited(self):
         self.titleLabel.setDisabled(True)
-        self.getObject().setName(self.titleLabel.text()) # also calls the event
+        self.getObject().setName(
+            self.titleLabel.text()
+        )  # also calls the event
+
 
 class DatasetObjectList(ObjectList, EventChildClass):
     def __init__(self, handler, **kwargs):
@@ -188,6 +194,7 @@ class DatasetObjectList(ObjectList, EventChildClass):
     def onDatasetDeleted(self, id):
         self.removeObject(id)
 
+
 class ModelsObjectList(ObjectList, EventChildClass):
     def __init__(self, handler, **kwargs):
         self.handler = handler
@@ -203,6 +210,7 @@ class ModelsObjectList(ObjectList, EventChildClass):
 
     def onModelDeleted(self, id):
         self.removeObject(id)
+
 
 class SideBar(ContentBar):
     def __init__(self, handler, **kwargs):

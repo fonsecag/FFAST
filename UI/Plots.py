@@ -12,6 +12,7 @@ from client.dataWatcher import DataWatcher
 import numpy as np
 from datasetLoaders.loader import SubDataset
 
+
 class DataDependentObject:
 
     dataWatcher = None
@@ -136,7 +137,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.plotItem = self.plotWidget.getPlotItem()
         self.layout.addWidget(self.plotWidget)
         self.applyPlotWidget()
-        self.applyToolbar(title=title) # needs the plotwidget to exist
+        self.applyToolbar(title=title)  # needs the plotwidget to exist
 
         # REFRESH
         self.eventSubscribe("WIDGET_REFRESH", self.onWidgetRefresh)
@@ -144,8 +145,12 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.eventSubscribe("QUIT_READY", self.onQuit)
 
         # EVENTS
-        self.eventSubscribe("OBJECT_NAME_CHANGED", self.onModelDatasetNameChanged)
-        self.eventSubscribe("OBJECT_COLOR_CHANGED", self.onModelDatasetColorChanged)
+        self.eventSubscribe(
+            "OBJECT_NAME_CHANGED", self.onModelDatasetNameChanged
+        )
+        self.eventSubscribe(
+            "OBJECT_COLOR_CHANGED", self.onModelDatasetColorChanged
+        )
         # LEGEND
         self.applyLegend()
         self.applyStyle()
@@ -168,7 +173,9 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
             layout.addWidget(self.legendCheckBox)
 
         if self.isSubbable:
-            self.subCheckBox = ToolCheckButton(self.handler, self.onSubStateChanged)
+            self.subCheckBox = ToolCheckButton(
+                self.handler, self.onSubStateChanged
+            )
             layout.addWidget(self.subCheckBox)
             self.plotWidget.sigRangeChanged.connect(self.updateSub)
 
@@ -430,12 +437,11 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
     def onModelDatasetNameChanged(self, key):
         if not self.dataWatcher.isDependentOn(key):
             return
-        
+
         self.refreshLegend()
 
     def onModelDatasetColorChanged(self, key):
         if not self.dataWatcher.isDependentOn(key):
             return
-        
-        self.visualRefresh() # includes legend
 
+        self.visualRefresh()  # includes legend

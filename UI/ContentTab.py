@@ -36,6 +36,7 @@ class DatasetModelLabel(ListCheckButton, EventChildClass):
             return
         self.applyStyle()
 
+
 class ContentTab(ExpandingScrollArea):
     def __init__(
         self, handler, hasDataSelector=True, color="@BGColor2", **kwargs
@@ -55,13 +56,9 @@ class ContentTab(ExpandingScrollArea):
         self.widget.layout.addLayout(self.bottomLayout)
 
         self.hasDataSelector = hasDataSelector
+        self.widget.layout.setContentsMargins(40, 40, 40, 40)
         if hasDataSelector:
-            self.widget.layout.setContentsMargins(40, 10, 40, 40)
-            self.widget.layout.setSpacing(40)
             self.addDataSelector()
-
-        else:
-            self.widget.layout.setContentsMargins(40, 40, 40, 40)
 
     def addWidget(self, *args, **kwargs):
         self.bottomLayout.addWidget(*args, **kwargs)
@@ -69,9 +66,15 @@ class ContentTab(ExpandingScrollArea):
     def addDataSelectionCallback(self, func):
         return self.dataSelector.addUpdateCallback(func)
 
-    def addDataSelector(self):
-        self.dataSelector = DatasetModelSelector(self.handler, parent=self)
+    def setDataSelector(self, dataselector):
+        self.widget.layout.setContentsMargins(40, 10, 40, 40)
+        self.widget.layout.setSpacing(40)
+        self.dataSelector = dataselector
         self.topLayout.addWidget(self.dataSelector)
+
+    def addDataSelector(self):
+        ds = DatasetModelSelector(self.handler, parent=self)
+        self.setDataSelector(ds)
 
 
 class DatasetModelSelector(Widget, EventChildClass):
@@ -86,9 +89,8 @@ class DatasetModelSelector(Widget, EventChildClass):
         self.layout.setSpacing(5)
 
         # CREATE LISTS AND ADD THEM TO THE LAYOUTS
-        self.modelsList = FlexibleListSelector(label = 'Selected models')
-        self.datasetsList = FlexibleListSelector(label = 'Selected datasets')
-        self.datasetsList.singleSelection = True
+        self.modelsList = FlexibleListSelector(label="Selected models")
+        self.datasetsList = FlexibleListSelector(label="Selected datasets")
         self.modelsList.setOnUpdate(self.update)
         self.datasetsList.setOnUpdate(self.update)
         self.layout.addWidget(self.modelsList)
@@ -108,27 +110,29 @@ class DatasetModelSelector(Widget, EventChildClass):
             w = DatasetModelLabel(self.handler, key, parent=self.modelsList)
             self.modelsList.addWidget(w)
 
+        self.update()
+
     def updateDatasetsList(self, key):
         self.datasetsList.removeWidgets(clear=True)
         keys = self.env.getAllDatasetKeys()
 
         for key in keys:
-            w = DatasetModelLabel(self.handler, key, parent = self.datasetsList)
+            w = DatasetModelLabel(self.handler, key, parent=self.datasetsList)
             self.datasetsList.addWidget(w)
+
+        self.update()
 
     def addUpdateCallback(self, func):
         self.updateCallbacks.append(func)
 
     def getSelectedKeys(self):
         modelKeys = []
-        for w in self.modelsList.getWidgets():
-            if w.checked:
-                modelKeys.append(w.key)
+        for w in self.modelsList.getSelectedWidgets():
+            modelKeys.append(w.key)
 
         datasetKeys = []
-        for w in self.datasetsList.getWidgets():
-            if w.checked:
-                datasetKeys.append(w.key)
+        for w in self.datasetsList.getSelectedWidgets():
+            datasetKeys.append(w.key)
 
         return modelKeys, datasetKeys
 

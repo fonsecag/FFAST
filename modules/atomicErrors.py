@@ -2,12 +2,12 @@ import numpy as np
 from client.dataType import DataType
 import logging
 from scipy.stats import gaussian_kde
+from config.atoms import zIntToZStr, atomColors
 
 logger = logging.getLogger("FFAST")
 
 
 def loadData(env):
-
     class AtomicForcesErrorDist(DataType):
         modelDependent = True
         datasetDependent = True
@@ -22,18 +22,29 @@ def loadData(env):
             env = self.env
 
             err = env.getData("forcesError", model=model, dataset=dataset)
+            z = dataset.getElements()
 
-            diff = np.abs(err.get("diff"))
-            diff = diff.reshape(diff.shape[0], -1)
-            mae = np.mean(np.abs(diff), axis=1)
+            diffAll = err.get("diff")
+            out = {}
 
-            N = env.getConfig("errorDistNKdePoints")
-            kde = gaussian_kde(np.abs(mae))
+            for i in np.unique(z):
+                idxs = np.argwhere(z == i)
+                idxs = idxs.flatten()
 
-            distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05)
-            distY = kde(distX)
+                diff = diffAll[:, idxs, :]
 
-            de = self.newDataEntity(distY=distY, distX=distX)
+                diff = diff.reshape(diff.shape[0], -1)
+                mae = np.mean(np.abs(diff), axis=1)
+
+                N = env.getConfig("errorDistNKdePoints")
+                kde = gaussian_kde(np.abs(mae))
+
+                distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05)
+                distY = kde(distX)
+
+                out[zIntToZStr[i]] = {"distY": distY, "distX": distX}
+
+            de = self.newDataEntity(**out)
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 
@@ -41,30 +52,94 @@ def loadData(env):
 
 
 def loadUI(UIHandler, env):
-    from UI.ContentTab import ContentTab
+    from UI.ContentTab import ContentTab, DatasetModelSelector, ListCheckButton
     from UI.Plots import BasicPlotWidget
+    from UI.Templates import FlexibleListSelector
+    from config.atoms import atomColors, zIntToZStr
 
-    ct = ContentTab(UIHandler)
+    ct = ContentTab(
+        UIHandler, hasDataSelector=False
+    )  # adding a new one manually
     UIHandler.addContentTab(ct, "Atomic Errors")
 
-    class EnergyErrorDistPlot(BasicPlotWidget):
-        def __init__(self, handler, **kwargs):
-            super().__init__(
-                handler,
-                title="Energy MAE distribution",
-                isSubbable=False,
-                name="Energy Error Distribution",
-                **kwargs
-            )
-            self.setDataDependencies("energyErrorDist")
-            self.setXLabel("Energy MAE")
-            self.setYLabel("Density")
+    class AtomLabel(ListCheckButton):
+        def __init__(self, atomIndex, *args, **kwargs):
+            color = atomColors[atomIndex]
+            name = zIntToZStr[atomIndex]
+            self.atomIndex = atomIndex
+            self.atomName = name
+            super().__init__(*args, color=color, label=name, **kwargs)
 
-        def addPlots(self):
-            for data in self.getWatchedData():
-                de = data["dataEntry"]
-                x, y = de.get("distX"), de.get("distY")
-                self.plot(x, y, autoColor=data)
+    class AtomicDatasetModelSelector(DatasetModelSelector):
+
+        lastSelectedDataset = None
+
+        def __init__(self, UIHandler, parent=None):
+            super().__init__(UIHandler, parent=parent)
+            self.atomsList = FlexibleListSelector(
+                label="Selected models", elementSize=50
+            )
+            self.atomsList.setOnUpdate(self.update)
+            self.layout.addWidget(self.atomsList)
+
+            self.datasetsList.singleSelection = True
+
+        def getSelectedAtomIndices(self):
+            return [x.atomIndex for x in self.atomsList.getSelectedWidgets()]
+
+        def getSelectedAtomInfo(self):
+            l = {}
+            idxs = self.getSelectedAtomIndices()
+            for i in idxs:
+                l[zIntToZStr[i]] = {"index": i, "color": atomColors[i]}
+
+            return l
+
+        def update(self):
+            modelKeys, datasetKeys = self.getSelectedKeys()
+            if len(datasetKeys) > 1:
+                logger.error(
+                    f"Too many keys in singleton dataset selector: {datasetKeys}"
+                )
+                return
+
+            key = None
+            if len(datasetKeys) > 0:
+                key = datasetKeys[0]
+            if key != self.lastSelectedDataset:
+                self.lastSelectedDataset = key
+                self.updateAtomsList()
+
+            nModels, nTypes = len(modelKeys), len(
+                self.getSelectedAtomIndices()
+            )
+
+            self.atomsList.singleSelection = nModels > 1
+            self.modelsList.singleSelection = nTypes > 1
+
+            DatasetModelSelector.update(self)
+
+        def updateAtomsList(self):
+            key = self.lastSelectedDataset
+
+            self.atomsList.removeWidgets(clear=True)
+            if key is not None:
+                dataset = self.handler.env.getDataset(key)
+                if dataset is None:
+                    return
+
+                elements = set(dataset.getElements())
+
+                if len(elements) > 0:
+                    label = AtomLabel(0)  # All
+                    self.atomsList.addWidget(label)
+
+                for i in elements:
+                    label = AtomLabel(i)
+                    self.atomsList.addWidget(label)
+
+    dataselector = AtomicDatasetModelSelector(UIHandler, parent=ct)
+    ct.setDataSelector(dataselector)
 
     class ForcesErrorDistPlot(BasicPlotWidget):
         def __init__(self, handler, **kwargs):
@@ -73,78 +148,48 @@ def loadUI(UIHandler, env):
                 title="Forces MAE distribution",
                 isSubbable=False,
                 name="Force Error Distribution",
-                **kwargs
+                **kwargs,
             )
-            self.setDataDependencies("forcesErrorDist")
+            self.setDataDependencies(
+                "atomicForcesErrorDist", "forcesErrorDist"
+            )
             self.setXLabel("Forces MAE")
             self.setYLabel("Density")
 
         def addPlots(self):
+
+            atomTypes = dataselector.getSelectedAtomInfo()
+            atomMode = len(atomTypes) > 1
+            hasAll = "All" in atomTypes
+
             for data in self.getWatchedData():
                 de = data["dataEntry"]
-                x, y = de.get("distX"), de.get("distY")
-                self.plot(x, y, autoColor=data)
+                dataType = data["key"]
 
-    class EnergyErrorPlot(BasicPlotWidget):
-        def __init__(self, handler, **kwargs):
-            super().__init__(
-                handler,
-                title="Energy MAE timeline",
-                name="Energy Error Timeline",
-                **kwargs
-            )
-            self.setDataDependencies("energyError")
-            self.setXLabel("Configuration index")
-            self.setYLabel("Energy MAE")
+                if dataType == "forcesErrorDist":
+                    if not hasAll:
+                        continue
 
-        def addPlots(self):
-            for data in self.getWatchedData():
-                err = data["dataEntry"].get()
-                self.plot(np.arange(err.shape[0]), np.abs(err), autoColor=data)
+                    x, y = de.get("distX"), de.get("distY")
+                    if atomMode:
+                        self.plot(x, y, color=atomColors[0])
+                    else:
+                        self.plot(x, y, autoColor=data)
 
-        def getDatasetSubIndices(self, dataset, model):
-            (xRange, yRange) = self.getRanges()
-            N = dataset.getN()
-            x0, x1 = xRange
-            return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
+                else:
+                    for atom, info in atomTypes.items():
+                        if atom == "All":
+                            continue
 
-    class ForcesErrorPlot(BasicPlotWidget):
-        def __init__(self, handler, **kwargs):
-            super().__init__(
-                handler,
-                title="Forces MAE timeline",
-                name="Force Error Timeline",
-                **kwargs
-            )
-            self.setDataDependencies("forcesError")
-            self.setXLabel("Configuration index")
-            self.setYLabel("Forces MAE")
+                        atomDE = de.get(atom)
 
-        def addPlots(self):
-            for data in self.getWatchedData():
-                err = data["dataEntry"].get()
-                mae = err.reshape(err.shape[0], -1)
-                mae = np.mean(np.abs(mae), axis=1)
-                self.plot(np.arange(mae.shape[0]), mae, autoColor=data)
+                        x, y = atomDE.get("distX"), atomDE.get("distY")
 
-        def getDatasetSubIndices(self, dataset, model):
-            (xRange, yRange) = self.getRanges()
-            N = dataset.getN()
-            x0, x1 = xRange
-            return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
-
-    plt = EnergyErrorDistPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 0, 0)
-    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
+                        if atomMode:
+                            self.plot(x, y, color=info["color"])
+                        else:
+                            self.plot(x, y, autoColor=data)
 
     plt = ForcesErrorDistPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 0, 1)
-    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
-
-    plt = EnergyErrorPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 1, 0)
-    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
-
-    plt = ForcesErrorPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 1, 1)
+    ct.addWidget(plt, 0, 0)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)

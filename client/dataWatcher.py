@@ -91,7 +91,9 @@ class DataWatcher(EventChildClass):
         return self.modelDependencies
 
     def isDependentOn(self, key):
-        return (key in self.getModelDependencies()) or (key in self.getDatasetDependencies())
+        return (key in self.getModelDependencies()) or (
+            key in self.getDatasetDependencies()
+        )
 
     def setModelDatasetDependencies(self, modelKeys, datasetKeys):
         self.setModelDependencies(*modelKeys, quiet=True)

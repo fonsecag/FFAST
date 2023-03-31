@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QSizePolicy
 import pyqtgraph
 import logging
 from Utils.misc import rgbToHex
+from events import EventChildClass
 
 WIDGET_ID = 0
 logger = logging.getLogger("FFAST")
@@ -121,6 +122,11 @@ class WidgetButton(Widget):
 
     def updateFunc(*args, **kwargs):
         pass
+
+
+class ComboBox(QtWidgets.QComboBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class ToolCheckButton(QtWidgets.QToolButton):
@@ -604,3 +610,64 @@ class FlexibleListSelector(Widget):
 
     def removeWidgets(self, *args, **kwargs):
         return self.list.removeWidgets(*args, **kwargs)
+
+
+class ObjectComboBox(QtWidgets.QComboBox, EventChildClass):
+
+    updateFunc = None
+
+    def __init__(self, handler, hasDatasets = True, hasModels = True, *args, **kwargs):
+        self.handler = handler
+        self.env = handler.env
+        super().__init__(*args, **kwargs)
+        EventChildClass.__init__(self)
+    
+        self.hasDatasets = hasDatasets
+        self.hasModels = hasModels
+
+        if not (hasDatasets or hasModels):
+            return
+
+        if self.hasDatasets:
+            self.eventSubscribe("DATASET_LOADED", self.updateList)
+            self.eventSubscribe("DATASET_DELETED", self.updateList)
+
+        if self.hasModels:
+            self.eventSubscribe("MODEL_LOADED", self.updateList)
+            self.eventSubscribe("MODEL_DELETED", self.updateList)
+
+        self.eventSubscribe("OBJECT_NAME_CHANGED", self.updateComboBox)
+
+        self.currentKeyList = []
+        self.updateList()
+
+        self.currentIndexChanged.connect(self.onIndexChanged)
+
+    def updateList(self, *args):
+        l = []
+        if self.hasDatasets:
+            l = l + self.env.getAllDatasetKeys()
+
+        if self.hasModels:
+            l = l + self.env.getAllModelKeys()
+
+        self.currentKeyList = l
+        self.updateComboBox()
+
+    def updateComboBox(self, *args):
+        self.clear()
+        self.addItems([self.env.getModelOrDataset(x).getDisplayName() for x in self.currentKeyList])
+
+    def setOnIndexChanged(self, func):
+        self.updateFunc = func
+
+    def onIndexChanged(self, index):
+        if (index < 0) or (index >= len(self.currentKeyList)):
+            return
+        
+        if self.updateFunc is not None:
+            self.updateFunc(self.currentKeyList[index])
+
+        
+
+

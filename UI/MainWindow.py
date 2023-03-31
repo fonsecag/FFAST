@@ -4,6 +4,7 @@ from UI.Templates import Widget
 from config.uiConfig import configStyleSheet
 from UI.SideBar import SideBar
 from UI.MainContent import MainContentTabWidget
+from UI.menuHandler import MenuHandler
 
 # from qframelesswindow import FramelessWindow
 
@@ -51,7 +52,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mainLayout = self.mainContent.layout
         self.containerLayout.addWidget(self.mainContent)
 
-        # self.setupMenuBar()
+        self.setupMenuBar()
 
     def setTitleBar(self, titleBar):
         """set custom title bar
@@ -66,9 +67,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.titleBar.raise_()
 
     def setupMenuBar(self):
-        mb = self.menuBar()
-        file = mb.addMenu("&File")
-        file.addAction("hello", self.exit)
+        # mb = self.menuBar()
+        # file = mb.addMenu("&File")
+        # file.addAction("hello", self.exit)
+        self.menuHandler = MenuHandler(self)
 
     def exit(self):
         self.close()

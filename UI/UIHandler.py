@@ -5,6 +5,7 @@ from PySide6.QtCore import QDir
 import pyqtgraph
 from UI.MainWindow import MainWindow
 import os
+from UI.Loupe import Loupe
 
 
 class UIHandler(EventClass):
@@ -36,8 +37,8 @@ class UIHandler(EventClass):
     def newLoupe(self):
         loupe = Loupe(self, len(self.loupes))
 
-        for func in self.loupeAddonFunctions:
-            func(self, loupe)
+        # for func in self.loupeAddonFunctions:
+        #     func(self, loupe)
 
         self.loupes.append(loupe)
         loupe.show()

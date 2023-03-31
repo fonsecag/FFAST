@@ -4,25 +4,31 @@ import os
 
 
 class MenuHandler(EventClass):
-    def __init__(self, handler):
-        self.handler = handler
-        self.window = handler.window
+    def __init__(self, window):
+        self.handler = window.handler
+        self.window = window
         self.connectActions()
 
     def connectActions(self):
         handler, window = (self.handler, self.window)
+        mb = window.menuBar()
 
-        window.actionSave.triggered.connect(self.onSave)
-        window.actionLoad.triggered.connect(self.onLoad)
-        window.actionCustomPreferences.triggered.connect(self.onPreferences)
-        window.actionCustomExit.triggered.connect(self.onExit)
-        window.actionDatasetLoad.triggered.connect(self.onDatasetLoad)
-        window.actionModelLoad.triggered.connect(self.onModelLoad)
-        window.actionNewLoupe.triggered.connect(self.newLoupe)
-        window.actionNewLoupe.setShortcut("Ctrl+n")
-        window.actionLoadPrepredictedModel.triggered.connect(
-            self.loadPrepredictedModel
-        )
+        # FILE
+        File = mb.addMenu("&File")
+        File.addAction("Save", self.onSave)
+        File.addAction("Load", self.onLoad)
+
+        File.addAction("Load Dataset", self.onDatasetLoad)
+        File.addAction("Load Model", self.onModelLoad)
+
+        File.addAction("Load Prediction", self.loadPrepredictedModel)
+
+        # File.addAction("Preferences", self.onPreferences)
+        # File.addAction("Exit", self.onExit)
+    
+        # LOUPE
+        Loupe = mb.addMenu("&Loupe")
+        Loupe.addAction("New", self.newLoupe, "Ctrl+n")
 
     def onSave(self):
         (path, _) = QFileDialog.getSaveFileName(self.handler.window)

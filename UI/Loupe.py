@@ -26,6 +26,24 @@ class InteractiveCanvas(scene.SceneCanvas):
         self.create_native()
         # super().__init__(self)
 
+
+        pos = np.random.normal(size=(100000, 3), scale=0.2)
+        # one could stop here for the data generation, the rest is just to make the
+        # data look more interesting. Copied over from magnify.py
+        centers = np.random.normal(size=(50, 3))
+        indexes = np.random.normal(size=100000, loc=centers.shape[0] / 2,
+                                scale=centers.shape[0] / 3)
+        indexes = np.clip(indexes, 0, centers.shape[0] - 1).astype(int)
+
+        scales = 10**(np.linspace(-2, 0.5, centers.shape[0]))[indexes][:, np.newaxis]
+        pos *= scales
+        pos += centers[indexes]
+        colors = np.random.random((len(pos),4))
+
+        scatter = scene.visuals.Markers(scaling=True, spherical=True)
+        colors = np.random.random((len(pos),4))
+        scatter.set_data(pos, edge_width=0.002, face_color=colors, size=0.02) 
+
     def getPickingRender(self, refresh=True, pos=None):
         av = self.plotWidget.atomsVis
         bv = self.plotWidget.bondsVis
@@ -87,6 +105,8 @@ class InteractiveCanvas(scene.SceneCanvas):
         point = self.getPointAtPosition(event.pos, refresh=False)
         self.plotWidget.setHoveredPoint(point)
 
+    # def addObject(self, )
+
     # def on_resize(self, *args):
     #     scene.SceneCanvas.on_resize(self, *args)
     #     self.plotWidget.onResize()
@@ -129,5 +149,7 @@ class Loupe(Widget, EventChildClass):
             return
         
         self.selectedDatasetKey = key
+
+    
 
 

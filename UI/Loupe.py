@@ -4,6 +4,8 @@ from PySide6 import QtCore, QtGui, QtWidgets
 import logging 
 from vispy import scene
 import numpy as np 
+from vispy.geometry.generation import create_sphere
+import asyncio
 
 logger = logging.getLogger("FFAST")
 
@@ -16,20 +18,28 @@ class SideBar(ContentBar):
     def setupContent(self):
         pass
 
-class InteractiveCanvas(scene.SceneCanvas):
+class InteractiveCanvas(Widget):
     
     mouseoverActive = False
-    # R = None
-    # elements = None
 
-    def __init__(self):
-        super().__init__(keys="interactive", bgcolor="black", create_native=False)
-        # self.plotWidget = plotWidget
-        self.create_native()
+    def __init__(self, loupe):
+        super().__init__(layout='horizontal')
+
+
+        self.canvas = scene.SceneCanvas(keys="interactive", bgcolor="black", create_native=False)
+        self.canvas.create_native()
+        self.view = self.canvas.central_widget.add_view()
+        self.loupe = loupe
+        self.canvas.native.setParent(loupe)
+        self.layout.addWidget(self.canvas.native)
+
+
+        self.setTestData2()
+        self.setTestData()
+
+        self.freeze()
 
         # self.elements = []
-        # self.setTestData()
-
 
     def setTestData(self):
         pos = np.random.normal(size=(100000, 3), scale=0.2)
@@ -45,10 +55,24 @@ class InteractiveCanvas(scene.SceneCanvas):
         pos += centers[indexes]
         colors = np.random.random((len(pos),4))
 
-        scatter = scene.visuals.Markers(scaling=True, spherical=True)
+        scatter = scene.visuals.Markers(scaling=True, spherical=True, parent=self.view.scene)
         colors = np.random.random((len(pos),4))
         scatter.set_data(pos, edge_width=0.002, face_color=colors, size=0.02) 
 
+    def setTestData2(self):
+        self.radius = 2.0
+        self.view.camera = 'turntable'
+        mesh = create_sphere(20, 20, radius=self.radius)
+        vertices = mesh.get_vertices()
+        tris = mesh.get_faces()
+
+        cl = np.linspace(-self.radius, self.radius, 6 + 2)[1:-1]
+
+        self.iso = scene.visuals.Isoline(vertices=vertices, tris=tris,
+                                         data=vertices[:, 2],
+                                         levels=cl, color_lev='autumn',
+                                         parent=self.view.scene)
+        
     def getPickingRender(self, refresh=True, pos=None):
         av = self.plotWidget.atomsVis
         bv = self.plotWidget.bondsVis
@@ -110,9 +134,10 @@ class InteractiveCanvas(scene.SceneCanvas):
         point = self.getPointAtPosition(event.pos, refresh=False)
         self.plotWidget.setHoveredPoint(point)
 
-    # def on_resize(self, *args):
-    #     scene.SceneCanvas.on_resize(self, *args)
-    #     self.plotWidget.onResize()
+    def on_resize(self, *args):
+        scene.SceneCanvas.on_resize(self, *args)
+        print("RESIZING")
+        # self.plotWidget.onResize()
 
     ## VISUAL ELEMENTS
 
@@ -149,6 +174,7 @@ class Loupe(Widget, EventChildClass):
 
     selectedDatasetKey = None
     index = 0
+    videoPaused = False
 
     def __init__(self, handler, N, **kwargs):
         self.handler = handler
@@ -161,6 +187,7 @@ class Loupe(Widget, EventChildClass):
 
         # SIDEBAR HERE
         self.sideBarContainer = Widget(layout='vertical')
+        self.sideBarContainer.setFixedWidth(300)
         self.layout.addWidget(self.sideBarContainer)
 
         self.datasetComboBox = ObjectComboBox(handler, hasModels=False)
@@ -176,14 +203,10 @@ class Loupe(Widget, EventChildClass):
         self.layout.addWidget(self.contentWindow)
 
         # CANVAS
-        # self.canvas = InteractiveCanvas()
-        self.canvas = scene.SceneCanvas()
-        self.canvas.create_native()
-        self.contentLayout.addWidget(self.canvas.native)
+        self.canvas = InteractiveCanvas(self)
+        self.contentLayout.addWidget(self.canvas)
 
     def onDatasetSelected(self, key):
-        if True:
-            return
         if key == self.selectedDatasetKey:
             return
         
@@ -191,10 +214,43 @@ class Loupe(Widget, EventChildClass):
         self.canvas.onDatasetInit()
 
         self.index = 0
-        self.canvas.setGeometry(self.getCurrentR())
+        # self.canvas.setGeometry(self.getCurrentR())
+        self.updateCurrentR()
+
+    # GEOMETRY
 
     def getCurrentR(self):
         dataset = self.env.getDataset(self.selectedDatasetKey)
         return dataset.getCoordinates(indices = self.index)
 
+    def updateCurrentR(self):
+        self.canvas.setGeometry(self.getCurrentR())
+
+    # VIDEO/MOVING GEOMETRIES
+    
+    def onStart(self):
+        self.videoPaused = False
+        self.videoTask = asyncio.create_task(self.runOnNext())
+
+    async def runOnNext(self):
+        while not self.videoPaused:
+            self.onNext()
+            await asyncio.sleep(self.videoInterval)
+
+    def onPause(self):
+        self.videoPaused = True
+
+    def onPrevious(self):
+        self.n = max(0, self.n - 1)
+        self.updateCurrentR()
+        self.refresh()
+
+    def onNext(self):
+        nMax = self.getNMax() - 1
+        self.n = min(nMax, self.n + 1)
+        if self.n == nMax:
+            self.onPause()
+
+        self.updateCurrentR()
+        self.refresh()
 

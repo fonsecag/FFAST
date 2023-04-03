@@ -19,14 +19,19 @@ class SideBar(ContentBar):
 class InteractiveCanvas(scene.SceneCanvas):
     
     mouseoverActive = False
+    # R = None
+    # elements = None
 
     def __init__(self):
         super().__init__(keys="interactive", bgcolor="black", create_native=False)
         # self.plotWidget = plotWidget
         self.create_native()
-        # super().__init__(self)
+
+        # self.elements = []
+        # self.setTestData()
 
 
+    def setTestData(self):
         pos = np.random.normal(size=(100000, 3), scale=0.2)
         # one could stop here for the data generation, the rest is just to make the
         # data look more interesting. Copied over from magnify.py
@@ -105,19 +110,49 @@ class InteractiveCanvas(scene.SceneCanvas):
         point = self.getPointAtPosition(event.pos, refresh=False)
         self.plotWidget.setHoveredPoint(point)
 
-    # def addObject(self, )
-
     # def on_resize(self, *args):
     #     scene.SceneCanvas.on_resize(self, *args)
     #     self.plotWidget.onResize()
 
+    ## VISUAL ELEMENTS
+
+    def addVisualElement(self, element):
+        self.elements.append(element)
+
+    ## INIT
+
+    def onDatasetInit(self):
+        for element in self.elements:
+            element.onDatasetInit()
+
+    ## GEOMETRY
+
+    def onNewGeometry(self):
+        for element in self.elements:
+            element.onNewGeometry()
+
+    def setGeometry(self, R):
+        self.R = R
+        self.onNewGeometry()
+
+class VisualElement:
+    def __init__(self, canvas):
+        self.canvas = canvas
+
+    def onDatasetInit(self):
+        pass
+
+    def onNewGeometry(self):
+        pass
 
 class Loupe(Widget, EventChildClass):
 
     selectedDatasetKey = None
+    index = 0
 
     def __init__(self, handler, N, **kwargs):
         self.handler = handler
+        self.env = handler.env
         super().__init__(color="green", layout = 'horizontal')
         EventChildClass.__init__(self)
 
@@ -141,15 +176,25 @@ class Loupe(Widget, EventChildClass):
         self.layout.addWidget(self.contentWindow)
 
         # CANVAS
-        self.canvas = InteractiveCanvas()
+        # self.canvas = InteractiveCanvas()
+        self.canvas = scene.SceneCanvas()
+        self.canvas.create_native()
         self.contentLayout.addWidget(self.canvas.native)
 
     def onDatasetSelected(self, key):
+        if True:
+            return
         if key == self.selectedDatasetKey:
             return
         
         self.selectedDatasetKey = key
+        self.canvas.onDatasetInit()
 
-    
+        self.index = 0
+        self.canvas.setGeometry(self.getCurrentR())
+
+    def getCurrentR(self):
+        dataset = self.env.getDataset(self.selectedDatasetKey)
+        return dataset.getCoordinates(indices = self.index)
 
 

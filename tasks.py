@@ -157,6 +157,11 @@ class TaskManager(EventClass):
 
         self.eventPush("TASK_CREATED", taskID)
 
+    def simpleTask(self, func, *args, **kwargs):
+        task = asyncio.create_task(func(*args, **kwargs))
+        task.taskID = -1
+        task.add_done_callback(self.handleTaskResult)
+
     def handleTaskResult(self, task):
         # https://quantlane.com/blog/ensure-asyncio-task-exceptions-get-logged/
         try:
@@ -167,7 +172,8 @@ class TaskManager(EventClass):
 
         except Exception:  # pylint: disable=broad-except
             logging.exception("Exception raised by task = %r", task)
-            self.eventPush("TASK_DONE", task.taskID)
+            if task.taskID > 0:
+                self.eventPush("TASK_DONE", task.taskID)
 
     def queueTask(self, *args, taskKey=None, **kwargs):
         if (taskKey is not None) and (taskKey in self.runningTasks):
@@ -207,3 +213,5 @@ class TaskManager(EventClass):
             task["progress"] = None
 
         task["progressMessage"] = message
+
+

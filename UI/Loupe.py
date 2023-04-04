@@ -29,50 +29,16 @@ class InteractiveCanvas(Widget):
         self.canvas = scene.SceneCanvas(keys="interactive", bgcolor="black", create_native=False)
         self.canvas.create_native()
         self.view = self.canvas.central_widget.add_view()
+        self.view.camera = 'turntable'
+        self.scene = self.view.scene
         self.loupe = loupe
         self.canvas.native.setParent(loupe)
         self.layout.addWidget(self.canvas.native)
 
-
-        self.setTestData2()
-        self.setTestData()
+        self.elements = []
 
         self.freeze()
-
-        # self.elements = []
-
-    def setTestData(self):
-        pos = np.random.normal(size=(100000, 3), scale=0.2)
-        # one could stop here for the data generation, the rest is just to make the
-        # data look more interesting. Copied over from magnify.py
-        centers = np.random.normal(size=(50, 3))
-        indexes = np.random.normal(size=100000, loc=centers.shape[0] / 2,
-                                scale=centers.shape[0] / 3)
-        indexes = np.clip(indexes, 0, centers.shape[0] - 1).astype(int)
-
-        scales = 10**(np.linspace(-2, 0.5, centers.shape[0]))[indexes][:, np.newaxis]
-        pos *= scales
-        pos += centers[indexes]
-        colors = np.random.random((len(pos),4))
-
-        scatter = scene.visuals.Markers(scaling=True, spherical=True, parent=self.view.scene)
-        colors = np.random.random((len(pos),4))
-        scatter.set_data(pos, edge_width=0.002, face_color=colors, size=0.02) 
-
-    def setTestData2(self):
-        self.radius = 2.0
-        self.view.camera = 'turntable'
-        mesh = create_sphere(20, 20, radius=self.radius)
-        vertices = mesh.get_vertices()
-        tris = mesh.get_faces()
-
-        cl = np.linspace(-self.radius, self.radius, 6 + 2)[1:-1]
-
-        self.iso = scene.visuals.Isoline(vertices=vertices, tris=tris,
-                                         data=vertices[:, 2],
-                                         levels=cl, color_lev='autumn',
-                                         parent=self.view.scene)
-        
+    
     def getPickingRender(self, refresh=True, pos=None):
         av = self.plotWidget.atomsVis
         bv = self.plotWidget.bondsVis
@@ -141,8 +107,9 @@ class InteractiveCanvas(Widget):
 
     ## VISUAL ELEMENTS
 
-    def addVisualElement(self, element):
-        self.elements.append(element)
+    def addVisualElement(self, Element):
+        el = Element(parent = self.scene)
+        self.elements.append(el)
 
     ## INIT
 
@@ -153,6 +120,8 @@ class InteractiveCanvas(Widget):
     ## GEOMETRY
 
     def onNewGeometry(self):
+        self.canvas.measure_fps()
+
         for element in self.elements:
             element.onNewGeometry()
 
@@ -161,8 +130,16 @@ class InteractiveCanvas(Widget):
         self.onNewGeometry()
 
 class VisualElement:
-    def __init__(self, canvas):
-        self.canvas = canvas
+
+    hasElement = False
+    canvas = None
+
+    def __init__(self, parent = None, element = None):
+        if element is None:
+            self.hasElement = False
+        else:
+            self.hasElement = True
+            self.element = element
 
     def onDatasetInit(self):
         pass
@@ -174,7 +151,8 @@ class Loupe(Widget, EventChildClass):
 
     selectedDatasetKey = None
     index = 0
-    videoPaused = False
+    videoPaused = True
+    videoInterval = 1./60 # s
 
     def __init__(self, handler, N, **kwargs):
         self.handler = handler
@@ -206,6 +184,9 @@ class Loupe(Widget, EventChildClass):
         self.canvas = InteractiveCanvas(self)
         self.contentLayout.addWidget(self.canvas)
 
+        # UPDATES
+        self.datasetComboBox.forceUpdate() # activate the selection
+
     def onDatasetSelected(self, key):
         if key == self.selectedDatasetKey:
             return
@@ -214,23 +195,33 @@ class Loupe(Widget, EventChildClass):
         self.canvas.onDatasetInit()
 
         self.index = 0
-        # self.canvas.setGeometry(self.getCurrentR())
         self.updateCurrentR()
 
-    # GEOMETRY
 
+        # TODO REMOVE
+        if self.videoPaused:
+            self.onStart()
+
+    def getSelectedDataset(self):
+        if self.selectedDatasetKey is None:
+            return None
+        return self.env.getDataset(self.selectedDatasetKey)
+
+    # GEOMETRY
     def getCurrentR(self):
-        dataset = self.env.getDataset(self.selectedDatasetKey)
-        return dataset.getCoordinates(indices = self.index)
+        return self.getSelectedDataset().getCoordinates(indices = self.index)
 
     def updateCurrentR(self):
         self.canvas.setGeometry(self.getCurrentR())
 
+    # ELEMENTS
+    def addVisualElement(self, Element):
+        self.canvas.addVisualElement(Element)
+
     # VIDEO/MOVING GEOMETRIES
-    
     def onStart(self):
         self.videoPaused = False
-        self.videoTask = asyncio.create_task(self.runOnNext())
+        self.videoTask = self.env.tm.simpleTask(self.runOnNext)
 
     async def runOnNext(self):
         while not self.videoPaused:
@@ -243,14 +234,16 @@ class Loupe(Widget, EventChildClass):
     def onPrevious(self):
         self.n = max(0, self.n - 1)
         self.updateCurrentR()
-        self.refresh()
+
+    def getNMax(self):
+        return self.getSelectedDataset().getN()
 
     def onNext(self):
         nMax = self.getNMax() - 1
-        self.n = min(nMax, self.n + 1)
-        if self.n == nMax:
+        # self.index = min(nMax, self.index + 1) # TODO: back to max
+        self.index = (self.index + 1) % nMax
+        if self.index == nMax:
             self.onPause()
 
         self.updateCurrentR()
-        self.refresh()
 

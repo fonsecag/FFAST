@@ -17,6 +17,7 @@ class UIHandler(EventClass):
     env = None
     tabs = []
     loupes = []
+    loupeModules = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -37,14 +38,17 @@ class UIHandler(EventClass):
     def newLoupe(self):
         loupe = Loupe(self, len(self.loupes))
 
-        # for func in self.loupeAddonFunctions:
-        #     func(self, loupe)
+        for func in self.loupeModules:
+            func(self, loupe)
 
         self.loupes.append(loupe)
         loupe.show()
         loupe.setFocus()
 
         self.eventPush("LOUPES_UPDATE")
+
+    def registerLoupeModule(self, func):
+        self.loupeModules.append(func)
 
     def setEnvironment(self, env):
         self.env = env
@@ -100,3 +104,4 @@ class UIHandler(EventClass):
 
     def addContentTab(self, widget, name):
         self.mainWindow.mainContent.addTab(widget, name)
+

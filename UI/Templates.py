@@ -657,9 +657,13 @@ class ObjectComboBox(QtWidgets.QComboBox, EventChildClass):
     def updateComboBox(self, *args):
         self.clear()
         self.addItems([self.env.getModelOrDataset(x).getDisplayName() for x in self.currentKeyList])
+        # self.onIndexChanged(None)
 
     def setOnIndexChanged(self, func):
         self.updateFunc = func
+
+    def forceUpdate(self):
+        self.onIndexChanged(self.currentIndex())
 
     def onIndexChanged(self, index):
         if (index < 0) or (index >= len(self.currentKeyList)):

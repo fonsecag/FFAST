@@ -56,6 +56,8 @@ class Environment(EventClass):
     model predictions, extra dataset descriptors).
     """
 
+    
+
     def __init__(self, headless=True):
         super().__init__()
         self.headless = headless

@@ -5,7 +5,7 @@ from Utils.misc import md5FromArraysAndStrings, removeExtension
 import logging
 from events import EventClass
 from scipy.spatial.distance import pdist
-from config.userConfig import config
+from config.userConfig import getConfig
 from Utils.misc import hexToRGB
 from config.atoms import zIntToZStr, zStrToZInt
 
@@ -75,7 +75,7 @@ class DatasetLoader(EventClass):
 
         global GLOBAL_DATASETS_COUNTER
 
-        colors = config["datasetColors"]
+        colors = getConfig("datasetColors")
         nColors = len(colors)
         self.color = hexToRGB(colors[GLOBAL_DATASETS_COUNTER % nColors])
 

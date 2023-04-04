@@ -222,6 +222,8 @@ class SideBar(ContentBar):
 
         self.modelsList = ModelsObjectList(self.handler, parent=self)
         self.addContent("MODELS", widget=self.modelsList)
+        self.setExpanded("MODELS")
 
         self.datasetsList = DatasetObjectList(self.handler, parent=self)
         self.addContent("DATASETS", widget=self.datasetsList)
+        self.setExpanded("DATASETS")

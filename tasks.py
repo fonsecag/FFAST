@@ -213,5 +213,3 @@ class TaskManager(EventClass):
             task["progress"] = None
 
         task["progressMessage"] = message
-
-

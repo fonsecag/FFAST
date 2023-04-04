@@ -25,7 +25,7 @@ class MenuHandler(EventClass):
 
         # File.addAction("Preferences", self.onPreferences)
         # File.addAction("Exit", self.onExit)
-    
+
         # LOUPE
         Loupe = mb.addMenu("&Loupe")
         Loupe.addAction("New", self.newLoupe, "Ctrl+n")

@@ -25,12 +25,13 @@ def loadModules(UI, env, headless=False):
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
 
-        if hasattr(foo, 'loadData'):
+        if hasattr(foo, "loadData"):
             foo.loadData(env)
-        if (not headless) and hasattr(foo, 'loadUI'):
+        if (not headless) and hasattr(foo, "loadUI"):
             foo.loadUI(UI, env)
         if (not headless) and hasattr(foo, "loadLoupe"):
             UI.registerLoupeModule(foo.loadLoupe)
+
 
 def md5FromArraysAndStrings(*args):
     fp = hashlib.md5()

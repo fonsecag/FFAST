@@ -1,13 +1,14 @@
 from events import EventChildClass
 from UI.Templates import Widget, ContentBar, ObjectComboBox
 from PySide6 import QtCore, QtGui, QtWidgets
-import logging 
+import logging
 from vispy import scene
-import numpy as np 
+import numpy as np
 from vispy.geometry.generation import create_sphere
 import asyncio
 
 logger = logging.getLogger("FFAST")
+
 
 class SideBar(ContentBar):
     def __init__(self, handler, **kwargs):
@@ -18,18 +19,20 @@ class SideBar(ContentBar):
     def setupContent(self):
         pass
 
+
 class InteractiveCanvas(Widget):
-    
+
     mouseoverActive = False
 
     def __init__(self, loupe):
-        super().__init__(layout='horizontal')
+        super().__init__(layout="horizontal")
 
-
-        self.canvas = scene.SceneCanvas(keys="interactive", bgcolor="black", create_native=False)
+        self.canvas = scene.SceneCanvas(
+            keys="interactive", bgcolor="black", create_native=False
+        )
         self.canvas.create_native()
         self.view = self.canvas.central_widget.add_view()
-        self.view.camera = 'turntable'
+        self.view.camera = "turntable"
         self.scene = self.view.scene
         self.loupe = loupe
         self.canvas.native.setParent(loupe)
@@ -38,7 +41,7 @@ class InteractiveCanvas(Widget):
         self.elements = []
 
         self.freeze()
-    
+
     def getPickingRender(self, refresh=True, pos=None):
         av = self.plotWidget.atomsVis
         bv = self.plotWidget.bondsVis
@@ -102,39 +105,58 @@ class InteractiveCanvas(Widget):
 
     def on_resize(self, *args):
         scene.SceneCanvas.on_resize(self, *args)
-        print("RESIZING")
         # self.plotWidget.onResize()
 
     ## VISUAL ELEMENTS
 
     def addVisualElement(self, Element):
-        el = Element(parent = self.scene)
+        el = Element(parent=self.scene)
+        el.canvas = self
         self.elements.append(el)
+
+    def visualRefresh(self):
+
+        for element in self.elements:
+            if element.visualRefreshQueued:
+                element.draw()
+                element.visualRefreshQueued = False
 
     ## INIT
 
-    def onDatasetInit(self):
+    def setDataset(self, dataset):
+        self.dataset = dataset
+
+        print("CALLING ELEMENT INITS")
         for element in self.elements:
             element.onDatasetInit()
 
+        self.visualRefresh()
+
     ## GEOMETRY
+    def getCurrentR(self):
+        return self.dataset.getCoordinates(indices=self.index)
+
+    def setIndex(self, index):
+        self.index = index
+        self.onNewGeometry()
 
     def onNewGeometry(self):
-        self.canvas.measure_fps()
+        self.canvas.measure_fps()  # TODO remove
 
         for element in self.elements:
             element.onNewGeometry()
 
-    def setGeometry(self, R):
-        self.R = R
-        self.onNewGeometry()
+        self.visualRefresh()
+
 
 class VisualElement:
 
     hasElement = False
+    visualRefreshQueued = False
     canvas = None
+    index = None
 
-    def __init__(self, parent = None, element = None):
+    def __init__(self, element=None):
         if element is None:
             self.hasElement = False
         else:
@@ -147,24 +169,31 @@ class VisualElement:
     def onNewGeometry(self):
         pass
 
+    def queueVisualRefresh(self):
+        self.visualRefreshQueued = True
+
+    def draw(self):
+        pass
+
+
 class Loupe(Widget, EventChildClass):
 
     selectedDatasetKey = None
     index = 0
     videoPaused = True
-    videoInterval = 1./60 # s
+    videoInterval = 1.0 / 2000  # s
 
     def __init__(self, handler, N, **kwargs):
         self.handler = handler
         self.env = handler.env
-        super().__init__(color="green", layout = 'horizontal')
+        super().__init__(color="green", layout="horizontal")
         EventChildClass.__init__(self)
 
         self.resize(1100, 800)
         self.setWindowTitle(f"Loupe {N}")
 
         # SIDEBAR HERE
-        self.sideBarContainer = Widget(layout='vertical')
+        self.sideBarContainer = Widget(layout="vertical")
         self.sideBarContainer.setFixedWidth(300)
         self.layout.addWidget(self.sideBarContainer)
 
@@ -176,7 +205,7 @@ class Loupe(Widget, EventChildClass):
         self.sideBarContainer.layout.addWidget(self.sideBar)
 
         # MAIN WINDOW HERE
-        self.contentWindow = Widget(color ="@BGColor2", layout = 'horizontal')
+        self.contentWindow = Widget(color="@BGColor2", layout="horizontal")
         self.contentLayout = self.contentWindow.layout
         self.layout.addWidget(self.contentWindow)
 
@@ -184,47 +213,49 @@ class Loupe(Widget, EventChildClass):
         self.canvas = InteractiveCanvas(self)
         self.contentLayout.addWidget(self.canvas)
 
-        # UPDATES
-        self.datasetComboBox.forceUpdate() # activate the selection
-
-    def onDatasetSelected(self, key):
-        if key == self.selectedDatasetKey:
-            return
-        
-        self.selectedDatasetKey = key
-        self.canvas.onDatasetInit()
-
-        self.index = 0
-        self.updateCurrentR()
-
+    def forceUpdate(self):
+        self.datasetComboBox.forceUpdate()  # activate the selection
+        print("FORCE UPDATING")
+        self.updateCurrentIndex()
 
         # TODO REMOVE
+        print("STARTING VIDEO")
         if self.videoPaused:
             self.onStart()
+
+    def onDatasetSelected(self, key):
+        print("ON DATASET SELECTED")
+        if key == self.selectedDatasetKey:
+            return
+        print("SECLETED")
+        self.selectedDatasetKey = key
+        self.canvas.setDataset(self.getSelectedDataset())
+
+        self.index = 0
+        self.updateCurrentIndex()
 
     def getSelectedDataset(self):
         if self.selectedDatasetKey is None:
             return None
         return self.env.getDataset(self.selectedDatasetKey)
 
-    # GEOMETRY
-    def getCurrentR(self):
-        return self.getSelectedDataset().getCoordinates(indices = self.index)
-
-    def updateCurrentR(self):
-        self.canvas.setGeometry(self.getCurrentR())
+    # INDEX
+    def updateCurrentIndex(self):
+        self.canvas.setIndex(self.index)
 
     # ELEMENTS
     def addVisualElement(self, Element):
         self.canvas.addVisualElement(Element)
 
-    # VIDEO/MOVING GEOMETRIES
+    #  VIDEO/MOVING GEOMETRIES
     def onStart(self):
         self.videoPaused = False
         self.videoTask = self.env.tm.simpleTask(self.runOnNext)
 
     async def runOnNext(self):
         while not self.videoPaused:
+            if self.selectedDatasetKey is None:
+                return
             self.onNext()
             await asyncio.sleep(self.videoInterval)
 
@@ -233,7 +264,7 @@ class Loupe(Widget, EventChildClass):
 
     def onPrevious(self):
         self.n = max(0, self.n - 1)
-        self.updateCurrentR()
+        self.updateCurrentIndex()
 
     def getNMax(self):
         return self.getSelectedDataset().getN()
@@ -245,5 +276,8 @@ class Loupe(Widget, EventChildClass):
         if self.index == nMax:
             self.onPause()
 
-        self.updateCurrentR()
+        self.updateCurrentIndex()
 
+    # SETTINGS PANE
+    def addSidebarPane(self, name, pane):
+        self.sideBar.addContent(name, pane)

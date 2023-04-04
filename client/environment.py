@@ -56,12 +56,9 @@ class Environment(EventClass):
     model predictions, extra dataset descriptors).
     """
 
-    
-
     def __init__(self, headless=True):
         super().__init__()
         self.headless = headless
-        self.loadConfig()
 
         if headless:
             self.quitReady = False
@@ -85,14 +82,6 @@ class Environment(EventClass):
         self.eventSubscribe(
             "SUBDATASET_INDICES_CHANGED", self.deleteCacheByDataset
         )
-
-    def loadConfig(self):
-        from config.userConfig import config
-
-        self.userConfig = config
-
-    def getConfig(self, key):
-        return self.userConfig.get(key, None)
 
     def initialiseDataTypes(self):
         from client.dataType import EnergyPredictionData, ForcesPredictionData

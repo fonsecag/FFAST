@@ -4,7 +4,7 @@ from Utils.misc import removeExtension
 import torch
 import logging
 import numpy as np
-from config.userConfig import config
+from config.userConfig import getConfig
 from Utils.misc import hexToRGB
 
 logger = logging.getLogger("FFAST")
@@ -84,7 +84,7 @@ class ModelLoader(EventClass):
 
         global GLOBAL_MODELS_COUNTER
 
-        colors = config["modelColors"]
+        colors = getConfig("modelColors")
         nColors = len(colors)
         self.color = hexToRGB(colors[GLOBAL_MODELS_COUNTER % nColors])
 

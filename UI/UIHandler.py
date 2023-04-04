@@ -104,4 +104,3 @@ class UIHandler(EventClass):
 
     def addContentTab(self, widget, name):
         self.mainWindow.mainContent.addTab(widget, name)
-

@@ -110,8 +110,9 @@ def loadUI(UIHandler, env):
                 self.lastSelectedDataset = key
                 self.updateAtomsList()
 
-            nModels, nTypes = len(modelKeys), len(
-                self.getSelectedAtomIndices()
+            nModels, nTypes = (
+                len(modelKeys),
+                len(self.getSelectedAtomIndices()),
             )
 
             self.atomsList.singleSelection = nModels > 1

@@ -205,6 +205,7 @@ class CollapseButton(QtWidgets.QPushButton):
     def setCollapsingWidget(self, widget):
         self.collapsingWidget = widget
         self.updateIcon()
+        self.setCollapsed()
 
     def updateIcon(self):
         if self.collapsingWidget.isVisible():
@@ -309,11 +310,20 @@ class ContentBar(Widget):
         self.setFixedWidth(300)
         self.layout.addStretch()
 
+        self.widgets = {}
+
     def addContent(self, name, widget=None):
         content = CollapsibleWidget(
             self.handler, name=name, widget=widget, parent=self
         )
         self.layout.insertWidget(self.layout.count() - 1, content)
+        self.widgets[name] = content
+
+    def setCollapsed(self, name):
+        self.widgets[name].setCollapsed()
+
+    def setExpanded(self, name):
+        self.widgets[name].setExpanded()
 
 
 class ObjectListItem(Widget):
@@ -612,16 +622,18 @@ class FlexibleListSelector(Widget):
         return self.list.removeWidgets(*args, **kwargs)
 
 
-class ObjectComboBox(QtWidgets.QComboBox, EventChildClass):
+class ObjectComboBox(ComboBox, EventChildClass):
 
     updateFunc = None
 
-    def __init__(self, handler, hasDatasets = True, hasModels = True, *args, **kwargs):
+    def __init__(
+        self, handler, hasDatasets=True, hasModels=True, *args, **kwargs
+    ):
         self.handler = handler
         self.env = handler.env
         super().__init__(*args, **kwargs)
         EventChildClass.__init__(self)
-    
+
         self.hasDatasets = hasDatasets
         self.hasModels = hasModels
 
@@ -656,7 +668,12 @@ class ObjectComboBox(QtWidgets.QComboBox, EventChildClass):
 
     def updateComboBox(self, *args):
         self.clear()
-        self.addItems([self.env.getModelOrDataset(x).getDisplayName() for x in self.currentKeyList])
+        self.addItems(
+            [
+                self.env.getModelOrDataset(x).getDisplayName()
+                for x in self.currentKeyList
+            ]
+        )
         # self.onIndexChanged(None)
 
     def setOnIndexChanged(self, func):
@@ -668,10 +685,69 @@ class ObjectComboBox(QtWidgets.QComboBox, EventChildClass):
     def onIndexChanged(self, index):
         if (index < 0) or (index >= len(self.currentKeyList)):
             return
-        
+
         if self.updateFunc is not None:
             self.updateFunc(self.currentKeyList[index])
 
-        
+
+#############
+## SETTINGS
+#############
 
 
+class SettingsWidgetBase(Widget, EventChildClass):
+    def __init__(self, handler, name):
+        super().__init__(layout="horizontal")
+        self.handler = handler
+        self.name = name
+
+        self.label = QtWidgets.QLabel("name")
+        self.layout.addWidget(self.label)
+        self.layout.addStretch()
+
+
+class SettingsComboBox(SettingsWidgetBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+
+
+class SettingsPane(Widget, EventChildClass):
+    # if local, the settings pane doesnt save parameters into the config file
+    # this is used for example in the loupe, where each loupe is independent
+    # and settings dont get changed
+    # TODO: non-local settings dont actually work yet at all
+    local = True
+
+    def __init__(self, UIHandler, local=True, **kwargs):
+        self.local = local
+        self.handler = UIHandler
+        super().__init__(layout="vertical", **kwargs)
+        EventChildClass.__init__(self)
+        self.settings = {}
+        self.layout.setContentsMargins(8, 8, 8, 8)
+        self.layout.setSpacing(8)
+
+    def addSetting(self, typ, name, settingKey=None, **kwargs):
+
+        if (not self.local) and (settingKey is None):
+            logger.error(
+                f"Tried to add setting of name {name} and type {typ} to non-local SettingsPane, but no settings key given."
+            )
+            return
+
+        if name in self.settings:
+            logger.error(
+                f"Tried to add setting of name {name} and type {typ} but name already taken in pane."
+            )
+            return
+
+        if typ == "ComboBox":
+            el = SettingsComboBox(self.handler, name, parent=self, **kwargs)
+        else:
+            logger.error(
+                f"Tried to make setting for SettingsPane {self} but type {typ} not recognised"
+            )
+            return
+
+        self.layout.addWidget(el)
+        self.settings[name] = el

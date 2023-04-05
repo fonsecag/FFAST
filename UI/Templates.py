@@ -78,6 +78,16 @@ class Widget(QWidget):
         if hasattr(self, "isEventChild") and self.isEventChild:
             self.deleteEvents()
 
+    def forceUpdateParent(self):
+        w = self
+        while w.parentWidget() is not None:
+            w = w.parentWidget()
+            if isinstance(w, CollapsibleWidget):
+                # idk why this is needed, but it is
+                # otherwise things just dont update properly
+                # also, only .adjustSize is also not good enough for some reason
+                w.forceUpdateLayout()
+                return
 
 class TabWidget(QTabWidget):
     def __init__(self, parent=None, color=None, styleSheet=""):
@@ -193,7 +203,7 @@ class ExpandingScrollArea(QtWidgets.QScrollArea):
         return QtCore.QSize(super().sizeHint().width(), h)
 
 
-class CollapseButton(QtWidgets.QPushButton):
+class CollapseButton(QtWidgets.QPushButton, Widget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setObjectName("collapseButton")
@@ -234,13 +244,7 @@ class CollapseButton(QtWidgets.QPushButton):
 
     def updateSize(self):
         w = self
-        while w.parentWidget() is not None:
-            w = w.parentWidget()
-            if isinstance(w, CollapsibleWidget):
-                # idk why this is needed, but it is
-                # otherwise things just dont update properly
-                # also, only .adjustSize is also not good enough for some reason
-                w.forceUpdateLayout()
+        self.forceUpdateParent()
 
 
 class CollapsibleWidget(Widget):
@@ -696,20 +700,56 @@ class ObjectComboBox(ComboBox, EventChildClass):
 
 
 class SettingsWidgetBase(Widget, EventChildClass):
+
+    hideFunc = None
+    callbackFunc = None
+
     def __init__(self, handler, name):
         super().__init__(layout="horizontal")
         self.handler = handler
         self.name = name
 
+        self.setFixedHeight(40)
+
         self.label = QtWidgets.QLabel("name")
         self.layout.addWidget(self.label)
         self.layout.addStretch()
 
+    def setHideCondition(self, func):
+        self.hideFunc = func
+
+    def updateVisibility(self):
+        if (self.hideFunc is not None) and self.hideFunc():
+            print("IM HIDINING")
+            self.hide()
+        else:
+            print("IM SHOWING")
+            self.show()
+
+        self.forceUpdateParent()
+
+    def setCallback(self, func):
+        self.callbackFunc = func
+
+    def callback(self):
+        self.parent().updateVisibilities()
+        if self.callbackFunc is not None:
+            self.callbackFunc()
 
 class SettingsComboBox(SettingsWidgetBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
+        self.comboBox = ComboBox(parent = self)
+        self.comboBox.setFixedWidth(150-8)
+        self.comboBox.currentIndexChanged.connect(self.callback)
+        self.layout.addWidget(self.comboBox)
 
+    def setItems(self, *args, **kwargs):
+        self.comboBox.clear()
+        self.comboBox.addItems(*args, **kwargs)
+
+    def getValue(self):
+        return self.comboBox.currentText()
 
 class SettingsPane(Widget, EventChildClass):
     # if local, the settings pane doesnt save parameters into the config file
@@ -751,3 +791,19 @@ class SettingsPane(Widget, EventChildClass):
 
         self.layout.addWidget(el)
         self.settings[name] = el
+
+        self.updateVisibilities()
+
+        return el
+
+    def getSettingValue(self, name):
+        el = self.settings.get(name, None)
+        if el is None:
+            return None
+        print(f"SETTING {name}: {el.getValue()}")
+        return el.getValue()
+    
+    def updateVisibilities(self):
+        print("UPDATING VISIBIKITITES")
+        for k,v in self.settings.items():
+            v.updateVisibility()

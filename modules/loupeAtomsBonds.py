@@ -35,12 +35,32 @@ def addAtomsObject(UIHandler, loupe):
 def addSettingsPane(UIHandler, loupe):
     from UI.Templates import Widget, SettingsPane
 
-    pane = SettingsPane(UIHandler)
-    for i in range(10):
-        pane.addSetting("ComboBox", f"Test {i}")
+    pane = SettingsPane(UIHandler, color = 'green')
+
+    cb = pane.addSetting("ComboBox", f"Test 0")
+    cb.setItems(["yo", "yoyo"])
+
+    cb = pane.addSetting("ComboBox", f"Test 1")
+    cb.setItems(["yo", "yoyo"])
+    cb.setHideCondition(lambda:pane.getSettingValue(f"Test 0")=="yo")
+
+    cb = pane.addSetting("ComboBox", f"Test 2")
+    cb.setItems(["yo", "yoyo"])
+    cb.setHideCondition(lambda:pane.getSettingValue(f"Test 1")=="yo")
+
+    cb = pane.addSetting("ComboBox", f"Test 3")
+    cb.setItems(["yo", "yoyo"])
+    cb.setHideCondition(lambda:pane.getSettingValue(f"Test 2")=="yo")
+
+    cb = pane.addSetting("ComboBox", f"Test 4")
+    cb.setItems(["yo", "yoyo"])
+    cb.setHideCondition(lambda:pane.getSettingValue(f"Test 3")=="yo")
+
+
     loupe.addSidebarPane("TEEST", pane)
 
 
 def loadLoupe(UIHandler, loupe):
     addAtomsObject(UIHandler, loupe)
     addSettingsPane(UIHandler, loupe)
+

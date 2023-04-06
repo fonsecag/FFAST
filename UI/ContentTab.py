@@ -89,8 +89,12 @@ class DatasetModelSelector(Widget, EventChildClass):
         self.layout.setSpacing(5)
 
         # CREATE LISTS AND ADD THEM TO THE LAYOUTS
-        self.modelsList = FlexibleListSelector(label="Selected models")
-        self.datasetsList = FlexibleListSelector(label="Selected datasets")
+        self.modelsList = FlexibleListSelector(
+            label="Selected models", parent=self
+        )
+        self.datasetsList = FlexibleListSelector(
+            label="Selected datasets", parent=self
+        )
         self.modelsList.setOnUpdate(self.update)
         self.datasetsList.setOnUpdate(self.update)
         self.layout.addWidget(self.modelsList)

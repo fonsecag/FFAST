@@ -77,7 +77,7 @@ def loadUI(UIHandler, env):
         def __init__(self, UIHandler, parent=None):
             super().__init__(UIHandler, parent=parent)
             self.atomsList = FlexibleListSelector(
-                label="Selected models", elementSize=50
+                parent=self, label="Selected elements", elementSize=50
             )
             self.atomsList.setOnUpdate(self.update)
             self.layout.addWidget(self.atomsList)
@@ -132,11 +132,11 @@ def loadUI(UIHandler, env):
                 elements = set(dataset.getElements())
 
                 if len(elements) > 0:
-                    label = AtomLabel(0)  # All
+                    label = AtomLabel(0, parent=self.atomsList)  # All
                     self.atomsList.addWidget(label)
 
                 for i in elements:
-                    label = AtomLabel(i)
+                    label = AtomLabel(i, parent=self.atomsList)
                     self.atomsList.addWidget(label)
 
     dataselector = AtomicDatasetModelSelector(UIHandler, parent=ct)

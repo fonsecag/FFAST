@@ -41,6 +41,7 @@ class UIHandler(EventClass):
         for func in self.loupeModules:
             func(self, loupe)
 
+        loupe.forceUpdate()
         self.loupes.append(loupe)
         loupe.show()
         loupe.setFocus()

@@ -1,11 +1,20 @@
 from events import EventChildClass
-from UI.Templates import Widget, ContentBar, ObjectComboBox
+from UI.Templates import (
+    Widget,
+    ContentBar,
+    ObjectComboBox,
+    SettingsPane,
+    Widget,
+    Slider,
+    ToolButton
+)
 from PySide6 import QtCore, QtGui, QtWidgets
 import logging
 from vispy import scene
 import numpy as np
 from vispy.geometry.generation import create_sphere
 import asyncio
+from config.userConfig import Settings
 
 logger = logging.getLogger("FFAST")
 
@@ -24,8 +33,8 @@ class InteractiveCanvas(Widget):
 
     mouseoverActive = False
 
-    def __init__(self, loupe):
-        super().__init__(layout="horizontal")
+    def __init__(self, loupe, **kwargs):
+        super().__init__(layout="horizontal", **kwargs)
 
         self.canvas = scene.SceneCanvas(
             keys="interactive", bgcolor="black", create_native=False
@@ -126,7 +135,6 @@ class InteractiveCanvas(Widget):
     def setDataset(self, dataset):
         self.dataset = dataset
 
-        print("CALLING ELEMENT INITS")
         for element in self.elements:
             element.onDatasetInit()
 
@@ -181,7 +189,6 @@ class Loupe(Widget, EventChildClass):
     selectedDatasetKey = None
     index = 0
     videoPaused = True
-    videoInterval = 1.0 / 2000  # s
 
     def __init__(self, handler, N, **kwargs):
         self.handler = handler
@@ -189,11 +196,13 @@ class Loupe(Widget, EventChildClass):
         super().__init__(color="green", layout="horizontal")
         EventChildClass.__init__(self)
 
+        self.initialiseSettings()
+
         self.resize(1100, 800)
         self.setWindowTitle(f"Loupe {N}")
 
         # SIDEBAR HERE
-        self.sideBarContainer = Widget(layout="vertical")
+        self.sideBarContainer = Widget(layout="vertical", parent=self)
         self.sideBarContainer.setFixedWidth(300)
         self.layout.addWidget(self.sideBarContainer)
 
@@ -201,37 +210,100 @@ class Loupe(Widget, EventChildClass):
         self.datasetComboBox.setOnIndexChanged(self.onDatasetSelected)
         self.sideBarContainer.layout.addWidget(self.datasetComboBox)
 
-        self.sideBar = SideBar(handler)
+        self.sideBar = SideBar(handler, parent=self)
         self.sideBarContainer.layout.addWidget(self.sideBar)
 
         # MAIN WINDOW HERE
-        self.contentWindow = Widget(color="@BGColor2", layout="horizontal")
+        self.contentWindow = Widget(
+            color="@BGColor2", layout="horizontal", parent=self
+        )
         self.contentLayout = self.contentWindow.layout
         self.layout.addWidget(self.contentWindow)
 
         # CANVAS
-        self.canvas = InteractiveCanvas(self)
+        self.canvas = InteractiveCanvas(self, parent=self)
         self.contentLayout.addWidget(self.canvas)
 
+        # VIDEO PANE
+        self.initialiseVideoPane()
+
+    # SETTINGS
+    def initialiseSettings(self):
+        self.settings = Settings()
+        self.settings.addAction("updateIndex", self.updateCurrentIndex)
+        self.settings.addAction("updateGeometry", self.updateCurrentIndex)
+        self.settings.addAction("pause", self.onPause)
+        self.settings.addAction("datasetSelected", self.onDatasetSelected)
+
+        self.settings.addParameters(
+            **{"videoFPS": [30], "videoSkipFrames": [0],}
+        )
+
+    def initialiseVideoPane(self):
+        pane = Widget(parent=self, layout="vertical")
+
+        # PLAYBACK
+        playbackWindow = Widget(parent = pane, layout = 'vertical')
+        self.indexSlider = Slider()
+        self.indexSlider.setCallbackFunc(self.setIndex)
+        playbackWindow.layout.addWidget(self.indexSlider)
+
+        arrowBar = Widget(parent = pane, layout = 'horizontal')
+        self.indexLeftArrow = ToolButton(self.onPrevious, "left")
+        self.playButton = ToolButton(self.toggleVideo, "start")
+        self.indexRightArrow = ToolButton(self.onNext, "right")
+        
+        arrowBar.layout.addStretch()
+        arrowBar.layout.addWidget(self.indexLeftArrow)
+        arrowBar.layout.addWidget(self.playButton)
+        arrowBar.layout.addWidget(self.indexRightArrow)
+        arrowBar.layout.addStretch()
+
+        playbackWindow.layout.addWidget(arrowBar)
+        pane.layout.addWidget(playbackWindow)
+
+        # SETTINGS
+
+        settingsPane = SettingsPane(self.handler, self.settings, parent=pane)
+        settingsPane.addSetting(
+            "LineEdit",
+            "FPS",
+            settingsKey="videoFPS",
+            isInt=True,
+            nMin=1,
+            nMax=5000,
+        )
+
+        settingsPane.addSetting(
+            "LineEdit",
+            "Skip frames",
+            settingsKey="videoSkipFrames",
+            isInt=True,
+            nMin=0,
+            nMax=99999,
+        )
+
+        pane.layout.addWidget(settingsPane)
+
+        self.addSidebarPane("INDEX / VIDEO", pane)
+
+    # DATASET
     def forceUpdate(self):
         self.datasetComboBox.forceUpdate()  # activate the selection
-        print("FORCE UPDATING")
+        if self.selectedDatasetKey is None:
+            return
         self.updateCurrentIndex()
 
-        # TODO REMOVE
-        print("STARTING VIDEO")
-        if self.videoPaused:
-            self.onStart()
-
     def onDatasetSelected(self, key):
-        print("ON DATASET SELECTED")
         if key == self.selectedDatasetKey:
             return
-        print("SECLETED")
         self.selectedDatasetKey = key
-        self.canvas.setDataset(self.getSelectedDataset())
+
+        dataset = self.getSelectedDataset()
+        self.canvas.setDataset(dataset)
 
         self.index = 0
+        self.indexSlider.setMinMax(0, dataset.getN()-1)
         self.updateCurrentIndex()
 
     def getSelectedDataset(self):
@@ -241,6 +313,7 @@ class Loupe(Widget, EventChildClass):
 
     # INDEX
     def updateCurrentIndex(self):
+        # self.indexSlider.setValue(self.index)
         self.canvas.setIndex(self.index)
 
     # ELEMENTS
@@ -248,6 +321,20 @@ class Loupe(Widget, EventChildClass):
         self.canvas.addVisualElement(Element)
 
     #  VIDEO/MOVING GEOMETRIES
+    def toggleVideo(self):
+        if self.videoPaused:
+            self.onStart()
+        else:
+            self.onPause()
+
+        if self.videoPaused:
+            self.playButton.setIconByName("start")
+        else:
+            self.playButton.setIconByName("pause")
+
+    def onPause(self):
+        self.videoPaused = True
+
     def onStart(self):
         self.videoPaused = False
         self.videoTask = self.env.tm.simpleTask(self.runOnNext)
@@ -256,24 +343,25 @@ class Loupe(Widget, EventChildClass):
         while not self.videoPaused:
             if self.selectedDatasetKey is None:
                 return
-            self.onNext()
-            await asyncio.sleep(self.videoInterval)
-
-    def onPause(self):
-        self.videoPaused = True
+            self.onNext(skip = self.settings.get("videoSkipFrames"))
+            await asyncio.sleep(1/self.settings.get("videoFPS"))
 
     def onPrevious(self):
-        self.n = max(0, self.n - 1)
-        self.updateCurrentIndex()
+        index = max(0, self.index - 1)
+        self.setIndex(index)
 
     def getNMax(self):
-        return self.getSelectedDataset().getN()
+        return self.getSelectedDataset().getN() - 1
 
-    def onNext(self):
-        nMax = self.getNMax() - 1
-        # self.index = min(nMax, self.index + 1) # TODO: back to max
-        self.index = (self.index + 1) % nMax
-        if self.index == nMax:
+    def onNext(self, skip = 0):
+        index = min(self.getNMax(), self.index + 1 + skip) 
+
+        self.setIndex(index)
+
+    def setIndex(self, index):
+
+        self.index = index
+        if index == self.getNMax():
             self.onPause()
 
         self.updateCurrentIndex()

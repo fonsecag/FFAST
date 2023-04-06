@@ -89,6 +89,7 @@ class Widget(QWidget):
                 w.forceUpdateLayout()
                 return
 
+
 class TabWidget(QTabWidget):
     def __init__(self, parent=None, color=None, styleSheet=""):
         super().__init__(parent=parent)
@@ -134,10 +135,89 @@ class WidgetButton(Widget):
         pass
 
 
+class Slider(Widget):
+
+    callbackFunc = None
+
+    def __init__(self, *args, hasEditBox = True, nMin=0, nMax = 99999, interval = 1, **kwargs):
+        super().__init__(*args, **kwargs, layout = 'horizontal')
+
+        self.hasEditBox = hasEditBox
+        self.interval = 1
+
+        self.slider = QtWidgets.QSlider(Qt.Horizontal)
+        self.layout.addWidget(self.slider)
+        self.slider.valueChanged.connect(self.onUpdateSlider)
+
+        if hasEditBox:
+            self.lineEdit = LineEdit()
+            self.lineEdit.setFixedWidth(70)
+            self.layout.addWidget(self.lineEdit)
+            self.lineEdit.setOnEdit(self.onUpdateLineEdit)
+
+        self.setMinMax(nMin, nMax, interval)
+
+    def setMinMax(self, nMin, nMax, interval = 1):
+        self.nMin = nMin
+        self.nMax = nMax
+
+        self.slider.setMinimum(nMin)
+        self.slider.setMaximum(nMax)
+        self.slider.setTickInterval(interval)
+
+        val = QtGui.QIntValidator(nMin, nMax)
+        self.lineEdit.setValidator(val)
+
+    def onUpdateSlider(self, value):
+        self.lineEdit.setText(str(value))
+        self.callback()
+
+    def onUpdateLineEdit(self):
+        value =  self.lineEdit.text()
+        self.slider.setValue(int(value))
+        self.callback()
+
+    def setValue(self, value):
+        self.lineEdit.setText(str(value))
+        self.slider.setValue(int(value))
+
+    def getValue(self):
+        return self.slider.value()
+
+    def setCallbackFunc(self, func):
+        self.callbackFunc = func
+
+    def callback(self):
+        if self.callbackFunc is not None:
+            self.callbackFunc(self.getValue())
+
 class ComboBox(QtWidgets.QComboBox):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, color=None, styleSheet="", **kwargs):
         super().__init__(*args, **kwargs)
 
+        Widget.applyDefaultName(self)
+        Widget.applyDefaultStyleSheet(self, color=color, styleSheet=styleSheet)
+
+
+class LineEdit(QtWidgets.QLineEdit):
+
+    callbackFunc = None
+
+    def __init__(self, *args, color=None, styleSheet="", **kwargs):
+        super().__init__(*args, **kwargs)
+
+        Widget.applyDefaultName(self)
+        Widget.applyDefaultStyleSheet(self, color=color, styleSheet=styleSheet)
+
+        self.editingFinished.connect(self.callback)
+
+    def setOnEdit(self, func):
+        self.callbackFunc = func
+
+    def callback(self):
+        self.clearFocus()
+        if self.callbackFunc is not None:
+            self.callbackFunc()
 
 class ToolCheckButton(QtWidgets.QToolButton):
     checked = False
@@ -172,11 +252,13 @@ class ToolCheckButton(QtWidgets.QToolButton):
 
 
 class ToolButton(QtWidgets.QToolButton):
-    def __init__(self, handler, func, icon="default", **kwargs):
+    def __init__(self, func, icon="default", **kwargs):
         super().__init__(**kwargs)
-        self.handler = handler
         self.clicked.connect(func)
-        icon = getIcon(icon)
+        self.setIconByName(icon)
+
+    def setIconByName(self, name):
+        icon = getIcon(name)
         self.setIcon(QtGui.QIcon(icon))
 
 
@@ -367,12 +449,7 @@ class ObjectList(Widget):
         w.deleteLater()
 
         # force udpate parents if they're collapsible scrollareas
-        parent = self.parent()
-        while parent is not None:
-            if isinstance(parent, CollapsibleWidget):
-                parent.forceUpdateLayout()
-                break
-            parent = parent.parent()
+        self.forceUpdateParent()
 
 
 class InfoWidget(Widget):
@@ -689,7 +766,6 @@ class ObjectComboBox(ComboBox, EventChildClass):
     def onIndexChanged(self, index):
         if (index < 0) or (index >= len(self.currentKeyList)):
             return
-
         if self.updateFunc is not None:
             self.updateFunc(self.currentKeyList[index])
 
@@ -704,14 +780,22 @@ class SettingsWidgetBase(Widget, EventChildClass):
     hideFunc = None
     callbackFunc = None
 
-    def __init__(self, handler, name):
-        super().__init__(layout="horizontal")
+    def __init__(
+        self, handler, name, settings=None, settingsKey=None, **kwargs
+    ):
+        super().__init__(layout="horizontal", **kwargs)
         self.handler = handler
         self.name = name
 
+        self.settings = settings
+        self.settingsKey = settingsKey
+        self.hasSettingsKey = (settings is not None) and (
+            settingsKey is not None
+        )
+
         self.setFixedHeight(40)
 
-        self.label = QtWidgets.QLabel("name")
+        self.label = QtWidgets.QLabel(str(name))
         self.layout.addWidget(self.label)
         self.layout.addStretch()
 
@@ -720,10 +804,8 @@ class SettingsWidgetBase(Widget, EventChildClass):
 
     def updateVisibility(self):
         if (self.hideFunc is not None) and self.hideFunc():
-            print("IM HIDINING")
             self.hide()
         else:
-            print("IM SHOWING")
             self.show()
 
         self.forceUpdateParent()
@@ -732,57 +814,151 @@ class SettingsWidgetBase(Widget, EventChildClass):
         self.callbackFunc = func
 
     def callback(self):
+        if self.hasSettingsKey:
+            self.settings.setParameter(self.settingsKey, self.getValue())
         self.parent().updateVisibilities()
         if self.callbackFunc is not None:
             self.callbackFunc()
 
+    def setDefault(self):
+        if not self.hasSettingsKey:
+            return
+
+        self.setValue(self.settings.get(self.settingsKey, None))
+
+
 class SettingsComboBox(SettingsWidgetBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args)
-        self.comboBox = ComboBox(parent = self)
-        self.comboBox.setFixedWidth(150-8)
+    def __init__(
+        self,
+        *args,
+        settings=None,
+        settingsKey=None,
+        isNumber=False,
+        items=(),
+        **kwargs,
+    ):
+        super().__init__(
+            *args, settings=settings, settingsKey=settingsKey, **kwargs
+        )
+        self.isNumber = isNumber
+        self.comboBox = ComboBox(parent=self)
+        self.comboBox.setFixedWidth(150 - 8)
+
+        self.setItems(items)
+        self.setDefault()
+
         self.comboBox.currentIndexChanged.connect(self.callback)
         self.layout.addWidget(self.comboBox)
 
-    def setItems(self, *args, **kwargs):
+    def setItems(self, items):
+        self.items = []
         self.comboBox.clear()
-        self.comboBox.addItems(*args, **kwargs)
+        self.comboBox.addItems(items)
 
     def getValue(self):
-        return self.comboBox.currentText()
+        t = self.comboBox.currentText()
+        if self.isNumber:
+            return float(t)
+        else:
+            return str(t)
+
+    def setValue(self, value):
+        self.comboBox.setCurrentText(value)
+
+
+class SettingsLineEdit(SettingsWidgetBase):
+    def __init__(
+        self,
+        *args,
+        settings=None,
+        settingsKey=None,
+        isFloat=False,
+        isInt=False,
+        nMin=0,
+        nMax=99999,
+        **kwargs,
+    ):
+        super().__init__(
+            *args, settings=settings, settingsKey=settingsKey, **kwargs
+        )
+
+        self.isFloat = isFloat
+        self.isInt = isInt
+
+        self.lineEdit = LineEdit("?", parent=self)
+        self.lineEdit.setFixedWidth(150 - 8)
+        self.lineEdit.setMaxLength(10)
+
+        if self.isInt:
+            val = QtGui.QIntValidator(nMin, nMax)
+            self.lineEdit.setValidator(val)
+        elif self.isFloat:
+            val = QtGui.QDoubleValidator(nMin, nMax)
+            self.lineEdit.setValidator(val)
+
+        self.setDefault()
+
+        self.lineEdit.setOnEdit(self.callback)
+        self.layout.addWidget(self.lineEdit)
+
+    def getValue(self):
+        t = self.lineEdit.text()
+        if self.isFloat:
+            return float(t)
+        elif self.isInt:
+            return int(t)
+        else:
+            return str(t)
+
+    def setValue(self, value):
+        self.lineEdit.setText(str(value))
+
+
 
 class SettingsPane(Widget, EventChildClass):
-    # if local, the settings pane doesnt save parameters into the config file
-    # this is used for example in the loupe, where each loupe is independent
-    # and settings dont get changed
-    # TODO: non-local settings dont actually work yet at all
-    local = True
-
-    def __init__(self, UIHandler, local=True, **kwargs):
-        self.local = local
+    def __init__(self, UIHandler, settings, **kwargs):
         self.handler = UIHandler
         super().__init__(layout="vertical", **kwargs)
         EventChildClass.__init__(self)
-        self.settings = {}
+        self.settingsWidgets = {}
+        self.settings = settings
         self.layout.setContentsMargins(8, 8, 8, 8)
         self.layout.setSpacing(8)
 
-    def addSetting(self, typ, name, settingKey=None, **kwargs):
+    def addSetting(self, typ, name, settingsKey=None, **kwargs):
 
-        if (not self.local) and (settingKey is None):
+        if settingsKey is None:
             logger.error(
-                f"Tried to add setting of name {name} and type {typ} to non-local SettingsPane, but no settings key given."
+                f"Tried to add setting of name {name} and type {typ} to SettingsPane, but no settings key given."
             )
             return
 
-        if name in self.settings:
+        if name in self.settingsWidgets:
             logger.error(
                 f"Tried to add setting of name {name} and type {typ} but name already taken in pane."
             )
             return
 
         if typ == "ComboBox":
-            el = SettingsComboBox(self.handler, name, parent=self, **kwargs)
+            el = SettingsComboBox(
+                self.handler,
+                name,
+                settingsKey=settingsKey,
+                settings=self.settings,
+                parent=self,
+                **kwargs,
+            )
+
+        elif typ == "LineEdit":
+            el = SettingsLineEdit(
+                self.handler,
+                name,
+                settingsKey=settingsKey,
+                settings=self.settings,
+                parent=self,
+                **kwargs,
+            )
+
         else:
             logger.error(
                 f"Tried to make setting for SettingsPane {self} but type {typ} not recognised"
@@ -790,20 +966,18 @@ class SettingsPane(Widget, EventChildClass):
             return
 
         self.layout.addWidget(el)
-        self.settings[name] = el
+        self.settingsWidgets[name] = el
 
         self.updateVisibilities()
 
         return el
 
     def getSettingValue(self, name):
-        el = self.settings.get(name, None)
+        el = self.settingsWidgets.get(name, None)
         if el is None:
             return None
-        print(f"SETTING {name}: {el.getValue()}")
         return el.getValue()
-    
+
     def updateVisibilities(self):
-        print("UPDATING VISIBIKITITES")
-        for k,v in self.settings.items():
+        for _, v in self.settingsWidgets.items():
             v.updateVisibility()

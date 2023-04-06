@@ -6,6 +6,7 @@ from UI.Templates import (
     CollapseButton,
     InfoWidget,
     ToolButton,
+    LineEdit,
 )
 from config.uiConfig import configStyleSheet
 from Utils.misc import rgbToHex
@@ -61,7 +62,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         self.labelLayout = QtWidgets.QHBoxLayout()
         self.labelLayout.setContentsMargins(0, 5, 0, 0)
         self.labelLayout.setSpacing(4)
-        self.titleLabel = QtWidgets.QLineEdit("?", parent=self)
+        self.titleLabel = LineEdit("?", parent=self)
         self.titleLabel.setDisabled(True)
         # self.titleLabel = QtWidgets.QLabel("?", parent=self)
 
@@ -84,9 +85,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
     def applyToolbar(self):
         layout = self.labelLayout
 
-        self.renameButton = ToolButton(
-            self.handler, self.renameObject, icon="rename"
-        )
+        self.renameButton = ToolButton(self.renameObject, icon="rename" )
         self.renameButton.setFixedSize(25, 25)
 
         # SET LINE EDIT PARAMETERS
@@ -98,9 +97,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         layout.addWidget(self.renameButton)
 
         if not self.getObject().isSubDataset:
-            self.deleteButton = ToolButton(
-                self.handler, self.deleteObject, icon="delete"
-            )
+            self.deleteButton = ToolButton( self.deleteObject, icon="delete")
             self.deleteButton.setFixedSize(25, 25)
             layout.addWidget(self.deleteButton)
 

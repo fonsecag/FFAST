@@ -29,38 +29,30 @@ def addAtomsObject(UIHandler, loupe):
                 self.pos, face_color=self.colors, size=0.8, edge_width=0.001,
             )
 
-    loupe.addVisualElement(AtomsElement)
+    # loupe.addVisualElement(AtomsElement)
+
+
+def addSettings(UIHandler, loupe):
+    settings = loupe.settings
+    settings.addParameters(**{"atomColorType": ["Elements", "updateIndex"]})
 
 
 def addSettingsPane(UIHandler, loupe):
-    from UI.Templates import Widget, SettingsPane
+    from UI.Templates import SettingsPane
 
-    pane = SettingsPane(UIHandler, color = 'green')
+    pane = SettingsPane(UIHandler, loupe.settings, parent=loupe)
 
-    cb = pane.addSetting("ComboBox", f"Test 0")
-    cb.setItems(["yo", "yoyo"])
+    pane.addSetting(
+        "ComboBox",
+        f"Coloring",
+        settingsKey=f"atomColorType",
+        items=["Elements", "Force Error"],
+    )
 
-    cb = pane.addSetting("ComboBox", f"Test 1")
-    cb.setItems(["yo", "yoyo"])
-    cb.setHideCondition(lambda:pane.getSettingValue(f"Test 0")=="yo")
-
-    cb = pane.addSetting("ComboBox", f"Test 2")
-    cb.setItems(["yo", "yoyo"])
-    cb.setHideCondition(lambda:pane.getSettingValue(f"Test 1")=="yo")
-
-    cb = pane.addSetting("ComboBox", f"Test 3")
-    cb.setItems(["yo", "yoyo"])
-    cb.setHideCondition(lambda:pane.getSettingValue(f"Test 2")=="yo")
-
-    cb = pane.addSetting("ComboBox", f"Test 4")
-    cb.setItems(["yo", "yoyo"])
-    cb.setHideCondition(lambda:pane.getSettingValue(f"Test 3")=="yo")
-
-
-    loupe.addSidebarPane("TEEST", pane)
+    loupe.addSidebarPane("ATOMS", pane)
 
 
 def loadLoupe(UIHandler, loupe):
     addAtomsObject(UIHandler, loupe)
+    addSettings(UIHandler, loupe)
     addSettingsPane(UIHandler, loupe)
-

@@ -38,7 +38,7 @@ def loadLoupe(UI, loupe):
             self.period = 20
 
         def onNewGeometry(self):
-            self.time = self.time + 1
+            self.time = self.canvas.index
             dc = np.random.normal(0, 0.05, self.colors.shape)
             self.colors = np.clip(self.colors + dc, 0, 1)
             self.pos = self.pos + np.random.normal(0, 0.0005, self.pos.shape)
@@ -52,4 +52,4 @@ def loadLoupe(UI, loupe):
                 edge_width=0.001,
             )
 
-    # loupe.addVisualElement(RandomOrbs)
+    loupe.addVisualElement(RandomOrbs)

@@ -3,6 +3,10 @@ from UI.Loupe import VisualElement
 
 
 def loadLoupe(UI, loupe):
+
+    if True:
+        return
+
     from vispy import scene
 
     class RandomOrbs(VisualElement):
@@ -12,7 +16,7 @@ def loadLoupe(UI, loupe):
             )
             super().__init__(*args, **kwargs, element=scatter)
 
-            N = 100000
+            N = 10000
             pos = np.random.normal(size=(N, 3), scale=0.2)
             # one could stop here for the data generation, the rest is just to make the
             # data look more interesting. Copied over from magnify.py
@@ -52,4 +56,7 @@ def loadLoupe(UI, loupe):
                 edge_width=0.001,
             )
 
-    loupe.addVisualElement(RandomOrbs)
+
+    for i in range(1):
+        loupe.addVisualElement(RandomOrbs)
+

@@ -164,12 +164,9 @@ class VisualElement:
     canvas = None
     index = None
 
-    def __init__(self, element=None):
-        if element is None:
-            self.hasElement = False
-        else:
-            self.hasElement = True
-            self.element = element
+    def __init__(self, singleElement = None):
+        if singleElement is not None:
+            self.singleElement = singleElement
 
     def onDatasetInit(self):
         pass
@@ -182,6 +179,10 @@ class VisualElement:
 
     def draw(self):
         pass
+    
+    def hide(self):
+        if self.singleElement is not None:
+            self.singleElement.hide()
 
 
 class Loupe(Widget, EventChildClass):
@@ -313,7 +314,7 @@ class Loupe(Widget, EventChildClass):
 
     # INDEX
     def updateCurrentIndex(self):
-        # self.indexSlider.setValue(self.index)
+        self.indexSlider.setValue(self.index)
         self.canvas.setIndex(self.index)
 
     # ELEMENTS

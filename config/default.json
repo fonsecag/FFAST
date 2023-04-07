@@ -16,5 +16,7 @@
     "clusterScheme": [
         {"type": "Agglo", "desc": "Coulomb", "nClusters": 10},
         {"type": "KMeans", "desc": "Energy", "nClusters": 4}
-    ]
+    ],
+    "loupeBondsColor": "#909090",
+    "loupeBondsLenience": 1.1
 }

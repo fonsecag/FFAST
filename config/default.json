@@ -17,6 +17,8 @@
         {"type": "Agglo", "desc": "Coulomb", "nClusters": 10},
         {"type": "KMeans", "desc": "Energy", "nClusters": 4}
     ],
-    "loupeBondsColor": "#909090",
-    "loupeBondsLenience": 1.1
+    "loupeBondsColor":  "#404040",
+    "loupeAtomColorDimming": 0.93,
+    "loupeBondsLenience": 1.1,
+    "loupePhysicalScalingFactor": 0.1
 }

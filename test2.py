@@ -13,52 +13,39 @@ from vispy.scene.visuals import create_visual_node
 import collections
 
 class TubeVisual(MeshVisual):
-    
-    def __init__(self, points, radius=1.0,
-                 closed=False,
-                 color='grey',
+    lastNumberOfPoints = None
+    vertices = None
+    indices = None
+
+    def __init__(self, radius=1.0,
+                 color=(0.5, 0.5, 0.5, 1),
                  tube_points=10,
                  shading='smooth',
-                 vertex_colors=None,
-                 face_colors=None,
                  mode='triangles'):
 
-        # make sure we are working with floats
-        points = np.array(points).astype(float)
-        print(f'Points: {points.shape}')
+        self.tube_points = tube_points
+        self.radius = radius
+     
+        MeshVisual.__init__(self, np.zeros((3, 3)), np.array([[0,1,2]]),
+                            shading=shading, color = color,
+                            mode=mode)
 
-        tangents, normals, binormals = _frenet_frames(points, closed)
 
-        segments = len(points) - 1
+    def generate_new_indices(self, nPoints):
+        
+        if nPoints == self.lastNumberOfPoints:
+            return
+        
+        self.lastNumberOfPoints = nPoints
 
-        # if single radius, convert to list of radii
-        if not isinstance(radius, collections.abc.Iterable):
-            radius = [radius] * len(points)
-        elif len(radius) != len(points):
-            raise ValueError('Length of radii list must match points.')
-
-        # get the positions of each vertex
-        grid = np.zeros((len(points), tube_points, 3))
-        for i in range(len(points)):
-            pos = points[i]
-            normal = normals[i]
-            binormal = binormals[i]
-            r = radius[i]
-
-            # Add a vertex for each point on the circle
-            v = np.arange(tube_points,
-                          dtype=np.float32) / tube_points * 2 * np.pi
-            cx = -1. * r * np.cos(v) # *(1 + np.random.random(tube_points)*0.1)
-            cy = r * np.sin(v) # *(1 + np.random.random(tube_points)*0.1)
-            grid[i] = (pos + cx[:, np.newaxis]*normal +
-                       cy[:, np.newaxis]*binormal)
-
+        tube_points = self.tube_points
+        segments = nPoints - 1
 
         # construct the mesh
         indices = []
         for i in range(0,segments,2):
             for j in range(tube_points):
-                ip = (i+1) % segments if closed else i+1
+                ip = (i+1)
                 jp = (j+1) % tube_points
 
                 index_a = i*tube_points + j
@@ -69,50 +56,15 @@ class TubeVisual(MeshVisual):
                 indices.append([index_a, index_b, index_d])
                 indices.append([index_b, index_c, index_d])
 
-        vertices = grid.reshape(grid.shape[0]*grid.shape[1], 3)
-
-        color = ColorArray(color)
-        if vertex_colors is None:
-            point_colors = np.resize(color.rgba,
-                                     (len(points), 4))
-            vertex_colors = np.repeat(point_colors, tube_points, axis=0)
 
         self.indices = np.array(indices, dtype=np.uint32)
-        self.vertices = vertices
 
-        MeshVisual.__init__(self, vertices, self.indices,
-                            vertex_colors=vertex_colors,
-                            face_colors=face_colors,
-                            shading=shading,
-                            mode=mode)
+    def generate_new_vertices(self, points):
 
-    def set_new_points_test(self, points):
-        
-        self._meshdata.set_vertices(self.vertices, reset_normals = False)
-        self.mesh_data_changed()
+        tangents, normals, binormals = _frenet_frames(points, False)
 
-    def set_new_points(self, points, radius=1.0,
-                 closed=False,
-                 color='grey',
-                 tube_points=10,
-                 shading='smooth',
-                 vertex_colors=None,
-                 face_colors=None,
-                 mode='triangles'):
-
-        # make sure we are working with floats
-        points = np.array(points).astype(float)
-        print(f'Points: {points.shape}')
-
-        tangents, normals, binormals = _frenet_frames(points, closed)
-
-        segments = len(points) - 1
-
-        # if single radius, convert to list of radii
-        if not isinstance(radius, collections.abc.Iterable):
-            radius = [radius] * len(points)
-        elif len(radius) != len(points):
-            raise ValueError('Length of radii list must match points.')
+        tube_points = self.tube_points
+        radius = self.radius
 
         # get the positions of each vertex
         grid = np.zeros((len(points), tube_points, 3))
@@ -120,30 +72,22 @@ class TubeVisual(MeshVisual):
             pos = points[i]
             normal = normals[i]
             binormal = binormals[i]
-            r = radius[i]
 
             # Add a vertex for each point on the circle
             v = np.arange(tube_points,
                           dtype=np.float32) / tube_points * 2 * np.pi
-            cx = -1. * r * np.cos(v) # *(1 + np.random.random(tube_points)*0.1)
-            cy = r * np.sin(v) # *(1 + np.random.random(tube_points)*0.1)
+            cx = -1. * radius * np.cos(v) # *(1 + np.random.random(tube_points)*0.1)
+            cy = radius * np.sin(v) # *(1 + np.random.random(tube_points)*0.1)
             grid[i] = (pos + cx[:, np.newaxis]*normal +
                        cy[:, np.newaxis]*binormal)
 
-        vertices = grid.reshape(grid.shape[0]*grid.shape[1], 3)
+        self.vertices = grid.reshape(grid.shape[0]*grid.shape[1], 3)
 
-        color = ColorArray(color)
-        if vertex_colors is None:
-            point_colors = np.resize(color.rgba,
-                                     (len(points), 4))
-            vertex_colors = np.repeat(point_colors, tube_points, axis=0)
+    def set_new_points(self, points):
+        self.generate_new_vertices(points)
+        self.generate_new_indices(len(points))
 
-        # self.set_data(vertices, self.indices,
-        #                     vertex_colors=vertex_colors,
-        #                     face_colors=face_colors)
-
-        self._meshdata.set_vertices(vertices)
-        self.mesh_data_changed()
+        self.set_data(self.vertices, self.indices)
 
 
 Tube = create_visual_node(TubeVisual)
@@ -209,7 +153,7 @@ class TubeVisualizer:
         self.view = self.canvas.central_widget.add_view()
 
         # Prepare the tube data
-        n_points = 500
+        n_points = 50
         t = np.linspace(0, 2 * np.pi, n_points)
         x = np.cos(t)
         y = np.sin(t)
@@ -224,7 +168,7 @@ class TubeVisualizer:
         #     [0,0,0], [0,1,0], [1,1,0], [1,0,0]
         # ]) * 10
 
-        self.tube = Tube(tube_points, shading='smooth', tube_points=10, parent=self.view.scene)
+        self.tube = Tube(radius = 1, shading='smooth', tube_points=10, parent=self.view.scene)
 
         # Set up camera and view settings
         self.view.camera = 'arcball'
@@ -248,7 +192,7 @@ class TubeVisualizer:
 
         timer = app.Timer()
         timer.connect(self.update)
-        timer.start(1/144)
+        timer.start(1/3)
 
         sys.exit(self.app.exec_())
 

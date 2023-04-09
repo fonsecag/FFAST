@@ -9,7 +9,7 @@ import logging
 from Utils.misc import rgbToHex
 from events import EventChildClass
 
-WIDGET_ID = 0
+CURRENT_WIDGET_ID = 0
 logger = logging.getLogger("FFAST")
 
 
@@ -31,10 +31,10 @@ class Widget(QWidget):
         self.applyDefaultStyleSheet(color=color, styleSheet=styleSheet)
 
     def applyDefaultName(self):
-        global WIDGET_ID
-        self.id = WIDGET_ID
+        global CURRENT_WIDGET_ID
+        self.id = CURRENT_WIDGET_ID
         self.objectName = f"WIDGET_{self.id}"
-        WIDGET_ID += 1
+        CURRENT_WIDGET_ID += 1
         self.setObjectName(self.objectName)
 
     def applyDefaultLayout(self, layout=None):
@@ -138,7 +138,8 @@ class WidgetButton(Widget):
 class Slider(Widget):
 
     callbackFunc = None
-
+    quiet = False 
+    
     def __init__(self, *args, hasEditBox = True, nMin=0, nMax = 99999, interval = 1, **kwargs):
         super().__init__(*args, **kwargs, layout = 'horizontal')
 
@@ -177,9 +178,11 @@ class Slider(Widget):
         self.slider.setValue(int(value))
         self.callback()
 
-    def setValue(self, value):
+    def setValue(self, value, quiet = False):
+        self.quiet = quiet
         self.lineEdit.setText(str(value))
         self.slider.setValue(int(value))
+        self.quiet = False
 
     def getValue(self):
         return self.slider.value()
@@ -188,7 +191,7 @@ class Slider(Widget):
         self.callbackFunc = func
 
     def callback(self):
-        if self.callbackFunc is not None:
+        if not self.quiet and (self.callbackFunc is not None):
             self.callbackFunc(self.getValue())
 
 class ComboBox(QtWidgets.QComboBox):

@@ -14,7 +14,8 @@ from vispy import scene
 import numpy as np
 from vispy.geometry.generation import create_sphere
 import asyncio
-from config.userConfig import Settings
+from config.userConfig import Settings, getConfig
+from vispy.scene.cameras.turntable import TurntableCamera
 
 logger = logging.getLogger("FFAST")
 
@@ -29,27 +30,14 @@ class SideBar(ContentBar):
         pass
 
 
-class InteractiveCanvas(Widget):
+class SceneCanvas(scene.SceneCanvas):
 
     mouseoverActive = False
+    widget = None
 
-    def __init__(self, loupe, **kwargs):
-        super().__init__(layout="horizontal", **kwargs)
-
-        self.canvas = scene.SceneCanvas(
-            keys="interactive", bgcolor="black", create_native=False
-        )
-        self.canvas.create_native()
-        self.view = self.canvas.central_widget.add_view()
-        self.view.camera = "turntable"
-        self.scene = self.view.scene
-        self.loupe = loupe
-        self.canvas.native.setParent(loupe)
-        self.layout.addWidget(self.canvas.native)
-
-        self.elements = []
-
-        self.freeze()
+    def __init__(self, widget, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.widget = widget
 
     def getPickingRender(self, refresh=True, pos=None):
         av = self.plotWidget.atomsVis
@@ -116,7 +104,46 @@ class InteractiveCanvas(Widget):
         scene.SceneCanvas.on_resize(self, *args)
         # self.plotWidget.onResize()
 
-    ## VISUAL ELEMENTS
+
+class Camera(TurntableCamera):
+
+    parentCanvas = None
+
+    def __init__(self, parentCanvas):
+        self.parentCanvas = parentCanvas
+        super().__init__()
+
+    def view_changed(self):
+        self.parentCanvas.onCameraChange()
+        return TurntableCamera.view_changed(self)
+
+class InteractiveCanvas(Widget):
+
+    def __init__(self, loupe, **kwargs):
+        super().__init__(layout="horizontal", **kwargs)
+
+        self.canvas = SceneCanvas(self, 
+            keys="interactive", bgcolor="black", create_native=False
+        )
+
+        self.elements = []
+        self.props = {}
+
+        self.physicalScalingFactor = getConfig("loupePhysicalScalingFactor")
+
+        self.canvas.create_native()
+        self.view = self.canvas.central_widget.add_view()
+        self.view.camera = Camera(self)
+        self.camera = self.view.camera
+
+        self.scene = self.view.scene
+        self.loupe = loupe
+        self.canvas.native.setParent(loupe)
+        self.layout.addWidget(self.canvas.native)
+
+        self.freeze()
+
+    ## VISUAL ELEMENTS & PROPERTIES
 
     def addVisualElement(self, Element):
         el = Element(parent=self.scene)
@@ -130,10 +157,17 @@ class InteractiveCanvas(Widget):
                 element.draw()
                 element.visualRefreshQueued = False
 
-    ## INIT
+    def addProperty(self, Prop):
+        prop = Prop()
+        prop.canvas = self
+        self.props[prop.key] = prop
 
+    ## INIT
     def setDataset(self, dataset):
         self.dataset = dataset
+
+        for prop in self.props.values():
+            prop.onDatasetInit()
 
         for element in self.elements:
             element.onDatasetInit()
@@ -141,8 +175,13 @@ class InteractiveCanvas(Widget):
         self.visualRefresh()
 
     ## GEOMETRY
+
+    def getR(self, index=None):
+        R = self.dataset.getCoordinates(indices=index)
+        return R - np.mean(R, axis = 0)
+    
     def getCurrentR(self):
-        return self.dataset.getCoordinates(indices=self.index)
+        return self.getR(self.index)
 
     def setIndex(self, index):
         self.index = index
@@ -150,29 +189,72 @@ class InteractiveCanvas(Widget):
 
     def onNewGeometry(self):
         self.canvas.measure_fps()  # TODO remove
+        
+        for prop in self.props.values():
+            prop.onNewGeometry()
 
         for element in self.elements:
             element.onNewGeometry()
 
         self.visualRefresh()
 
+    ## CAMERA
+    def onCameraChange(self):
+        for prop in self.props.values():
+            prop.onCameraChange()
 
-class VisualElement:
+        for element in self.elements:
+            element.onCameraChange()
 
-    hasElement = False
-    visualRefreshQueued = False
+        self.visualRefresh()
+
+class CanvasProperty:
+
     canvas = None
     index = None
+    cleared = False
 
-    def __init__(self, singleElement = None):
-        if singleElement is not None:
-            self.singleElement = singleElement
+    def __init__(self, **kwargs):
+        self.content = {}
 
     def onDatasetInit(self):
         pass
 
     def onNewGeometry(self):
         pass
+
+    def onCameraChange(self):
+        pass
+
+    def set(self, **kwargs):
+        self.content.update(kwargs)
+
+    def _generate(self):
+        self.generate()
+        self.cleared = False
+
+    def generate(self):
+        pass
+
+    def get(self, key):
+        if self.cleared:
+            self._generate()
+        return self.content.get(key, None)
+
+    def clear(self):
+        self.cleared = True
+
+class VisualElement(CanvasProperty):
+
+    singleElement = None
+    visualRefreshQueued = False
+
+
+    def __init__(self, singleElement = None):
+        self.setSingleElement(singleElement)
+
+    def setSingleElement(self, element):
+        self.singleElement = element
 
     def queueVisualRefresh(self):
         self.visualRefreshQueued = True
@@ -183,7 +265,6 @@ class VisualElement:
     def hide(self):
         if self.singleElement is not None:
             self.singleElement.hide()
-
 
 class Loupe(Widget, EventChildClass):
 
@@ -196,6 +277,8 @@ class Loupe(Widget, EventChildClass):
         self.env = handler.env
         super().__init__(color="green", layout="horizontal")
         EventChildClass.__init__(self)
+
+        self.physicalScalingFactor = getConfig("loupePhysicalScalingFactor")
 
         self.initialiseSettings()
 
@@ -223,6 +306,7 @@ class Loupe(Widget, EventChildClass):
 
         # CANVAS
         self.canvas = InteractiveCanvas(self, parent=self)
+        self.canvas.settings = self.settings
         self.contentLayout.addWidget(self.canvas)
 
         # VIDEO PANE
@@ -253,7 +337,7 @@ class Loupe(Widget, EventChildClass):
         self.indexLeftArrow = ToolButton(self.onPrevious, "left")
         self.playButton = ToolButton(self.toggleVideo, "start")
         self.indexRightArrow = ToolButton(self.onNext, "right")
-        
+
         arrowBar.layout.addStretch()
         arrowBar.layout.addWidget(self.indexLeftArrow)
         arrowBar.layout.addWidget(self.playButton)
@@ -314,12 +398,22 @@ class Loupe(Widget, EventChildClass):
 
     # INDEX
     def updateCurrentIndex(self):
-        self.indexSlider.setValue(self.index)
+        self.indexSlider.setValue(self.index, quiet = True)
         self.canvas.setIndex(self.index)
+
+    def setIndex(self, index):
+        self.index = index
+        if index == self.getNMax():
+            self.onPause()
+
+        self.updateCurrentIndex()
 
     # ELEMENTS
     def addVisualElement(self, Element):
         self.canvas.addVisualElement(Element)
+
+    def addCanvasProperty(self, Prop):
+        self.canvas.addProperty(Prop)
 
     #  VIDEO/MOVING GEOMETRIES
     def toggleVideo(self):
@@ -358,14 +452,6 @@ class Loupe(Widget, EventChildClass):
         index = min(self.getNMax(), self.index + 1 + skip) 
 
         self.setIndex(index)
-
-    def setIndex(self, index):
-
-        self.index = index
-        if index == self.getNMax():
-            self.onPause()
-
-        self.updateCurrentIndex()
 
     # SETTINGS PANE
     def addSidebarPane(self, name, pane):

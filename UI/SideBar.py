@@ -85,7 +85,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
     def applyToolbar(self):
         layout = self.labelLayout
 
-        self.renameButton = ToolButton(self.renameObject, icon="rename" )
+        self.renameButton = ToolButton(self.renameObject, icon="rename")
         self.renameButton.setFixedSize(25, 25)
 
         # SET LINE EDIT PARAMETERS
@@ -97,7 +97,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         layout.addWidget(self.renameButton)
 
         if not self.getObject().isSubDataset:
-            self.deleteButton = ToolButton( self.deleteObject, icon="delete")
+            self.deleteButton = ToolButton(self.deleteObject, icon="delete")
             self.deleteButton.setFixedSize(25, 25)
             layout.addWidget(self.deleteButton)
 
@@ -164,6 +164,9 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         self.handler.env.deleteObject(self.id)
 
     def renameObject(self):
+        self.titleLabel.setText(
+            self.getObject().getName()
+        )  # remove display name things
         self.titleLabel.setDisabled(False)
         self.titleLabel.setFocus()
 
@@ -172,6 +175,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         self.getObject().setName(
             self.titleLabel.text()
         )  # also calls the event
+        self.applyInfo()
 
 
 class DatasetObjectList(ObjectList, EventChildClass):

@@ -6,6 +6,8 @@ from config.atoms import zIntToZStr, atomColors
 
 logger = logging.getLogger("FFAST")
 
+DEPENDENCIES = ["basicErrors"]
+
 
 def loadData(env):
     class AtomicForcesErrorDist(DataType):
@@ -36,7 +38,6 @@ def loadData(env):
                 diff = diff.reshape(diff.shape[0], -1)
                 mae = np.mean(np.abs(diff), axis=1)
 
-                N = env.getConfig("errorDistNKdePoints")
                 kde = gaussian_kde(np.abs(mae))
 
                 distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05)

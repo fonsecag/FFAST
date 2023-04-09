@@ -57,6 +57,7 @@ class ContentTab(ExpandingScrollArea):
 
         self.hasDataSelector = hasDataSelector
         self.widget.layout.setContentsMargins(40, 40, 40, 40)
+        self.widget.layout.setSpacing(40)
         if hasDataSelector:
             self.addDataSelector()
 
@@ -68,7 +69,6 @@ class ContentTab(ExpandingScrollArea):
 
     def setDataSelector(self, dataselector):
         self.widget.layout.setContentsMargins(40, 10, 40, 40)
-        self.widget.layout.setSpacing(40)
         self.dataSelector = dataselector
         self.topLayout.addWidget(self.dataSelector)
 

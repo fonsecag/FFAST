@@ -22,7 +22,7 @@ class EventClass:
     """
 
     isEventChild = False
-    eventClockTimestamp = 0
+    eventStamp = 0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,7 +73,7 @@ class EventClass:
         see main.py.
         """
 
-        self.eventClockTimestamp = time.process_time()
+        self.eventStamp += 1
 
         if (self.isEventChild) and (len(self.eventQueue) < 1):
             return

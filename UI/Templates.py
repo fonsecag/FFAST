@@ -138,10 +138,12 @@ class WidgetButton(Widget):
 class Slider(Widget):
 
     callbackFunc = None
-    quiet = False 
-    
-    def __init__(self, *args, hasEditBox = True, nMin=0, nMax = 99999, interval = 1, **kwargs):
-        super().__init__(*args, **kwargs, layout = 'horizontal')
+    quiet = False
+
+    def __init__(
+        self, *args, hasEditBox=True, nMin=0, nMax=99999, interval=1, **kwargs
+    ):
+        super().__init__(*args, **kwargs, layout="horizontal")
 
         self.hasEditBox = hasEditBox
         self.interval = 1
@@ -158,7 +160,7 @@ class Slider(Widget):
 
         self.setMinMax(nMin, nMax, interval)
 
-    def setMinMax(self, nMin, nMax, interval = 1):
+    def setMinMax(self, nMin, nMax, interval=1):
         self.nMin = nMin
         self.nMax = nMax
 
@@ -174,11 +176,11 @@ class Slider(Widget):
         self.callback()
 
     def onUpdateLineEdit(self):
-        value =  self.lineEdit.text()
+        value = self.lineEdit.text()
         self.slider.setValue(int(value))
         self.callback()
 
-    def setValue(self, value, quiet = False):
+    def setValue(self, value, quiet=False):
         self.quiet = quiet
         self.lineEdit.setText(str(value))
         self.slider.setValue(int(value))
@@ -193,6 +195,7 @@ class Slider(Widget):
     def callback(self):
         if not self.quiet and (self.callbackFunc is not None):
             self.callbackFunc(self.getValue())
+
 
 class ComboBox(QtWidgets.QComboBox):
     def __init__(self, *args, color=None, styleSheet="", **kwargs):
@@ -221,6 +224,7 @@ class LineEdit(QtWidgets.QLineEdit):
         self.clearFocus()
         if self.callbackFunc is not None:
             self.callbackFunc()
+
 
 class ToolCheckButton(QtWidgets.QToolButton):
     checked = False
@@ -915,7 +919,6 @@ class SettingsLineEdit(SettingsWidgetBase):
 
     def setValue(self, value):
         self.lineEdit.setText(str(value))
-
 
 
 class SettingsPane(Widget, EventChildClass):

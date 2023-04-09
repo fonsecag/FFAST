@@ -6,6 +6,8 @@ import importlib
 import os
 import logging
 
+logger = logging.getLogger("FFAST")
+
 
 def setupLogger():
     logging.basicConfig(
@@ -16,21 +18,84 @@ def setupLogger():
     logger = logging.getLogger("FFAST")
 
 
+def kahnsAlgorithm(graph):
+    degreeMap = {node: 0 for node in graph}
+
+    for name, dependencies in graph.items():
+        for dep in dependencies:
+            degreeMap[dep] += 1
+
+    queue = [node for node in graph if degreeMap[node] == 0]
+    sortedNodes = []
+
+    while queue:
+        node = queue.pop(0)
+        sortedNodes.append(node)
+
+        for dep in graph[node]:
+            degreeMap[dep] -= 1
+            if degreeMap[dep] == 0:
+                queue.append(dep)
+
+    sortedNodes.reverse()
+    if len(sortedNodes) == len(graph):
+        return sortedNodes, degreeMap
+    else:
+        return None, degreeMap
+
+
+def checkForInvalidDependencies(graph):
+    validNodes = set(graph.keys())
+    cleanedGraph = {}
+
+    for node, dependencies in graph.items():
+        valid = True
+        for dep in dependencies:
+            if dep not in validNodes:
+                logger.error(
+                    f"Module {node} cannot be loaded due to depending on inexistant module {dep}"
+                )
+                valid = False
+        if valid:
+            cleanedGraph[node] = dependencies
+
+    if len(cleanedGraph) < len(graph):
+        # need to cascade down if a node is removed
+        return checkForInvalidDependencies(cleanedGraph)
+    else:
+        return cleanedGraph
+
+
 def loadModules(UI, env, headless=False):
+    mods = {}
+    depGraph = {}
+
     for path in glob.glob(os.path.join("modules", "*.py")):
         name = os.path.basename(path).replace(".py", "")
-        name = f"module_{name}"
 
-        spec = importlib.util.spec_from_file_location(name, path)
-        foo = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(foo)
+        spec = importlib.util.spec_from_file_location(f"module_{name}", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
 
-        if hasattr(foo, "loadData"):
-            foo.loadData(env)
-        if (not headless) and hasattr(foo, "loadUI"):
-            foo.loadUI(UI, env)
-        if (not headless) and hasattr(foo, "loadLoupe"):
-            UI.registerLoupeModule(foo.loadLoupe)
+        mods[name] = mod
+        depGraph[name] = mod.DEPENDENCIES
+
+    depGraph = checkForInvalidDependencies(depGraph)
+    order, degreeMap = kahnsAlgorithm(depGraph)
+    if order is None:
+        logger.error(
+            f"Cycle in module dependency graph. Remaining nodes: {degreeMap}"
+        )
+        return
+
+    for name in order:
+        mod = mods[name]
+        if hasattr(mod, "loadData"):
+            mod.loadData(env)
+        if (not headless) and hasattr(mod, "loadUI"):
+            mod.loadUI(UI, env)
+        if (not headless) and hasattr(mod, "loadLoupe"):
+            UI.registerLoupeModule(mod.loadLoupe)
 
 
 def md5FromArraysAndStrings(*args):

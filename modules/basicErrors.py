@@ -5,6 +5,8 @@ from scipy.stats import gaussian_kde
 
 logger = logging.getLogger("FFAST")
 
+DEPENDENCIES = []
+
 
 def loadData(env):
     class EnergyPredictionError(DataType):
@@ -69,7 +71,6 @@ def loadData(env):
 
             diff = np.abs(eErr.get("diff"))
 
-            N = env.getConfig("errorDistNKdePoints")
             kde = gaussian_kde(np.abs(diff))
 
             distX = np.linspace(np.min(diff) * 0.95, np.max(diff) * 1.05)
@@ -98,7 +99,6 @@ def loadData(env):
             diff = diff.reshape(diff.shape[0], -1)
             mae = np.mean(np.abs(diff), axis=1)
 
-            N = env.getConfig("errorDistNKdePoints")
             kde = gaussian_kde(np.abs(mae))
 
             distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05)

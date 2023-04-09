@@ -1,6 +1,8 @@
 import numpy as np
 from UI.Loupe import VisualElement
 
+DEPENDENCIES = []
+
 
 def loadLoupe(UI, loupe):
 
@@ -56,7 +58,5 @@ def loadLoupe(UI, loupe):
                 edge_width=0.001,
             )
 
-
     for i in range(1):
         loupe.addVisualElement(RandomOrbs)
-

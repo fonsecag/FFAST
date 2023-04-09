@@ -205,6 +205,7 @@ class SubDataset(DatasetLoader):
         self.parent = parentDataset
         self.modelDep = model
         self.subName = subName
+        self.loaded = parentDataset.loaded
 
         self.indices = indices
         self.updatePath()

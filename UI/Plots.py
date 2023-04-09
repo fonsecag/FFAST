@@ -56,7 +56,7 @@ class DataloaderButton(PushButton, EventChildClass):
         color: @BGColor4;
     }
     """
-    lastUpdatedTimestamp = -1
+    lastUpdatedStamp = -1
 
     def __init__(self, handler, watcher, **kwargs):
         super().__init__("Load", styleSheet=self.styleSheet, **kwargs)
@@ -83,7 +83,7 @@ class DataloaderButton(PushButton, EventChildClass):
 
 class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
-    lastUpdatedTimestamp = -1
+    lastUpdatedStamp = -1
     styleSheet = """
     @OBJECT{
         border-radius:10px;
@@ -340,10 +340,10 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
     def visualRefresh(self):
         # when many refresh events happen in a single loop, no need to
         # refresh every time since information won't change
-        if self.eventClockTimestamp <= self.lastUpdatedTimestamp:
+        if self.eventStamp <= self.lastUpdatedStamp:
             return
 
-        self.lastUpdatedTimestamp = self.eventClockTimestamp
+        self.lastUpdatedStamp = self.eventStamp
 
         self.clear()
 

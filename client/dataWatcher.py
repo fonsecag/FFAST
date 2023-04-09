@@ -135,6 +135,7 @@ class DataWatcher(EventChildClass):
 
     def refreshDependencyList(self, *args):
         # args because event
+
         self.dependencyList = []
         env = self.env
 

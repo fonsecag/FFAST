@@ -278,10 +278,10 @@ class BasicPlotContainer(EventChildClass, QtWidgets.QWidget):
     def visualRefresh(self):
         # when many refresh events happen in a single loop, no need to
         # refresh every time since information won't change
-        if self.eventClockTimestamp <= self.lastUpdatedTimestamp:
+        if self.eventStamp <= self.lastUpdatedTimestamp:
             return
 
-        self.lastUpdatedTimestamp = self.eventClockTimestamp
+        self.lastUpdatedTimestamp = self.eventStamp
 
         self.clear()
 

@@ -6,7 +6,7 @@ from UI.Templates import (
     SettingsPane,
     Widget,
     Slider,
-    ToolButton
+    ToolButton,
 )
 from PySide6 import QtCore, QtGui, QtWidgets
 import logging
@@ -117,13 +117,13 @@ class Camera(TurntableCamera):
         self.parentCanvas.onCameraChange()
         return TurntableCamera.view_changed(self)
 
-class InteractiveCanvas(Widget):
 
+class InteractiveCanvas(Widget):
     def __init__(self, loupe, **kwargs):
         super().__init__(layout="horizontal", **kwargs)
 
-        self.canvas = SceneCanvas(self, 
-            keys="interactive", bgcolor="black", create_native=False
+        self.canvas = SceneCanvas(
+            self, keys="interactive", bgcolor="black", create_native=False
         )
 
         self.elements = []
@@ -178,8 +178,8 @@ class InteractiveCanvas(Widget):
 
     def getR(self, index=None):
         R = self.dataset.getCoordinates(indices=index)
-        return R - np.mean(R, axis = 0)
-    
+        return R - np.mean(R, axis=0)
+
     def getCurrentR(self):
         return self.getR(self.index)
 
@@ -189,7 +189,7 @@ class InteractiveCanvas(Widget):
 
     def onNewGeometry(self):
         self.canvas.measure_fps()  # TODO remove
-        
+
         for prop in self.props.values():
             prop.onNewGeometry()
 
@@ -207,6 +207,7 @@ class InteractiveCanvas(Widget):
             element.onCameraChange()
 
         self.visualRefresh()
+
 
 class CanvasProperty:
 
@@ -244,13 +245,13 @@ class CanvasProperty:
     def clear(self):
         self.cleared = True
 
+
 class VisualElement(CanvasProperty):
 
     singleElement = None
     visualRefreshQueued = False
 
-
-    def __init__(self, singleElement = None):
+    def __init__(self, singleElement=None):
         self.setSingleElement(singleElement)
 
     def setSingleElement(self, element):
@@ -261,10 +262,11 @@ class VisualElement(CanvasProperty):
 
     def draw(self):
         pass
-    
+
     def hide(self):
         if self.singleElement is not None:
             self.singleElement.hide()
+
 
 class Loupe(Widget, EventChildClass):
 
@@ -328,12 +330,12 @@ class Loupe(Widget, EventChildClass):
         pane = Widget(parent=self, layout="vertical")
 
         # PLAYBACK
-        playbackWindow = Widget(parent = pane, layout = 'vertical')
+        playbackWindow = Widget(parent=pane, layout="vertical")
         self.indexSlider = Slider()
         self.indexSlider.setCallbackFunc(self.setIndex)
         playbackWindow.layout.addWidget(self.indexSlider)
 
-        arrowBar = Widget(parent = pane, layout = 'horizontal')
+        arrowBar = Widget(parent=pane, layout="horizontal")
         self.indexLeftArrow = ToolButton(self.onPrevious, "left")
         self.playButton = ToolButton(self.toggleVideo, "start")
         self.indexRightArrow = ToolButton(self.onNext, "right")
@@ -388,7 +390,7 @@ class Loupe(Widget, EventChildClass):
         self.canvas.setDataset(dataset)
 
         self.index = 0
-        self.indexSlider.setMinMax(0, dataset.getN()-1)
+        self.indexSlider.setMinMax(0, dataset.getN() - 1)
         self.updateCurrentIndex()
 
     def getSelectedDataset(self):
@@ -398,7 +400,7 @@ class Loupe(Widget, EventChildClass):
 
     # INDEX
     def updateCurrentIndex(self):
-        self.indexSlider.setValue(self.index, quiet = True)
+        self.indexSlider.setValue(self.index, quiet=True)
         self.canvas.setIndex(self.index)
 
     def setIndex(self, index):
@@ -438,8 +440,8 @@ class Loupe(Widget, EventChildClass):
         while not self.videoPaused:
             if self.selectedDatasetKey is None:
                 return
-            self.onNext(skip = self.settings.get("videoSkipFrames"))
-            await asyncio.sleep(1/self.settings.get("videoFPS"))
+            self.onNext(skip=self.settings.get("videoSkipFrames"))
+            await asyncio.sleep(1 / self.settings.get("videoFPS"))
 
     def onPrevious(self):
         index = max(0, self.index - 1)
@@ -448,8 +450,8 @@ class Loupe(Widget, EventChildClass):
     def getNMax(self):
         return self.getSelectedDataset().getN() - 1
 
-    def onNext(self, skip = 0):
-        index = min(self.getNMax(), self.index + 1 + skip) 
+    def onNext(self, skip=0):
+        index = min(self.getNMax(), self.index + 1 + skip)
 
         self.setIndex(index)
 

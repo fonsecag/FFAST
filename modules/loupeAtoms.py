@@ -2,6 +2,9 @@ import numpy as np
 from config.atoms import atomColors, covalentRadii
 from config.userConfig import getConfig
 
+DEPENDENCIES = []
+
+
 def addAtomsObject(UIHandler, loupe):
 
     from UI.Loupe import VisualElement
@@ -10,8 +13,12 @@ def addAtomsObject(UIHandler, loupe):
     class AtomsElement(VisualElement):
         def __init__(self, *args, parent=None, **kwargs):
             self.scatter = scene.visuals.Markers(
-                scaling=True, spherical=True, parent=parent, light_color = (0,0,0),
-                light_ambient=1, antialias=1,
+                scaling=True,
+                spherical=True,
+                parent=parent,
+                light_color=(0, 0, 0),
+                light_ambient=1,
+                antialias=1,
             )
             super().__init__(*args, **kwargs, singleElement=self.scatter)
             self.edge_width = 0.02 * getConfig("loupePhysicalScalingFactor")
@@ -20,8 +27,12 @@ def addAtomsObject(UIHandler, loupe):
 
         def onDatasetInit(self):
             z = self.canvas.dataset.getElements()
-            self.colors = atomColors[z] / 255 * getConfig("loupeAtomColorDimming")
-            self.sizes = covalentRadii[z] * getConfig("loupePhysicalScalingFactor")
+            self.colors = (
+                atomColors[z] / 255 * getConfig("loupeAtomColorDimming")
+            )
+            self.sizes = covalentRadii[z] * getConfig(
+                "loupePhysicalScalingFactor"
+            )
 
         def onNewGeometry(self):
             R = self.canvas.getCurrentR() * self.scalingFactor
@@ -30,14 +41,20 @@ def addAtomsObject(UIHandler, loupe):
 
         def draw(self):
             self.scatter.set_data(
-                self.pos, face_color=self.colors, size=self.sizes, edge_width = self.edge_width, edge_color = getConfig("loupeBondsColor")
+                self.pos,
+                face_color=self.colors,
+                size=self.sizes,
+                edge_width=self.edge_width,
+                edge_color=getConfig("loupeBondsColor"),
             )
 
     loupe.addVisualElement(AtomsElement)
 
+
 def addSettings(UIHandler, loupe):
     settings = loupe.settings
     settings.addParameters(**{"atomColorType": ["Elements", "updateGeometry"]})
+
 
 def addSettingsPane(UIHandler, loupe):
     from UI.Templates import SettingsPane
@@ -53,8 +70,9 @@ def addSettingsPane(UIHandler, loupe):
 
     loupe.addSidebarPane("ATOMS", pane)
 
+
 def loadLoupe(UIHandler, loupe):
 
-    addSettings(UIHandler, loupe) # also sets the bonds property
+    addSettings(UIHandler, loupe)  # also sets the bonds property
     addAtomsObject(UIHandler, loupe)
     addSettingsPane(UIHandler, loupe)

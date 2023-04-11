@@ -195,7 +195,7 @@ class SubDataset(DatasetLoader):
     loadeeType = "dataset"
     isSubDataset = True
 
-    name = "Sub-dataset"
+    datasetType = "Sub-dataset"
     loaded = False
     modelDep = None
     parent = None
@@ -207,6 +207,9 @@ class SubDataset(DatasetLoader):
         self.subName = subName
         self.loaded = parentDataset.loaded
 
+        if indices is None:
+            indices = np.array([0])
+
         self.indices = indices
         self.updatePath()
 
@@ -216,6 +219,8 @@ class SubDataset(DatasetLoader):
         )
 
     def setIndices(self, indices):
+        if indices is None:
+            indices = np.array([0])
         self.indices = indices
         self.eventPush("SUBDATASET_INDICES_CHANGED", self.fingerprint)
         self.eventPush("DATASET_UPDATED", self.fingerprint)

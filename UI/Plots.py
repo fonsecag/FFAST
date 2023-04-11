@@ -220,7 +220,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
             self.legend.hide()
 
     def isSubbing(self):
-        return self.subCheckBox.isChecked()
+        return self.isSubbable and self.subCheckBox.isChecked()
 
     def addWidgetToToolbar(self, widget):
         n = self.toolbarLayout.count()
@@ -417,7 +417,8 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
         self.plotItem.addItem(plotItem)
         self.plotItems.append(plotItem)
-        self.plotItem.autoRange()
+        if not self.isSubbing():
+            self.plotItem.autoRange()
 
     def stepPlot(self, x, y, width=1, **kwargs):
         xLeft, xRight = (x - width / 2, x + width / 2)

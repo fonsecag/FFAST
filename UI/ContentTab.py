@@ -78,6 +78,8 @@ class ContentTab(ExpandingScrollArea):
 
 
 class DatasetModelSelector(Widget, EventChildClass):
+
+    quiet = False
     def __init__(self, handler, **kwargs):
         self.handler = handler
         self.env = handler.env
@@ -107,6 +109,9 @@ class DatasetModelSelector(Widget, EventChildClass):
         self.eventSubscribe("MODEL_DELETED", self.updateModelsList)
 
     def updateModelsList(self, key):
+        self.quiet = True
+        modelKeys, _ = self.getSelectedKeys()
+
         self.modelsList.removeWidgets(clear=True)
         keys = self.env.getAllModelKeys()
 
@@ -114,9 +119,19 @@ class DatasetModelSelector(Widget, EventChildClass):
             w = DatasetModelLabel(self.handler, key, parent=self.modelsList)
             self.modelsList.addWidget(w)
 
+        # reselect all models
+        for w in self.modelsList.getWidgets():
+            if w.key in modelKeys:
+                w.setChecked(True, quiet = True)
+
+        self.quiet = False
         self.update()
 
     def updateDatasetsList(self, key):
+
+        self.quiet = True
+        _, datasetKeys = self.getSelectedKeys()
+
         self.datasetsList.removeWidgets(clear=True)
         keys = self.env.getAllDatasetKeys()
 
@@ -124,6 +139,12 @@ class DatasetModelSelector(Widget, EventChildClass):
             w = DatasetModelLabel(self.handler, key, parent=self.datasetsList)
             self.datasetsList.addWidget(w)
 
+        # reselect all datasets
+        for w in self.datasetsList.getWidgets():
+            if w.key in datasetKeys:
+                w.setChecked(True, quiet = True)
+
+        self.quiet = False
         self.update()
 
     def addUpdateCallback(self, func):
@@ -141,6 +162,8 @@ class DatasetModelSelector(Widget, EventChildClass):
         return modelKeys, datasetKeys
 
     def update(self):
+        if self.quiet:
+            return
         modelKeys, datasetKeys = self.getSelectedKeys()
 
         for func in self.updateCallbacks:

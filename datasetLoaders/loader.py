@@ -1,12 +1,12 @@
 from collections import Counter
 import numpy as np
 import os
-from Utils.misc import md5FromArraysAndStrings, removeExtension
+from utils import md5FromArraysAndStrings, removeExtension
 import logging
 from events import EventClass
 from scipy.spatial.distance import pdist
 from config.userConfig import getConfig
-from Utils.misc import hexToRGB
+from utils import hexToRGB
 from config.atoms import zIntToZStr, zStrToZInt
 
 logger = logging.getLogger("FFAST")

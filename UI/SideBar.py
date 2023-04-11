@@ -9,7 +9,7 @@ from UI.Templates import (
     LineEdit,
 )
 from config.uiConfig import configStyleSheet
-from Utils.misc import rgbToHex
+from utils import rgbToHex
 from events import EventChildClass
 
 

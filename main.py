@@ -6,9 +6,9 @@ import sys
 import logging
 from events import EventClass
 from client.dataWatcher import DataWatcher
-from Utils.misc import loadModules
+from utils import loadModules
 import os
-from Utils.misc import setupLogger
+from utils import setupLogger
 
 
 class NathHorthath(EventClass):

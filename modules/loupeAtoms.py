@@ -36,12 +36,13 @@ def addAtomsObject(UIHandler, loupe):
             self.pos = R
             self.queueVisualRefresh()
 
-        def draw(self):
+        def draw(self, picking = False, pickingColors = None):
+
             self.scatter.set_data(
                 self.pos,
-                face_color=self.colors,
+                face_color= pickingColors if picking else self.colors,
                 size=self.sizes,
-                edge_width=self.edge_width,
+                edge_width= 0 if picking else self.edge_width,
                 edge_color=getConfig("loupeBondsColor"),
             )
 

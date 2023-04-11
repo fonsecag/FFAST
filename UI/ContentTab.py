@@ -6,7 +6,7 @@ from UI.Templates import (
 )
 from PySide6 import QtCore, QtGui, QtWidgets
 from config.uiConfig import configStyleSheet
-from Utils.misc import rgbToHex
+from utils import rgbToHex
 import logging
 from events import EventChildClass
 

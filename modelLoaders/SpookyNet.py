@@ -1,6 +1,6 @@
 from .loader import ModelLoader
 import torch
-from Utils.misc import md5FromArraysAndStrings
+from utils import md5FromArraysAndStrings
 import numpy as np
 
 
@@ -118,7 +118,7 @@ class SpookyNetModelLoader(ModelLoader):
         self.model.eval()
 
     def getFingerprint(self):
-        from Utils.misc import md5FromArraysAndStrings
+        from utils import md5FromArraysAndStrings
 
         lst = []
         for child in self.model.children():

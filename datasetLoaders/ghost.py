@@ -1,6 +1,6 @@
 from .loader import DatasetLoader
 import numpy as np
-from Utils.misc import md5FromArraysAndStrings
+from utils import md5FromArraysAndStrings
 
 
 class GhostDatasetLoader(DatasetLoader):

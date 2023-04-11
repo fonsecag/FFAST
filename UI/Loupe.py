@@ -19,6 +19,43 @@ from vispy.scene.cameras.turntable import TurntableCamera
 
 logger = logging.getLogger("FFAST")
 
+class AtomSelectionBase:
+    multiselect = 1
+    cycle = False
+    label = "N/A"
+
+    def __init__(self, loupe):
+        self.selectedPoints = []
+        self.loupe = loupe
+
+    def clearSelection(self):
+        nSel = len(self.selectedPoints)
+        self.selectedPoints = []
+        if nSel > 0:
+            self.loupe.refresh()
+
+    def selectCallback(self):
+        pass
+
+    def selectAtom(self, idx):
+        if idx is None:
+            return
+
+        sp = self.selectedPoints
+
+        if idx in sp:
+            sp.remove(idx)
+        else:
+            sp.append(idx)
+
+        if self.cycle and (len(sp) > self.multiselect):
+            self.selectedPoints = sp[-self.multiselect :]
+
+        self.selectCallback()
+
+    def getSelectedPoints(self):
+        return self.selectedPoints
+
 
 class SideBar(ContentBar):
     def __init__(self, handler, **kwargs):
@@ -33,52 +70,38 @@ class SideBar(ContentBar):
 class SceneCanvas(scene.SceneCanvas):
 
     mouseoverActive = False
+    mouseClickActive = False
     widget = None
+    pickingColors = None
 
     def __init__(self, widget, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.widget = widget
 
-    def getPickingRender(self, refresh=True, pos=None):
-        av = self.plotWidget.atomsVis
-        bv = self.plotWidget.bondsVis
-
-        bv.visible = False
-        av.spherical = False
-
-        r = self.plotWidget.getCurrentR()
-        colors = self.plotWidget.colorIDs
-        av.set_data(
-            pos=r,
-            size=self.plotWidget.atomSizes,
-            face_color=colors,
-            edge_width=0,
-        )
-        av.update_gl_state(blend=False)
+    def getPickingRender(self, pos):
+        for element in self.widget.elements:
+            element.draw(picking = True, pickingColors = self.pickingColors)
 
         tr = self.transforms.get_transform("canvas", "framebuffer")
         p = tr.map(pos)[:2]
         if pos is None:
             img = self.render()
         else:
-            img = self.render(crop=(p[0], p[1], 1, 1))
-
-        av.spherical = True
-
-        if refresh:
-            self.plotWidget.refresh()
-
+            img = self.render(region = (p[0],p[1], 1, 1))
+        
         return img
 
     def getPointAtPosition(self, pos, refresh=True):
-        img = self.getPickingRender(refresh=refresh, pos=pos)
+        img = self.getPickingRender(pos)
         # single pixel right in the middle
         color = img[0, 0]
-        idx = self.plotWidget.colorToIndex(color)
+        idx = self.colorToIndex(color)
+        if refresh:
+            self.widget.visualRefresh(force=True)
         return idx
 
     def on_mouse_press(self, event):
-        if not self.mouseoverActive:
+        if not self.mouseClickActive:
             return
         # https://vispy.org/api/vispy.scene.events.html
 
@@ -86,11 +109,11 @@ class SceneCanvas(scene.SceneCanvas):
         if event.button != 1:
             return
 
-        if self.plotWidget.selectedDatasetKey is None:
+        if self.widget.loupe.selectedDatasetKey is None:
             return
 
         point = self.getPointAtPosition(event.pos, refresh=False)
-        self.plotWidget.setSelectedPoint(point)
+        self.widget.setSelectedPoint(point)
 
     def on_mouse_move(self, event):
         if not self.mouseoverActive:
@@ -98,11 +121,25 @@ class SceneCanvas(scene.SceneCanvas):
 
         # not refreshing because we know we will refresh after setting the hovered point
         point = self.getPointAtPosition(event.pos, refresh=False)
-        self.plotWidget.setHoveredPoint(point)
+        self.widget.setHoveredPoint(point)
 
     def on_resize(self, *args):
         scene.SceneCanvas.on_resize(self, *args)
         # self.plotWidget.onResize()
+
+    def refreshPickingColors(self, N):
+        ids = np.arange(N)
+        colors = np.ones((N, 4)) * 255
+        colors[:, 0] = ids % 256
+        colors[:, 1] = ids // 256
+
+        self.pickingColors= colors/255
+
+    def colorToIndex(self, color):
+        if color[2] == 0:
+            return None
+        idx = color[0] + color[1] * 256
+        return idx
 
 
 class Camera(TurntableCamera):
@@ -119,6 +156,8 @@ class Camera(TurntableCamera):
 
 
 class InteractiveCanvas(Widget):
+    activeAtomSelectTool = None
+
     def __init__(self, loupe, **kwargs):
         super().__init__(layout="horizontal", **kwargs)
 
@@ -148,11 +187,10 @@ class InteractiveCanvas(Widget):
         el.canvas = self
         self.elements.append(el)
 
-    def visualRefresh(self):
-
+    def visualRefresh(self, force = False):
         for element in self.elements:
-            if element.visualRefreshQueued:
-                element.draw()
+            if force or element.visualRefreshQueued:
+                element.draw(picking = False, pickingColors = None)
                 element.visualRefreshQueued = False
 
     def addProperty(self, Prop):
@@ -161,6 +199,7 @@ class InteractiveCanvas(Widget):
         self.props[prop.key] = prop
 
     ## INIT
+    
     def setDataset(self, dataset):
         self.dataset = dataset
 
@@ -171,6 +210,7 @@ class InteractiveCanvas(Widget):
             element.onDatasetInit()
 
         self.visualRefresh()
+        self.canvas.refreshPickingColors(self.dataset.getNAtoms())
 
     ## GEOMETRY
 
@@ -205,6 +245,37 @@ class InteractiveCanvas(Widget):
             element.onCameraChange()
 
         self.visualRefresh()
+
+    ## PICKING
+    def setHoveredPoint(self, index):
+        self.visualRefresh(force=True)
+
+    def setSelectedPoint(self, index):
+        self.visualRefresh(force=True)
+
+    def isActiveAtomSelectTool(self, tool):
+        if tool is None:
+            return self.activeAtomSelectTool is None
+        return isinstance(self.activeAtomSelectTool, tool)
+
+    def setActiveAtomSelectTool(self, tool=None):
+        if self.isActiveAtomSelectTool(tool):
+            return
+
+        if tool is None:
+            self.activeAtomSelectTool = None
+            # self.currentAtomSelectionLabel.setText("")
+            # self.cancelAtomSelectionButton.hide()
+        else:
+            self.activeAtomSelectTool = tool(self)
+            # label = self.activeAtomSelectTool.label
+            # self.currentAtomSelectionLabel.setText(
+            #     f"Current selection tool: {label}"
+            # )
+            # self.cancelAtomSelectionButton.show()
+
+        self.selectedPoints = []
+        self.refresh()
 
 
 class CanvasProperty:
@@ -462,3 +533,10 @@ class Loupe(Widget, EventChildClass):
 
     def getSettingsPane(self, name):
         return self.panes.get(name, None)
+
+    # PICKING
+    def setActiveAtomSelectTool(self, *args):
+        return self.canvas.setActiveAtomSelectTool(*args)
+    
+    def isActiveAtomSelectTool(self, *args):
+        return self.canvas.isActiveAtomSelectTool(*args)

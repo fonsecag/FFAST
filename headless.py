@@ -1,5 +1,5 @@
 from client.environment import runHeadless
-from Utils.misc import setupLogger
+from utils import setupLogger
 
 
 async def main(env):

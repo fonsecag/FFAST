@@ -4,13 +4,13 @@ from datasetLoaders.loader import loadDataset, SubDataset
 from modelLoaders.ghost import GhostModelLoader
 from tasks import TaskManager
 from client.dataType import DataEntity
-from Utils.misc import md5FromArraysAndStrings
+from utils import md5FromArraysAndStrings
 from client.dataType import SubDataEntity
 import logging
 import os, glob
 import numpy as np
 import asyncio
-from Utils.misc import loadModules, mixColors
+from utils import loadModules, mixColors
 
 logger = logging.getLogger("FFAST")
 

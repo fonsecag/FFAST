@@ -6,8 +6,10 @@ from config.uiConfig import config, getIcon
 from PySide6.QtWidgets import QSizePolicy
 import pyqtgraph
 import logging
-from Utils.misc import rgbToHex
+from utils import rgbToHex
 from events import EventChildClass
+import ast
+import traceback 
 
 CURRENT_WIDGET_ID = 0
 logger = logging.getLogger("FFAST")
@@ -224,6 +226,44 @@ class LineEdit(QtWidgets.QLineEdit):
         self.clearFocus()
         if self.callbackFunc is not None:
             self.callbackFunc()
+
+
+class CodeTextEdit(QtWidgets.QTextEdit):
+
+    returnCallback = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        Widget.applyDefaultName(self)
+        Widget.applyDefaultStyleSheet(self, color="black")
+
+        self.installEventFilter(self)
+
+    def setReturnCallback(self, func):
+        self.returnCallback = func
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            if event.modifiers() == Qt.ShiftModifier:
+                super().keyPressEvent(event)
+            else:
+                self.clearFocus()
+                if self.returnCallback is not None:
+                    self.returnCallback()
+        else:
+            super().keyPressEvent(event)
+
+    def getValue(self):
+        t = self.toPlainText()
+        code = None
+        try:
+            code = ast.literal_eval(t)
+        except (TypeError, MemoryError, SyntaxError, ValueError):
+            logger.exception('Input cannot be evaluated')
+        
+        return code
+
 
 
 class ToolCheckButton(QtWidgets.QToolButton):
@@ -788,9 +828,9 @@ class SettingsWidgetBase(Widget, EventChildClass):
     callbackFunc = None
 
     def __init__(
-        self, handler, name, settings=None, settingsKey=None, **kwargs
+        self, handler, name, settings=None, settingsKey=None, layout='horizontal', **kwargs
     ):
-        super().__init__(layout="horizontal", **kwargs)
+        super().__init__(layout=layout, **kwargs)
         self.handler = handler
         self.name = name
 
@@ -889,6 +929,23 @@ class SettingsComboBox(SettingsWidgetBase):
     def setValue(self, value):
         self.comboBox.setCurrentText(value)
 
+class SettingsCodeBox(SettingsWidgetBase):
+    def __init__(self, *args, settings=None, settingsKey = None, **kwargs):
+        super().__init__(*args,settings=settings, settingsKey = settingsKey, layout='vertical', **kwargs)
+
+        self.setFixedHeight(200)
+
+        self.codeBox = CodeTextEdit(parent=self)
+        self.layout.addWidget(self.codeBox)
+        self.layout.setSpacing(8)
+
+        self.codeBox.setReturnCallback(self.callback)
+
+    def setValue(self, value):
+        self.codeBox.setText(value)
+
+    def getValue(self):
+        return self.codeBox.getValue()
 
 class SettingsLineEdit(SettingsWidgetBase):
     def __init__(
@@ -938,8 +995,6 @@ class SettingsLineEdit(SettingsWidgetBase):
         self.lineEdit.setText(str(value))
 
 
-
-
 class SettingsPane(Widget, EventChildClass):
     def __init__(self, UIHandler, settings, **kwargs):
         self.handler = UIHandler
@@ -986,6 +1041,15 @@ class SettingsPane(Widget, EventChildClass):
 
         elif typ == "CheckBox":
             el = SettingsCheckBox(
+                self.handler,
+                name,
+                settingsKey=settingsKey,
+                settings=self.settings,
+                parent=self,
+            )
+
+        elif typ == "CodeBox":
+            el = SettingsCodeBox(
                 self.handler,
                 name,
                 settingsKey=settingsKey,

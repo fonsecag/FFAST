@@ -1,6 +1,6 @@
 from .loader import ModelLoaderACE
 import numpy as np
-from Utils.misc import md5FromArraysAndStrings
+from utils import md5FromArraysAndStrings
 import torch
 
 
@@ -18,7 +18,7 @@ class MACEModelLoader(ModelLoaderACE):
         self.calculator.model.to(torch.float32).to("cpu")
 
     def getFingerprint(self):
-        from Utils.misc import md5FromArraysAndStrings
+        from utils import md5FromArraysAndStrings
 
         model = torch.load(self.path)
         lst = []

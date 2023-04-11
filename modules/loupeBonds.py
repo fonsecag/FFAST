@@ -1,19 +1,27 @@
 import numpy as np
 from config.atoms import covalentBonds
 from config.userConfig import getConfig
+from functools import partial
 
 DEPENDENCIES = ["loupeCamera"]
 
 
 def addSettings(UIHandler, loupe):
 
+    def loupeClearBondProperty(loupe):
+        loupe.canvas.props['fixedBonds'].clear()
+
     ## LOUPE SETTINGS
     settings = loupe.settings
-    settings.addParameters(**{"bondType": ["Fixed", "updateGeometry"]})
+    settings.addAction("clearBondProperty", partial(loupeClearBondProperty, loupe))
+    settings.addParameters(**{
+        "bondType": ["Fixed", "updateGeometry"],
+        "fixedBondIndices": [None, "clearBondProperty", "updateGeometry"],
+    })
 
     ## CANVAS PROPERTIES
 
-    from UI.Loupe import CanvasProperty
+    from UI.Loupe import CanvasProperty, AtomSelectionBase
     from scipy.spatial import distance_matrix
 
     class DynamicBondsProperty(CanvasProperty):
@@ -87,6 +95,46 @@ def addSettings(UIHandler, loupe):
     loupe.addCanvasProperty(DynamicBondsProperty)
     loupe.addCanvasProperty(FixedBondsProperty)
 
+    class BondSelect(AtomSelectionBase):
+        multiselect = 2
+        label = "Bond Selection"
+
+        def __init__(self, loupe, **kwargs):
+            super().__init__(loupe, **kwargs)
+
+            self.bonds = []
+            self.selectedBonds = loupe.selectedBonds
+
+        def selectCallback(self):
+            if len(self.selectedPoints) != 2:
+                return
+
+            (p1, p2) = self.selectedPoints
+            p1, p2 = int(p1), int(p2)
+            if p1 < p2:
+                sel = (p1, p2)
+            else:
+                sel = (p2, p1)
+            if sel in self.selectedBonds:
+                self.selectedBonds.remove(sel)
+            else:
+                self.selectedBonds.add(sel)
+
+            self.clearSelection()
+            self.writeSelectedBonds()
+
+        def writeSelectedBonds(self):
+            s, n, l = ("", len(self.selectedBonds), list(self.selectedBonds))
+            for i in range(n):
+                bond = l[i]
+                s += f"    [{bond[0]}, {bond[1]}]"
+                if i < n - 1:
+                    s += ",\n"
+                else:
+                    s += "\n"
+            self.loupe.bondsTextEdit.setText(f"[\n{s}]")
+
+    # loupe.setActiveAtomSelectTool(BondSelect)
 
 def addBondsObject(UIHandler, loupe):
 
@@ -120,7 +168,15 @@ def addBondsObject(UIHandler, loupe):
 
             self.lines.set_data(width=self.width / dist)
 
-        def draw(self):
+        def draw(self, picking = False, pickingColors = None):
+
+            if picking:
+                self.lines.visible = False
+                return
+            
+            if not self.lines.visible:
+                self.lines.visible = True
+
             bondType = self.canvas.settings.get("bondType")
             if bondType == "Dynamic":
                 bonds = self.canvas.props["dynamicBonds"].get("R")
@@ -194,6 +250,7 @@ def addBondsObject(UIHandler, loupe):
 
 def addSettingsPane(UIHandler, loupe):
     from UI.Templates import SettingsPane
+    settings = loupe.settings 
 
     pane = SettingsPane(UIHandler, loupe.settings, parent=loupe)
 
@@ -203,6 +260,13 @@ def addSettingsPane(UIHandler, loupe):
         settingsKey="bondType",
         items=["Fixed", "Dynamic"],
     )
+
+    s = pane.addSetting(
+        "CodeBox",
+        "Bond Indices",
+        settingsKey="fixedBondIndices",
+    )
+    s.setHideCondition(lambda: settings.get("bondType") != "Fixed")
 
     loupe.addSidebarPane("BONDS", pane)
 

@@ -1,11 +1,11 @@
 import os
 from events import EventClass
-from Utils.misc import removeExtension
+from utils import removeExtension
 import torch
 import logging
 import numpy as np
 from config.userConfig import getConfig
-from Utils.misc import hexToRGB
+from utils import hexToRGB
 
 logger = logging.getLogger("FFAST")
 GLOBAL_MODELS_COUNTER = 0

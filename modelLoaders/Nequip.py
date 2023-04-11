@@ -1,7 +1,7 @@
 from .loader import ModelLoaderACE
 from .loader import ModelLoaderACE
 import numpy as np
-from Utils.misc import md5FromArraysAndStrings
+from utils import md5FromArraysAndStrings
 import torch
 
 
@@ -19,7 +19,7 @@ class NequipModelLoader(ModelLoaderACE):
         self.calculator = calc
 
     def getFingerprint(self):
-        from Utils.misc import md5FromArraysAndStrings
+        from utils import md5FromArraysAndStrings
         from nequip.scripts.deploy import _ALL_METADATA_KEYS
 
         metadata = {k: "" for k in _ALL_METADATA_KEYS}

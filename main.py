@@ -75,7 +75,7 @@ async def eventLoop(UI, env):
     # Temporarily putting some preliminary tasks here
     if True and os.path.exists("private"):
         # env.taskLoadDataset("private/stach_2000.npz")
-        # env.taskLoadDataset("private/myoglobin_1000.npz")
+        env.taskLoadDataset("private/myoglobin_1000.npz")
         # env.taskLoadDataset("private/ethanol.npz")
         env.taskLoadDataset("private/ethanol_spl_200.npz")
         env.taskLoadModel("private/ethanol_def_1000.npz")
@@ -114,10 +114,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    logger = logging.getLogger("FFAST")
-
-    setupLogger()
-
     # add logging filters
     class VispyNoiseFilter(logging.Filter):
         def filter(self, record):
@@ -126,6 +122,12 @@ if __name__ == "__main__":
 
     vispyLogger = logging.getLogger("vispy")
     vispyLogger.addFilter(VispyNoiseFilter())
+
+    mplLogger = logging.getLogger("matplotlib")
+    mplLogger.setLevel(logging.WARN)
+
+    setupLogger()
+    logger = logging.getLogger("FFAST")
 
     try:
         qasync.run(main())

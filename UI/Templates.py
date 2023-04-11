@@ -833,6 +833,23 @@ class SettingsWidgetBase(Widget, EventChildClass):
 
         self.setValue(self.settings.get(self.settingsKey, None))
 
+class SettingsCheckBox(SettingsWidgetBase):
+    def __init__(self, *args, settings = None, settingsKey = None, **kwargs):
+        super().__init__(
+            *args, settings=settings, settingsKey = settingsKey
+        )
+
+        self.checkBox = QtWidgets.QCheckBox("", self)
+        self.setDefault()
+        self.layout.addWidget(self.checkBox)
+
+        self.checkBox.stateChanged.connect(self.callback)
+    
+    def getValue(self):
+        return self.checkBox.checkState()
+
+    def setValue(self, b):
+        self.checkBox.setChecked(b)
 
 class SettingsComboBox(SettingsWidgetBase):
     def __init__(
@@ -921,6 +938,8 @@ class SettingsLineEdit(SettingsWidgetBase):
         self.lineEdit.setText(str(value))
 
 
+
+
 class SettingsPane(Widget, EventChildClass):
     def __init__(self, UIHandler, settings, **kwargs):
         self.handler = UIHandler
@@ -963,6 +982,15 @@ class SettingsPane(Widget, EventChildClass):
                 settings=self.settings,
                 parent=self,
                 **kwargs,
+            )
+
+        elif typ == "CheckBox":
+            el = SettingsCheckBox(
+                self.handler,
+                name,
+                settingsKey=settingsKey,
+                settings=self.settings,
+                parent=self,
             )
 
         else:

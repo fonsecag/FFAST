@@ -129,8 +129,6 @@ class InteractiveCanvas(Widget):
         self.elements = []
         self.props = {}
 
-        self.physicalScalingFactor = getConfig("loupePhysicalScalingFactor")
-
         self.canvas.create_native()
         self.view = self.canvas.central_widget.add_view()
         self.view.camera = Camera(self)
@@ -177,8 +175,8 @@ class InteractiveCanvas(Widget):
     ## GEOMETRY
 
     def getR(self, index=None):
-        R = self.dataset.getCoordinates(indices=index)
-        return R - np.mean(R, axis=0)
+        return self.dataset.getCoordinates(indices=index)
+        # return R - np.mean(R, axis=0)
 
     def getCurrentR(self):
         return self.getR(self.index)
@@ -280,8 +278,6 @@ class Loupe(Widget, EventChildClass):
         super().__init__(color="green", layout="horizontal")
         EventChildClass.__init__(self)
 
-        self.physicalScalingFactor = getConfig("loupePhysicalScalingFactor")
-
         self.initialiseSettings()
 
         self.resize(1100, 800)
@@ -298,6 +294,7 @@ class Loupe(Widget, EventChildClass):
 
         self.sideBar = SideBar(handler, parent=self)
         self.sideBarContainer.layout.addWidget(self.sideBar)
+        self.panes = {}
 
         # MAIN WINDOW HERE
         self.contentWindow = Widget(
@@ -457,4 +454,11 @@ class Loupe(Widget, EventChildClass):
 
     # SETTINGS PANE
     def addSidebarPane(self, name, pane):
+        if name in self.panes:
+            logger.error(f'Tried to add settings pane with name {name} but already exists')
+            return
+        self.panes[name] = pane
         self.sideBar.addContent(name, pane)
+
+    def getSettingsPane(self, name):
+        return self.panes.get(name, None)

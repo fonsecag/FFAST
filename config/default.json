@@ -19,6 +19,5 @@
     ],
     "loupeBondsColor":  "#404040",
     "loupeAtomColorDimming": 0.93,
-    "loupeBondsLenience": 1.1,
-    "loupePhysicalScalingFactor": 0.1
+    "loupeBondsLenience": 1.1
 }

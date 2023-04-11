@@ -15,7 +15,6 @@ def setupLogger():
         format="[%(levelname)s] %(message)s",
         handlers=[logging.FileHandler("debug.log"), logging.StreamHandler()],
     )
-    logger = logging.getLogger("FFAST")
 
 
 def kahnsAlgorithm(graph):

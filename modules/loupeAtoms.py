@@ -21,8 +21,7 @@ def addAtomsObject(UIHandler, loupe):
                 antialias=1,
             )
             super().__init__(*args, **kwargs, singleElement=self.scatter)
-            self.edge_width = 0.02 * getConfig("loupePhysicalScalingFactor")
-            self.scalingFactor = getConfig("loupePhysicalScalingFactor")
+            self.edge_width = 0.02 
             # self.colors = (1,1,1)
 
         def onDatasetInit(self):
@@ -30,12 +29,10 @@ def addAtomsObject(UIHandler, loupe):
             self.colors = (
                 atomColors[z] / 255 * getConfig("loupeAtomColorDimming")
             )
-            self.sizes = covalentRadii[z] * getConfig(
-                "loupePhysicalScalingFactor"
-            )
+            self.sizes = covalentRadii[z]
 
         def onNewGeometry(self):
-            R = self.canvas.getCurrentR() * self.scalingFactor
+            R = self.canvas.getCurrentR()
             self.pos = R
             self.queueVisualRefresh()
 
@@ -51,9 +48,12 @@ def addAtomsObject(UIHandler, loupe):
     loupe.addVisualElement(AtomsElement)
 
 
+
 def addSettings(UIHandler, loupe):
     settings = loupe.settings
-    settings.addParameters(**{"atomColorType": ["Elements", "updateGeometry"]})
+    settings.addParameters(**{
+        "atomColorType": ["Elements", "updateGeometry"],
+        })
 
 
 def addSettingsPane(UIHandler, loupe):

@@ -2,7 +2,7 @@ import numpy as np
 from config.atoms import covalentBonds
 from config.userConfig import getConfig
 
-DEPENDENCIES = []
+DEPENDENCIES = ["loupeCamera"]
 
 
 def addSettings(UIHandler, loupe):
@@ -36,7 +36,7 @@ def addSettings(UIHandler, loupe):
             else:
                 bonds = None
 
-            self.set(R=bonds * getConfig("loupePhysicalScalingFactor"))
+            self.set(R=bonds)
 
         def getBondIndices(self, r):
             d = distance_matrix(r, r)
@@ -67,7 +67,7 @@ def addSettings(UIHandler, loupe):
             if self.nBonds is None:
                 self.set(R=None)
             else:
-                self.set(R=bonds * getConfig("loupePhysicalScalingFactor"))
+                self.set(R=bonds)
 
         def getBondIndices(self, r):
             d = distance_matrix(r, r)
@@ -84,23 +84,8 @@ def addSettings(UIHandler, loupe):
             self.idxs = idxs
             self.nBonds = len(self.idxs)
 
-    class CameraInfo(CanvasProperty):
-
-        key = "camera"
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-
-        def generate(self):
-            camera = self.canvas.camera
-            self.set(distance=camera._actual_distance)
-
-        def onCameraChange(self):
-            self.clear()
-
     loupe.addCanvasProperty(DynamicBondsProperty)
     loupe.addCanvasProperty(FixedBondsProperty)
-    loupe.addCanvasProperty(CameraInfo)
 
 
 def addBondsObject(UIHandler, loupe):
@@ -110,8 +95,9 @@ def addBondsObject(UIHandler, loupe):
     from vispy import scene
     from scipy.spatial import distance_matrix
 
+
     class BondsElement(VisualElement):
-        def __init__(self, *args, parent=None, width=20, **kwargs):
+        def __init__(self, *args, parent=None, width=200, **kwargs):
             self.lines = scene.visuals.Line(
                 pos=None,
                 parent=parent,
@@ -122,18 +108,17 @@ def addBondsObject(UIHandler, loupe):
             )
             super().__init__(*args, **kwargs, singleElement=self.lines)
             self.width = width
-            # self.colors = (1,1,1)
 
         def onNewGeometry(self):
             self.queueVisualRefresh()
 
         def onCameraChange(self):
-            width = self.canvas.props["camera"].get("distance")
+            dist = self.canvas.props["camera"].get("distance")
 
-            if width is None:
-                width = 1
+            if dist is None:
+                dist = 1
 
-            self.lines.set_data(width=self.width / width)
+            self.lines.set_data(width=self.width / dist)
 
         def draw(self):
             bondType = self.canvas.settings.get("bondType")
@@ -154,7 +139,8 @@ def addBondsObject(UIHandler, loupe):
             else:
                 self.lines.set_data(pos=bonds, width=self.width / width)
 
-    class BondsTubeElement(VisualElement):
+    if False:
+       class BondsTubeElement(VisualElement):
         # NOT UPDATED WITH NEW PROPERTIES FUNCTIONALITY
         tubeVisual = None
 
@@ -204,7 +190,6 @@ def addBondsObject(UIHandler, loupe):
             self.tube.set_new_points(bonds.reshape(-1, 3))
 
     loupe.addVisualElement(BondsElement)
-    # loupe.addVisualElement(BondsTubeElement)
 
 
 def addSettingsPane(UIHandler, loupe):
@@ -215,7 +200,7 @@ def addSettingsPane(UIHandler, loupe):
     pane.addSetting(
         "ComboBox",
         f"Bonds Type",
-        settingsKey=f"bondType",
+        settingsKey="bondType",
         items=["Fixed", "Dynamic"],
     )
 
@@ -223,7 +208,6 @@ def addSettingsPane(UIHandler, loupe):
 
 
 def loadLoupe(UIHandler, loupe):
-
     addSettings(UIHandler, loupe)  # also sets the bonds property
     addBondsObject(UIHandler, loupe)
     addSettingsPane(UIHandler, loupe)

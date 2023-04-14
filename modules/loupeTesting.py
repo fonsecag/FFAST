@@ -50,7 +50,7 @@ def loadLoupe(UI, loupe):
             self.pos = self.pos + np.random.normal(0, 0.0005, self.pos.shape)
             self.queueVisualRefresh()
 
-        def draw(self):
+        def _draw(self):
             self.element.set_data(
                 self.pos,
                 face_color=self.colors,

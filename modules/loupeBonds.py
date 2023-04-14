@@ -103,7 +103,7 @@ def addSettings(UIHandler, loupe):
             super().__init__(loupe, **kwargs)
 
             self.bonds = []
-            self.selectedBonds = loupe.selectedBonds
+            self.selectedBonds = set()
 
         def selectCallback(self):
             if len(self.selectedPoints) != 2:
@@ -132,9 +132,9 @@ def addSettings(UIHandler, loupe):
                     s += ",\n"
                 else:
                     s += "\n"
-            self.loupe.bondsTextEdit.setText(f"[\n{s}]")
+            # self.loupe.bondsTextEdit.setText(f"[\n{s}]")
 
-    # loupe.setActiveAtomSelectTool(BondSelect)
+    loupe.setActiveAtomSelectTool(BondSelect)
 
 def addBondsObject(UIHandler, loupe):
 
@@ -168,15 +168,8 @@ def addBondsObject(UIHandler, loupe):
 
             self.lines.set_data(width=self.width / dist)
 
-        def draw(self, picking = False, pickingColors = None):
-
-            if picking:
-                self.lines.visible = False
-                return
+        def _draw(self, picking = False, pickingColors = None):
             
-            if not self.lines.visible:
-                self.lines.visible = True
-
             bondType = self.canvas.settings.get("bondType")
             if bondType == "Dynamic":
                 bonds = self.canvas.props["dynamicBonds"].get("R")

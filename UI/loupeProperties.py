@@ -3,6 +3,7 @@ class CanvasProperty:
     canvas = None
     index = None
     cleared = False
+    changesR = False
 
     def __init__(self, **kwargs):
         self.content = {}
@@ -89,6 +90,7 @@ class VisualElement(CanvasProperty):
     visualRefreshQueued = False
     pickingVisible = False
     disabled = False
+    hidden = False
 
     def __init__(self, singleElement=None):
         self.setSingleElement(singleElement)
@@ -130,3 +132,13 @@ class VisualElement(CanvasProperty):
         if self.singleElement is not None:
             self.singleElement.visible = False
         self.disabled = True
+
+    def hide(self):
+        self.hidden = True
+        if self.singleElement:
+            self.singleElement.visible = False
+
+    def show(self):
+        self.hidden = False
+        if self.singleElement:
+            self.singleElement.visible = True

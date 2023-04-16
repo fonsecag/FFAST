@@ -5,6 +5,99 @@ import numpy as np
 DEPENDENCIES = ["basicErrors", "loupeAtoms"]
 
 
+class ColorBarVisual(VisualElement):
+    def __init__(self, *args, parent=None, **kwargs):
+        super().__init__(*args, **kwargs, singleElement=None)
+        self.colorBar = None  # gets inited when needed
+        self.sceneParent = parent
+
+    def getSize(self):
+        w, h = self.canvas.size()
+        return 0.8 * h, 10
+
+    def update(self):
+        # gets called by the ForceErrorColorProperty whenever needed (manualUpdate)
+
+        dw = self.canvas.loupe.forceErrorDataWatcher
+        data = dw.getWatchedData(dataOnly=True)
+        hasData = len(data) > 0
+
+        setting = self.canvas.settings.get("atomColorType")
+        prop = self.canvas.props["forceErrorColor"]
+
+        if prop.get("atomicMAE") is None:
+            hasData = False
+
+        if hasData and (setting == "Mean Force Error"):
+            self.setParameters(
+                visible=True,
+                cmap=prop.colorMap,
+                clim=(prop.get("meanMin"), prop.get("meanMax")),
+                label="Mean Force MAE",
+            )
+        elif hasData and (setting == "Force Error"):
+            self.setParameters(
+                visible=True,
+                cmap=prop.colorMap,
+                clim=(prop.get("min"), prop.get("max")),
+                label="Force MAE",
+            )
+        else:
+            self.setParameters(visible=False)
+
+    def setParameters(
+        self, visible=False, cmap=None, clim=(0, 1), label="N/A"
+    ):
+        if self.colorBar is None:
+            self.initColorBar()
+
+        if visible and self.hidden:
+            self.show()
+        elif (not visible) and (not self.hidden):
+            self.hide()
+
+        if not visible:
+            return
+
+        self.colorBar.cmap = cmap
+        self.colorBar.clim = (f"{clim[0]:.2f}", f"{clim[1]:.2f}")
+        self.colorBar.label.text = label
+
+    def initColorBar(self):
+        from vispy import scene
+
+        prop = self.canvas.props["forceErrorColor"]
+
+        # preliminary, gets changed by .update when afterwards
+        self.colorBar = scene.ColorBarWidget(
+            # parent=self.sceneParent,
+            cmap=prop.colorMap,  # gets updated by ForceErrorColorProperty
+            label_color="lightgray",
+            label="N/A",
+            clim=(0, 1),
+            orientation="right",
+            border_color="lightgray",
+            border_width=1,
+        )
+        self.colorBar.width_max = 70
+        self.spacer = scene.Widget()
+
+        self.canvas.grid.add_widget(self.colorBar)
+        self.canvas.grid.add_widget(self.spacer)
+        self.setSingleElement(self.colorBar)
+
+        # hackey way to add spacing to the label
+        cb = self.colorBar._colorbar
+        _update_positions_ori = cb._update_positions
+
+        def _update_positions_new(*args):
+            _update_positions_ori(*args)
+            pos = cb._label.pos
+            pos[0][0] = pos[0][0] + 15
+
+        cb._update_positions = _update_positions_new
+
+
 class ForceErrorColorProperty(CanvasProperty):
 
     key = "forceErrorColor"
@@ -54,9 +147,25 @@ class ForceErrorColorProperty(CanvasProperty):
         # gets called manually through an action when Coloring gets changed
         # or when the data loads
         self.clear()
-        self.get()
         self.canvas.props["meanForceError"].clear()
         self.canvas.props["forceError"].clear()
+
+        if "ColorBarVisual" in self.canvas.elements:
+            self.canvas.elements["ColorBarVisual"].update()
+
+        dw = self.canvas.loupe.forceErrorDataWatcher
+        data = dw.getWatchedData(dataOnly=True)
+        hasData = len(data) > 0
+
+        setting = self.canvas.settings.get("atomColorType")
+        atomsElement = self.canvas.elements["AtomsElement"]
+        if hasData and (setting == "Mean Force Error"):
+            atomsElement.colorProperty = self.canvas.props["meanForceError"]
+        elif hasData and (setting == "Force Error"):
+            atomsElement.colorProperty = self.canvas.props["forceError"]
+        else:
+            atomsElement.colorProperty = None
+        self.canvas.onNewGeometry()
 
 
 class MeanForceErrorProperty(CanvasProperty):
@@ -79,10 +188,6 @@ class MeanForceErrorProperty(CanvasProperty):
         fork = meanMax - meanMin
         colors = prop.getColors((meanAtomicMAE - meanMin) / fork)
         self.set(colors=colors)
-
-    def onNewGeometry(self):
-        if self.canvas.settings.get("atomColorType") == "Mean Force Error":
-            self.canvas.elements["AtomsElement"].colorProperty = self
 
 
 class ForceErrorProperty(CanvasProperty):
@@ -108,17 +213,25 @@ class ForceErrorProperty(CanvasProperty):
         self.set(colors=colors)
 
     def onNewGeometry(self):
-        if self.canvas.settings.get("atomColorType") == "Force Error":
-            self.canvas.elements["AtomsElement"].colorProperty = self
-
         self.clear()
 
 
 def addSettings(UIHandler, loupe):
-
     from UI.Templates import ObjectComboBox
 
+    ## ADDING DATAWATCHER
+    def updateForceErrorColor():
+        prop = loupe.canvas.props["forceErrorColor"]
+        prop.manualUpdate()
+
+    dw = DataWatcher(loupe.env)
+    loupe.forceErrorDataWatcher = dw
+    dw.setDataDependencies("forcesError")
+    dw.addCallback(updateForceErrorColor)
+
     settings = loupe.settings
+    # make sure to update the colorbar etc when we change color type
+    settings.addParameterActions("atomColorType", updateForceErrorColor)
 
     pane = loupe.getSettingsPane("ATOMS")
     comboBox = pane.settingsWidgets.get("Coloring")
@@ -152,22 +265,12 @@ def addSettings(UIHandler, loupe):
     # LOAD BUTTON
     from UI.Plots import DataloaderButton
 
-    btn = DataloaderButton(UIHandler, loupe.forceErrorDataWatcher)
+    btn = DataloaderButton(UIHandler, dw)
     container.layout.addWidget(btn)
     btn.setFixedWidth(80)
 
 
-def addDataWatcher(UIHandler, loupe):
-    def updateForceErrorColor():
-        prop = loupe.canvas.props["forceErrorColor"]
-        prop.manualUpdate()
-
-    dw = DataWatcher(loupe.env)
-    loupe.forceErrorDataWatcher = dw
-    dw.setDataDependencies("forcesError")
-    dw.addCallback(updateForceErrorColor)
-
-
 def loadLoupe(UIHandler, loupe):
-    addDataWatcher(UIHandler, loupe)
     addSettings(UIHandler, loupe)
+
+    loupe.addVisualElement(ColorBarVisual, "ColorBarVisual")

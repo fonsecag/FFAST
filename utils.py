@@ -75,6 +75,7 @@ def cleanBondIdxsArray(arr):
                 s.add((x[0], x[1]))
             else:
                 s.add((x[1], x[0]))
+
     except Exception as e:
         logger.exception(
             f"Tried to clean bond arr, but failed for: {e}. Array/List needs to be Nx2"

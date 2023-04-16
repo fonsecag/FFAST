@@ -61,6 +61,9 @@ class Settings(dict):
 
     def doPendingActions(self):
         for _ in range(len(self.pendingActions)):
+            if not self.pendingActions:
+                # check that the set has not become empty since
+                return
             actionKey = self.pendingActions.pop()
             self.doAction(actionKey)
 

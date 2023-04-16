@@ -207,6 +207,7 @@ def addSettingsPane(UIHandler, loupe):
         validationFunc=cleanBondIdxsArray,
     )
     s.setHideCondition(lambda: settings.get("bondType") != "Fixed")
+    s.setFixedHeight(200)
 
     ## ADD BONDS BUTTONS
     container = pane.addSetting(

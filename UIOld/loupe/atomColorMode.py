@@ -2,7 +2,30 @@ from config.atoms import atomColors
 import numpy as np
 from vispy.color import Colormap
 from vispy import scene
-from UI.utils import ColorBarVisual
+from UI import ColorBarVisual
+
+
+class ColorBarVisual:
+    def __init__(self, parentCanvas=None, **kwargs):
+        self.parentCanvas = parentCanvas
+        w, h = parentCanvas.size
+        self.colorBar = scene.visuals.ColorBar(size=(0.8 * h, 10), **kwargs)
+
+        self.visual = self.colorBar
+        self.onUpdate()
+
+    def onUpdate(self):
+        # https://github.com/vispy/vispy/blob/main/vispy/visuals/colorbar.py
+        w, h = self.parentCanvas.size
+
+        self.colorBar.pos = (20, h / 2)
+        self.colorBar.size = (0.8 * h, 10)
+
+        for x in self.colorBar.ticks:
+            x.font_size = 9
+
+        # needs to be last for some reason, some other updates overwrite it
+        self.colorBar.label.pos = (50, h / 2)
 
 
 class AtomColoringModeBase:

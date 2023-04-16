@@ -22,14 +22,25 @@ class Widget(QWidget):
     deleted = False
 
     def __init__(
-        self, layout=None, color=None, parent=None, frozen=False, styleSheet=""
+        self,
+        layout=None,
+        color=None,
+        parent=None,
+        frozen=False,
+        styleSheet="",
+        widgetName=None,
     ):
         super().__init__(parent=parent)
         self.frozen = frozen
         if parent is None:
             logger.warn(f"Parent not being set for widget {self}")
 
-        self.applyDefaultName()
+        if widgetName is None:
+            self.applyDefaultName()
+        else:
+            self.objectName = widgetName
+            self.setObjectName(widgetName)
+
         self.applyDefaultLayout(layout=layout)
         self.applyDefaultStyleSheet(color=color, styleSheet=styleSheet)
 
@@ -229,6 +240,61 @@ class LineEdit(QtWidgets.QLineEdit):
             self.callbackFunc()
 
 
+class CodeLineEdit(LineEdit):
+
+    returnCallback = None
+
+    def __init__(self, *args, validationFunc=None, **kwargs):
+        kwargs.update(color="black")
+        super().__init__(*args, **kwargs)
+
+        self.validationFunc = validationFunc
+        self.setOnEdit(self.onLineEdit)
+
+    def validate(self):
+        valid, validT = True, self.getValue()
+        if validT is None:
+            return False, None
+
+        if self.validationFunc is not None:
+            try:
+                valid, validT = self.validationFunc(validT)
+            except Exception as e:
+                logger.exception(
+                    f"Tried validating CodeLineEdit input, but got error {e}"
+                )
+                return False, None
+
+        return valid, validT
+
+    def setReturnCallback(self, func):
+        self.returnCallback = func
+
+    def onLineEdit(self):
+        validated, cleanedT = self.validate()
+        if not validated:
+            return
+        self.clearFocus()
+        self.setCode(cleanedT)
+        if self.returnCallback is not None:
+            self.returnCallback()
+
+    def getValue(self):
+        t = self.text()
+        t = t.replace("; ", "\n").replace(";", "\n")
+        code = None
+        try:
+            code = ast.literal_eval(t)
+        except (TypeError, MemoryError, SyntaxError, ValueError):
+            logger.exception("Input cannot be evaluated")
+
+        return code
+
+    def setCode(self, value):
+        text = pprint.pformat(value, width=30)
+        self.setText(text.replace("\n", "; "))
+
+
 class CodeTextEdit(QtWidgets.QTextEdit):
 
     returnCallback = None
@@ -366,6 +432,7 @@ class CollapseButton(QtWidgets.QPushButton, Widget):
         self.clicked.connect(self.onClick)
 
     collapsingWidget = None
+    callbackFunc = None
 
     def setCollapsingWidget(self, widget):
         self.collapsingWidget = widget
@@ -388,11 +455,15 @@ class CollapseButton(QtWidgets.QPushButton, Widget):
         self.collapsingWidget.hide()
         self.updateIcon()
         self.updateSize()
+        if self.callbackFunc is not None:
+            self.callbackFunc()
 
     def setExpanded(self):
         self.collapsingWidget.show()
         self.updateIcon()
         self.updateSize()
+        if self.callbackFunc is not None:
+            self.callbackFunc()
 
     def isExpanded(self):
         return self.collapsingWidget.isVisible()
@@ -400,6 +471,9 @@ class CollapseButton(QtWidgets.QPushButton, Widget):
     def updateSize(self):
         w = self
         self.forceUpdateParent()
+
+    def setCallback(self, func):
+        self.callbackFunc = func
 
 
 class CollapsibleWidget(Widget):
@@ -455,6 +529,9 @@ class CollapsibleWidget(Widget):
         self.scrollArea.adjustSize()
         self.scrollWidget.adjustSize()
 
+    def setCallback(self, func):
+        self.titleButton.setCallback(func)
+
 
 class ContentBar(Widget):
     def __init__(self, handler, **kwargs):
@@ -471,12 +548,13 @@ class ContentBar(Widget):
 
         self.widgets = {}
 
-    def addContent(self, name, widget=None):
+    def addContent(self, name, widget=None, callback=None):
         content = CollapsibleWidget(
             self.handler, name=name, widget=widget, parent=self
         )
         self.layout.insertWidget(self.layout.count() - 1, content)
         self.widgets[name] = content
+        return content
 
     def setCollapsed(self, name):
         self.widgets[name].setCollapsed()
@@ -897,7 +975,7 @@ class SettingsWidgetBase(Widget, EventChildClass):
         if hasLabel:
             self.label = QtWidgets.QLabel(str(name))
             self.layout.addWidget(self.label)
-            self.layout.addStretch()
+            # self.layout.addStretch()
 
         # update the widget if parameter changes
         if self.hasSettingsKey:
@@ -1015,23 +1093,32 @@ class SettingsCodeBox(SettingsWidgetBase):
         settings=None,
         settingsKey=None,
         validationFunc=None,
+        labelDirection="vertical",
+        singleLine=False,
         **kwargs,
     ):
         super().__init__(
             *args,
             settings=settings,
             settingsKey=settingsKey,
-            layout="vertical",
+            layout=labelDirection,
+            fixedHeight=False,
             **kwargs,
         )
 
-        self.setFixedHeight(200)
-
-        self.codeBox = CodeTextEdit(parent=self, validationFunc=validationFunc)
-        self.layout.addWidget(self.codeBox)
-        self.layout.setSpacing(8)
+        if not singleLine:
+            self.codeBox = CodeTextEdit(
+                parent=self, validationFunc=validationFunc
+            )
+        else:
+            self.codeBox = CodeLineEdit(
+                parent=self, validationFunc=validationFunc
+            )
 
         self.codeBox.setReturnCallback(self.callback)
+
+        self.layout.addWidget(self.codeBox)
+        self.layout.setSpacing(8)
 
     def _setValue(self, value):
         self.codeBox.setCode(value)
@@ -1106,7 +1193,13 @@ class SettingsPane(Widget, EventChildClass):
         self.layout.setSpacing(8)
 
     def addSetting(
-        self, typ, name, insertIndex=None, settingsKey=None, **kwargs
+        self,
+        typ,
+        name,
+        manualLayout=False,
+        insertIndex=None,
+        settingsKey=None,
+        **kwargs,
     ):
 
         if settingsKey is None:
@@ -1169,11 +1262,12 @@ class SettingsPane(Widget, EventChildClass):
             )
             return
 
-        if insertIndex is None:
-            self.layout.addWidget(el)
-        else:
-            self.layout.insertWidget(insertIndex, el)
-        self.settingsWidgets[name] = el
+        if not manualLayout:
+            if insertIndex is None:
+                self.layout.addWidget(el)
+            else:
+                self.layout.insertWidget(insertIndex, el)
+            self.settingsWidgets[name] = el
 
         self.updateVisibilities()
 

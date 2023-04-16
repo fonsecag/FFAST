@@ -42,7 +42,7 @@ class SceneCanvas(scene.SceneCanvas):
         self.widget = widget
 
     def getPickingRender(self, pos):
-        for element in self.widget.elements:
+        for element in self.widget.elements.values():
             element.draw(picking=True, pickingColors=self.pickingColors)
 
         tr = self.transforms.get_transform("canvas", "framebuffer")
@@ -126,6 +126,9 @@ class InteractiveCanvas(Widget):
     activeAtomSelectTool = None
     hoveredPoint = None
     nAtoms = -1
+    hasBeenInited = False
+    _currentR = None
+    currentTransformations = []
 
     def __init__(self, loupe, **kwargs):
         super().__init__(layout="horizontal", **kwargs)
@@ -141,6 +144,8 @@ class InteractiveCanvas(Widget):
         self.view = self.canvas.central_widget.add_view()
         self.view.camera = Camera(self)
         self.camera = self.view.camera
+
+        self.grid = self.canvas.central_widget.add_grid(margin=4)
 
         self.scene = self.view.scene
         self.loupe = loupe
@@ -158,7 +163,7 @@ class InteractiveCanvas(Widget):
 
     def visualRefresh(self, force=False):
         for element in self.elements.values():
-            if force or element.visualRefreshQueued:
+            if (force or element.visualRefreshQueued) and (not element.hidden):
                 element.draw(picking=False, pickingColors=None)
                 element.visualRefreshQueued = False
 
@@ -170,6 +175,7 @@ class InteractiveCanvas(Widget):
     ## INIT
 
     def setDataset(self, dataset):
+        self.hasBeenInited = False
         self.dataset = dataset
         self.nAtoms = self.dataset.getNAtoms()
 
@@ -180,8 +186,13 @@ class InteractiveCanvas(Widget):
             if not element.disabled:
                 element.onDatasetInit()
 
+        self.hasBeenInited = True
         self.visualRefresh()
+        # self.onNewGeometry()
         self.canvas.refreshPickingColors(self.dataset.getNAtoms())
+
+    def size(self):
+        return self.canvas.size
 
     ## GEOMETRY
 
@@ -189,17 +200,53 @@ class InteractiveCanvas(Widget):
         return self.dataset.getCoordinates(indices=index)
         # return R - np.mean(R, axis=0)
 
+    def applyTransformation(self, R, vOrM):
+        # is vector
+        if vOrM.ndim == 1:
+            return R + vOrM
+        elif vOrM.ndim == 2:
+            return R @ vOrM
+        else:
+            return R
+
+    def setCurrentR(self):
+        R = self.getCurrentR()
+
+        for vOrM in self.currentTransformations:
+            R = self.applyTransformation(R, vOrM)
+
+        self._currentR = R
+
     def getCurrentR(self):
-        return self.getR(self.index)
+        if self._currentR is None:
+            return self.getR(self.index)
+        else:
+            return self._currentR
 
     def setIndex(self, index):
         self.index = index
         self.onNewGeometry()
 
-    def onNewGeometry(self):
-        self.canvas.measure_fps()  # TODO remove
+    def resetCurrentR(self):
+        self._currentR = None
+        self.currentTransformations = []
 
+    def onNewGeometry(self):
+        if not self.hasBeenInited:
+            return
+
+        self.resetCurrentR()
+
+        postProps = []
         for prop in self.props.values():
+            if prop.changesR:
+                prop.onNewGeometry()
+            else:
+                postProps.append(prop)
+
+        self.setCurrentR()
+
+        for prop in postProps:
             prop.onNewGeometry()
 
         for element in self.elements.values():
@@ -457,7 +504,9 @@ class Loupe(Widget, EventChildClass):
             )
             return
         self.panes[name] = pane
-        self.sideBar.addContent(name, pane)
+        collapsibleWidget = self.sideBar.addContent(name, pane)
+        if isinstance(pane, SettingsPane):
+            collapsibleWidget.setCallback(pane.updateVisibilities)
 
     def getSettingsPane(self, name):
         return self.panes.get(name, None)

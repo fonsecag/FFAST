@@ -65,6 +65,25 @@ def checkForInvalidDependencies(graph):
         return cleanedGraph
 
 
+def cleanBondIdxsArray(arr):
+    try:
+        s = set()
+        for x in arr:
+            if x[0] == x[1]:
+                continue
+            elif x[0] < x[1]:
+                s.add((x[0], x[1]))
+            else:
+                s.add((x[1], x[0]))
+    except Exception as e:
+        logger.exception(
+            f"Tried to clean bond arr, but failed for: {e}. Array/List needs to be Nx2"
+        )
+        return False, None
+
+    return True, list(s)
+
+
 def loadModules(UI, env, headless=False):
     mods = {}
     depGraph = {}

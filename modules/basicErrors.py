@@ -49,8 +49,9 @@ def loadData(env):
             N = fData.shape[0]
 
             diff = fPred.get("forces") - fData
+            atomicMAE = np.mean(np.abs(diff), axis=2)
 
-            de = self.newDataEntity(diff=diff)
+            de = self.newDataEntity(diff=diff, atomicMAE=atomicMAE)
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 

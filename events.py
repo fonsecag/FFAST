@@ -1,6 +1,5 @@
 from collections import defaultdict
-import logging, traceback
-import os, time
+import logging
 
 logger = logging.getLogger("FFAST")
 subs = defaultdict(list)

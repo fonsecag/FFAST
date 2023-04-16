@@ -8,6 +8,9 @@ from scipy.spatial.distance import pdist
 from config.userConfig import getConfig
 from utils import hexToRGB
 from config.atoms import zIntToZStr, zStrToZInt
+from config.atoms import covalentBonds
+from scipy.spatial import distance_matrix
+from utils import cleanBondIdxsArray
 
 logger = logging.getLogger("FFAST")
 GLOBAL_DATASETS_COUNTER = 0
@@ -155,6 +158,9 @@ class DatasetLoader(EventClass):
         name = removeExtension(os.path.basename(self.path))
         self.setName(name)
 
+        z = self.getElements()
+        self.bondSizes = covalentBonds[z, z] * getConfig("loupeBondsLenience")
+
     def getPDist(self, indices=None):
         R = self.getCoordinates(indices=indices)
         return toDistance(R)
@@ -189,6 +195,16 @@ class DatasetLoader(EventClass):
     def setColor(self, r, g, b):
         self.color = [r, g, b]
         self.eventPush("OBJECT_COLOR_CHANGED", self.fingerprint)
+
+    def getBondIndices(self, index):
+
+        r = self.getCoordinates(index)
+        d = distance_matrix(r, r)
+
+        idxs = np.argwhere(d < self.bondSizes)
+        _, idxs = cleanBondIdxsArray(idxs)
+
+        return idxs
 
 
 class SubDataset(DatasetLoader):

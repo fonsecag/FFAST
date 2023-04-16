@@ -30,6 +30,7 @@ class DataWatcher(EventChildClass):
         self.dependencyList = []
         self.currentlyMissingKeys = []
         self.refreshWidgets = []
+        self.callbacks = []
 
     allDatasets = False
     allModels = False
@@ -226,6 +227,9 @@ class DataWatcher(EventChildClass):
         for widget in self.refreshWidgets:
             self.eventPush("WIDGET_REFRESH", widget)
 
+        for func in self.callbacks:
+            func()
+
     def getWatchedData(self, dataOnly=False):
         env = self.env
         allData = []
@@ -261,3 +265,6 @@ class DataWatcher(EventChildClass):
         deps = self.getMissingDependencies()
         for dep in deps:
             env.generationQueue.add(dep)
+
+    def addCallback(self, func):
+        self.callbacks.append(func)

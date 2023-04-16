@@ -21,16 +21,33 @@ class Settings(dict):
 
     def addParameter(self, key, defaultValue, *actions):
         self[key] = defaultValue
-        if len(actions) > 0:
-            self.parameterActions[key] = actions
+        self.addParameterActions(key, *actions)
+
+    def addParameterActions(self, key, *actions):
+        if len(actions) <= 0:
+            return
+
+        if key not in self.parameterActions:
+            self.parameterActions[key] = []
+
+        for a in actions:
+            if callable(a):
+                self.addAction(hash(a), a)
+                self.parameterActions[key].append(hash(a))
+            else:
+                self.parameterActions[key].append(a)
 
     def addParameters(self, **kwargs):
         for k, v in kwargs.items():
             self.addParameter(k, v[0], *v[1:])
 
     def setParameter(self, key, value, refresh=True):
-        if self[key] == value:
-            return
+        try:
+            if self[key] == value:
+                return
+        except ValueError:
+            # means the value cannot be compared, usually if the parameter is a list or numpy array
+            pass
 
         self[key] = value
 

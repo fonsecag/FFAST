@@ -80,6 +80,7 @@ class ContentTab(ExpandingScrollArea):
 class DatasetModelSelector(Widget, EventChildClass):
 
     quiet = False
+
     def __init__(self, handler, **kwargs):
         self.handler = handler
         self.env = handler.env
@@ -122,7 +123,7 @@ class DatasetModelSelector(Widget, EventChildClass):
         # reselect all models
         for w in self.modelsList.getWidgets():
             if w.key in modelKeys:
-                w.setChecked(True, quiet = True)
+                w.setChecked(True, quiet=True)
 
         self.quiet = False
         self.update()
@@ -142,7 +143,7 @@ class DatasetModelSelector(Widget, EventChildClass):
         # reselect all datasets
         for w in self.datasetsList.getWidgets():
             if w.key in datasetKeys:
-                w.setChecked(True, quiet = True)
+                w.setChecked(True, quiet=True)
 
         self.quiet = False
         self.update()

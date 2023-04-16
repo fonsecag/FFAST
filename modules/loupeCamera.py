@@ -1,24 +1,20 @@
-
 DEPENDENCIES = ["loupeAtoms"]
 
+
 def loadLoupe(UIHandler, loupe):
-    from UI.Loupe import CanvasProperty
+    from UI.loupeProperties import CanvasProperty
     import numpy as np
 
     # SETTINGS
 
     settings = loupe.settings
-    settings.addParameters(**{
-        "originCenterOfMass": [True, "updateGeometry"]
-        })
-    
+    settings.addParameters(**{"originCenterOfMass": [True, "updateGeometry"]})
+
     # SETTINGS PANE
     pane = loupe.getSettingsPane("ATOMS")
 
     pane.addSetting(
-        "CheckBox",
-        f'Origin COM',
-        settingsKey='originCenterOfMass'
+        "CheckBox", f"Origin COM", settingsKey="originCenterOfMass"
     )
 
     # PROPERTIES
@@ -42,7 +38,7 @@ def loadLoupe(UIHandler, loupe):
             wasActive = np.sum(np.abs(self.lastCOM)) > 0
             if self.centeringCOM():
                 r = self.canvas.getCurrentR()
-                com = np.mean(r, axis = 0)
+                com = np.mean(r, axis=0)
 
                 if wasActive:
                     dr = com - self.lastCOM

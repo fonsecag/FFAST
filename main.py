@@ -76,6 +76,7 @@ async def eventLoop(UI, env):
     if True and os.path.exists("private"):
         # env.taskLoadDataset("private/stach_2000.npz")
         env.taskLoadDataset("private/myoglobin_1000.npz")
+        # env.taskLoadDataset("private/fuck.npz")
         # env.taskLoadDataset("private/ethanol.npz")
         env.taskLoadDataset("private/ethanol_spl_200.npz")
         env.taskLoadModel("private/ethanol_def_1000.npz")

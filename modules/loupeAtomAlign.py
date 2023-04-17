@@ -2,39 +2,12 @@ from UI.loupeProperties import AtomSelectionBase, CanvasProperty
 import numpy as np
 import logging
 from scipy.spatial.transform import Rotation
+from client.mathUtils import getVV0Angle, getVV0RotationMatrix, getPerpComponent
 
 logger = logging.getLogger("FFAST")
 
 DEPENDENCIES = ["loupeAtoms"]
 
-
-def getVV0Angle(v, v0, directionVector=None):
-    (u, u0) = v / np.linalg.norm(v), v0 / np.linalg.norm(v0)
-    if directionVector is None:
-        sign = 1
-    else:
-        cross = np.cross(v, v0)
-        sign = -np.sign(np.dot(directionVector, cross))
-    return sign * np.arccos(np.dot(u, u0))
-
-
-def getVV0RotationMatrix(v, v0):
-    vPerp = np.cross(v, v0)
-    vPerp /= np.linalg.norm(vPerp)
-    angle = getVV0Angle(v, v0)
-
-    rotMatrix = Rotation.from_rotvec(-angle * vPerp)
-
-    return rotMatrix.as_matrix()
-
-
-def getPerpComponent(v, vRef, unitary=False):
-    vPar = np.dot(v, vRef) * vRef
-    vPerp = v - vPar
-    if unitary:
-        vPerp /= np.linalg.norm(v)
-
-    return vPerp
 
 
 def getTransform(r, r0, along=None):
@@ -133,17 +106,23 @@ class AtomAlignSelect(AtomSelectionBase):
         self.atoms = []
 
     def selectCallback(self):
-        if len(self.selectedPoints) != 3:
+        N = len(self.selectedPoints)
+        self.updateInfo()
+        if N != 3:
             return
 
         self.applySelectedAtoms()
         self.clearSelection()
+        self.canvas.setActiveAtomSelectTool(None)
 
     def applySelectedAtoms(self):
         self.canvas.loupe.settings.setParameter(
             "alignAtomsIndices", self.selectedPoints
         )
 
+    def getInfoLabel(self):
+        N = len(self.selectedPoints)
+        return f'Select{3-N} more points'
 
 def addSettings(UIHandler, loupe):
     from UI.Templates import PushButton

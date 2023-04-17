@@ -229,6 +229,8 @@ class SubDataset(DatasetLoader):
         self.indices = indices
         self.updatePath()
 
+        self.bondSizes = parentDataset.bondSizes
+
     def updatePath(self):
         self.path = (
             f"{self.subName},{self.parent.getName()},{self.modelDep.getName()}"
@@ -312,3 +314,6 @@ class SubDataset(DatasetLoader):
 
     def getLattice(self):
         return self.parent.getLattice()
+
+    def getElementsName(self):
+        return self.parent.getElementsName()

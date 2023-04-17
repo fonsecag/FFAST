@@ -131,10 +131,10 @@ class InteractiveCanvas(Widget):
     currentTransformations = []
 
     def __init__(self, loupe, **kwargs):
-        super().__init__(layout="horizontal", **kwargs)
+        super().__init__(layout="vertical", **kwargs)
 
         self.canvas = SceneCanvas(
-            self, keys="interactive", bgcolor="black", create_native=False
+            self, bgcolor="black", create_native=False
         )
 
         self.elements = {}
@@ -151,6 +151,8 @@ class InteractiveCanvas(Widget):
         self.loupe = loupe
         self.canvas.native.setParent(loupe)
         self.layout.addWidget(self.canvas.native)
+        self.addAtomSelectToolbar()
+        self.setActiveAtomSelectTool(None)
 
         self.freeze()
 
@@ -171,6 +173,21 @@ class InteractiveCanvas(Widget):
         prop = Prop()
         prop.canvas = self
         self.props[prop.key] = prop
+
+    def addAtomSelectToolbar(self):
+        self.atomSelectBar = Widget(color="@BGColor1", layout = 'horizontal')
+        self.atomSelectBar.setFixedHeight(40)
+        self.layout.insertWidget(0, self.atomSelectBar)
+
+        self.atomSelectBar.setContentsMargins(8, 0, 8, 0)
+
+        self.atomSelectBar.label1 = QtWidgets.QLabel("/")
+        self.atomSelectBar.label2 = QtWidgets.QLabel("/")
+        self.atomSelectBar.cancelButton = ToolButton(lambda x: self.setActiveAtomSelectTool(), "close")
+
+        self.atomSelectBar.layout.addWidget(self.atomSelectBar.label1)
+        self.atomSelectBar.layout.addWidget(self.atomSelectBar.label2)
+        self.atomSelectBar.layout.addWidget(self.atomSelectBar.cancelButton)
 
     ## INIT
 
@@ -253,6 +270,8 @@ class InteractiveCanvas(Widget):
             if not element.disabled:
                 element.onNewGeometry()
 
+        if self.activeAtomSelectTool is not None:
+            self.activeAtomSelectTool.updateInfo()
         self.visualRefresh()
 
     ## CAMERA
@@ -279,6 +298,7 @@ class InteractiveCanvas(Widget):
             self.visualRefresh(force=True)
 
     def isActiveAtomSelectTool(self, tool):
+        print(self.activeAtomSelectTool, tool)
         if tool is None:
             return self.activeAtomSelectTool is None
         return isinstance(self.activeAtomSelectTool, tool)
@@ -292,12 +312,14 @@ class InteractiveCanvas(Widget):
             self.activeAtomSelectTool = None
             self.canvas.mouseoverActive = False
             self.canvas.mouseClickActive = False
+            self.atomSelectBar.hide()
         else:
             self.activeAtomSelectTool = tool(self)
             self.canvas.mouseoverActive = True
             self.canvas.mouseClickActive = True
+            self.atomSelectBar.show()
 
-        self.selectedPoints = []
+        self.onNewGeometry()
 
     def getSelectedAtoms(self):
         if self.activeAtomSelectTool is None:
@@ -309,6 +331,8 @@ class InteractiveCanvas(Widget):
             return None
         return self.activeAtomSelectTool.hoveredPoint
 
+    def keyPressEvent(self, event):
+        self.parent().keyPressEvent(event)
 
 class Loupe(Widget, EventChildClass):
 
@@ -517,3 +541,17 @@ class Loupe(Widget, EventChildClass):
 
     def isActiveAtomSelectTool(self, *args):
         return self.canvas.isActiveAtomSelectTool(*args)
+
+    # SHORTCUTS
+    # not yet working
+    def keyPressEvent(self, event):
+        print("event")
+        if event.key() == QtCore.Qt.Key_Q:
+            print("Killing")
+        elif event.key() == QtCore.Qt.Key_Enter:
+            print("enter")
+        # print(event.key(), QtCore.Qt.Key_Escape)
+        # print(event.key()==QtCore.Qt.Key_Escape)
+        event.accept()
+
+

@@ -49,6 +49,7 @@ class AtomSelectionBase:
         self.selectedPoints = []
         self.hoveredPoint = None
         self.canvas = canvas
+        self.updateInfo()
 
     def clearSelection(self):
         nSel = len(self.selectedPoints)
@@ -83,6 +84,15 @@ class AtomSelectionBase:
     def getSelectedPoints(self):
         return self.selectedPoints
 
+    def getTitleLabel(self):
+        return self.label
+
+    def getInfoLabel(self):
+        return ""
+    
+    def updateInfo(self):
+        self.canvas.atomSelectBar.label1.setText(f'Selecting: {self.getTitleLabel()}')
+        self.canvas.atomSelectBar.label2.setText(self.getInfoLabel())
 
 class VisualElement(CanvasProperty):
 

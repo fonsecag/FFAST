@@ -30,6 +30,17 @@ def getPerpComponent(v, vRef, unitary=False):
 
     return vPerp
 
+def getDihedral(r1, r2, r3, r4):
+    midV = r2 - r3
+    midU = midV / np.linalg.norm(midV)
+
+    v1, v2 = r1 - r2, r4 - r3 
+    u1, u2 = v1/np.linalg.norm(v1), v2/np.linalg.norm(v2)
+
+    p1 = u1 - np.dot(u1,midU)*u1
+    p2 = u2 - np.dot(u2,midU)*u2
+
+    return getVV0Angle(p1, p2)
 
 def alignConfiguration(r, r0, along=[0, 1, 2], com=False):
     n1, n2, n3 = along

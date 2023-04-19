@@ -24,6 +24,6 @@ etc...
 
 ### 3D Visualiser 
 
-A new 3D visualiser ("loupe") can be opened through the menu (Loupe -> New). From there, any loaded dataset can be selected and visualised. Some visualisation options can be found when opening the menu on the right-hand side of the loupe (collapsing arrow at the top right). 
+A new 3D visualiser ("loupe") can be opened through the menu (Loupe -> New). From there, any loaded dataset can be selected and visualised. 
 
-Sub-datasets, e.g. zoomed-in plots, can also be displayed in a loupe by toggling the "Sub" checkbox on compatible plots. This will create a new dataset (dynamically updated when changing the plot's zoom/selection) that can also be opened in a loupe window.
+Sub-datasets, e.g. zoomed-in plots, can also be displayed in a loupe by toggling the "Sub" toggle icon on compatible plots. This will create a new dataset (dynamically updated when changing the plot's zoom/selection) that can also be opened in a loupe window.

@@ -74,11 +74,13 @@ async def eventLoop(UI, env):
 
     # Temporarily putting some preliminary tasks here
     if True and os.path.exists("private"):
-        # env.taskLoadDataset("private/stach_2000.npz")
-        env.taskLoadDataset("private/myoglobin_1000.npz")
+        # env.taskLoadDataset("private/sal_2000.npz")
+        # env.taskLoadDataset("private/myoglobin_1000.npz")
         # env.taskLoadDataset("private/fuck.npz")
-        # env.taskLoadDataset("private/ethanol.npz")
-        env.taskLoadDataset("private/ethanol_spl_200.npz")
+        # env.taskLoadDataset("private/ethanol_spl_200.npz")
+        env.taskLoadDataset("private/md22_DHA.npz")
+        env.taskLoadDataset("private/md22_stachyose.npz")
+        # env.taskLoadModel("private/neq_sal_1000.pth")
         env.taskLoadModel("private/ethanol_def_1000.npz")
         # env.taskLoadModel("private/eth_schnet")
         env.taskLoadModel("private/eth_il_1000.npz")

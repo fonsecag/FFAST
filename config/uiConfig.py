@@ -26,6 +26,10 @@ config = {
         "close": "close.png",
         "expanded": "expanded.png",
         "collapsed": "collapsed.png",
+        "delete": "close.png",
+        "rename": "rename.png",
+        "legend": "legend.png",
+        "subbing": "subbing.png",
     },
 }
 

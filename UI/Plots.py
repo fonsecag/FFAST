@@ -174,7 +174,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
         if self.isSubbable:
             self.subCheckBox = ToolCheckButton(
-                self.handler, self.onSubStateChanged
+                self.handler, self.onSubStateChanged, icon="subbing"
             )
             layout.addWidget(self.subCheckBox)
             self.plotWidget.sigRangeChanged.connect(self.updateSub)

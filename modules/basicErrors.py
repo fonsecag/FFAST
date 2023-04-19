@@ -46,8 +46,6 @@ def loadData(env):
             fPred = env.getData("forces", model=model, dataset=dataset)
             fData = dataset.getForces()
 
-            N = fData.shape[0]
-
             diff = fPred.get("forces") - fData
             atomicMAE = np.mean(np.abs(diff), axis=2)
 
@@ -174,7 +172,7 @@ def loadUI(UIHandler, env):
 
         def addPlots(self):
             for data in self.getWatchedData():
-                err = data["dataEntry"].get()
+                err = data["dataEntry"].get("diff")
                 self.plot(np.arange(err.shape[0]), np.abs(err), autoColor=data)
 
         def getDatasetSubIndices(self, dataset, model):
@@ -197,7 +195,7 @@ def loadUI(UIHandler, env):
 
         def addPlots(self):
             for data in self.getWatchedData():
-                err = data["dataEntry"].get()
+                err = data["dataEntry"].get("diff")
                 mae = err.reshape(err.shape[0], -1)
                 mae = np.mean(np.abs(mae), axis=1)
                 self.plot(np.arange(mae.shape[0]), mae, autoColor=data)

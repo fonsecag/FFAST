@@ -170,9 +170,7 @@ def addAtomsObject(UIHandler, loupe):
 
 def addSettings(UIHandler, loupe):
     settings = loupe.settings
-    settings.addParameters(
-        **{"atomColorType": ["Elements", "updateGeometry"],}
-    )
+    settings.addParameters(**{"atomColorType": ["Elements", "updateGeometry"]})
 
 
 def addSettingsPane(UIHandler, loupe):

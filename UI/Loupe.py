@@ -133,9 +133,7 @@ class InteractiveCanvas(Widget):
     def __init__(self, loupe, **kwargs):
         super().__init__(layout="vertical", **kwargs)
 
-        self.canvas = SceneCanvas(
-            self, bgcolor="black", create_native=False
-        )
+        self.canvas = SceneCanvas(self, bgcolor="black", create_native=False)
 
         self.elements = {}
         self.props = {}
@@ -175,7 +173,7 @@ class InteractiveCanvas(Widget):
         self.props[prop.key] = prop
 
     def addAtomSelectToolbar(self):
-        self.atomSelectBar = Widget(color="@BGColor1", layout = 'horizontal')
+        self.atomSelectBar = Widget(color="@BGColor1", layout="horizontal")
         self.atomSelectBar.setFixedHeight(40)
         self.layout.insertWidget(0, self.atomSelectBar)
 
@@ -183,7 +181,9 @@ class InteractiveCanvas(Widget):
 
         self.atomSelectBar.label1 = QtWidgets.QLabel("/")
         self.atomSelectBar.label2 = QtWidgets.QLabel("/")
-        self.atomSelectBar.cancelButton = ToolButton(lambda x: self.setActiveAtomSelectTool(), "close")
+        self.atomSelectBar.cancelButton = ToolButton(
+            lambda x: self.setActiveAtomSelectTool(), "close"
+        )
 
         self.atomSelectBar.layout.addWidget(self.atomSelectBar.label1)
         self.atomSelectBar.layout.addWidget(self.atomSelectBar.label2)
@@ -334,6 +334,7 @@ class InteractiveCanvas(Widget):
     def keyPressEvent(self, event):
         self.parent().keyPressEvent(event)
 
+
 class Loupe(Widget, EventChildClass):
 
     selectedDatasetKey = None
@@ -388,7 +389,7 @@ class Loupe(Widget, EventChildClass):
         self.settings.addAction("datasetSelected", self.onDatasetSelected)
 
         self.settings.addParameters(
-            **{"videoFPS": [30], "videoSkipFrames": [0],}
+            **{"videoFPS": [30], "videoSkipFrames": [0]}
         )
 
     def initialiseVideoPane(self):
@@ -543,7 +544,7 @@ class Loupe(Widget, EventChildClass):
         return self.canvas.isActiveAtomSelectTool(*args)
 
     # SHORTCUTS
-    # not yet working
+    # not yet working
     def keyPressEvent(self, event):
         print("event")
         if event.key() == QtCore.Qt.Key_Q:
@@ -553,5 +554,3 @@ class Loupe(Widget, EventChildClass):
         # print(event.key(), QtCore.Qt.Key_Escape)
         # print(event.key()==QtCore.Qt.Key_Escape)
         event.accept()
-
-

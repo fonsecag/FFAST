@@ -89,10 +89,13 @@ class AtomSelectionBase:
 
     def getInfoLabel(self):
         return ""
-    
+
     def updateInfo(self):
-        self.canvas.atomSelectBar.label1.setText(f'Selecting: {self.getTitleLabel()}')
+        self.canvas.atomSelectBar.label1.setText(
+            f"Selecting: {self.getTitleLabel()}"
+        )
         self.canvas.atomSelectBar.label2.setText(self.getInfoLabel())
+
 
 class VisualElement(CanvasProperty):
 

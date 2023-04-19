@@ -2,12 +2,15 @@ from UI.loupeProperties import AtomSelectionBase, CanvasProperty
 import numpy as np
 import logging
 from scipy.spatial.transform import Rotation
-from client.mathUtils import getVV0Angle, getVV0RotationMatrix, getPerpComponent
+from client.mathUtils import (
+    getVV0Angle,
+    getVV0RotationMatrix,
+    getPerpComponent,
+)
 
 logger = logging.getLogger("FFAST")
 
 DEPENDENCIES = ["loupeAtoms"]
-
 
 
 def getTransform(r, r0, along=None):
@@ -122,7 +125,8 @@ class AtomAlignSelect(AtomSelectionBase):
 
     def getInfoLabel(self):
         N = len(self.selectedPoints)
-        return f'Select{3-N} more points'
+        return f"Select{3-N} more points"
+
 
 def addSettings(UIHandler, loupe):
     from UI.Templates import PushButton

@@ -44,7 +44,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         ## TOP PART
         self.layout.setContentsMargins(8, 8, 8, 8)
         self.topLayout = QtWidgets.QHBoxLayout()
-        self.topLayout.setSpacing(8)
+        self.topLayout.setSpacing(4)
         self.layout.addLayout(self.topLayout)
         self.topRightLayout = QtWidgets.QVBoxLayout()
 

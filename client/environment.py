@@ -646,7 +646,6 @@ class Environment(EventClass):
     def lookForGhosts(self):
         for cacheKey in self.cache.keys():
             (dataKey, modelKey, datasetKey) = cacheKey.split("__")
-
             if (
                 (dataKey == "forces" or dataKey == "energy")
                 and (modelKey not in self.models)
@@ -655,8 +654,6 @@ class Environment(EventClass):
                 model = GhostModelLoader(self, modelKey)
                 model.initialise()
                 self.setNewModel(modelKey, model)
-
-        print("DONE LOOKING FOR GHOSTS")
 
     def loadPrepredictedDataset(self, path, datasetKey):
         d = np.load(path, allow_pickle=True)

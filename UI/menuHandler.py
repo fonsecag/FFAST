@@ -15,7 +15,7 @@ class MenuHandler(EventClass):
 
         # FILE
         File = mb.addMenu("&File")
-        File.addAction("Save", self.onSave)
+        File.addAction("Save", self.onSave, "Ctrl+s")
         File.addAction("Load", self.onLoad, "Ctrl+l")
 
         File.addAction("Load Dataset", self.onDatasetLoad, "Ctrl+d")

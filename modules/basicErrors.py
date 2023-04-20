@@ -70,7 +70,7 @@ def loadData(env):
 
             diff = np.abs(eErr.get("diff"))
 
-            kde = gaussian_kde(np.abs(diff))
+            kde = gaussian_kde(diff)
 
             distX = np.linspace(np.min(diff) * 0.95, np.max(diff) * 1.05)
             distY = kde(distX)
@@ -126,7 +126,7 @@ def loadUI(UIHandler, env):
             super().__init__(
                 handler,
                 title="Energy MAE distribution",
-                isSubbable=False,
+                isSubbable=True,
                 name="Energy Error Distribution",
                 **kwargs
             )
@@ -140,12 +140,34 @@ def loadUI(UIHandler, env):
                 x, y = de.get("distX"), de.get("distY")
                 self.plot(x, y, autoColor=data)
 
+        def getDatasetSubIndices(self, dataset, model):
+            (xRange, yRange) = self.getRanges()
+            N = dataset.getN()
+            x0, x1 = xRange
+
+            eErr = env.getData("energyError", model=model, dataset=dataset)
+            diff = np.abs(eErr.get("diff"))
+
+            idxs = np.argwhere((diff >= x0) & (diff <= x1))
+            idxs = np.unique(idxs)
+            
+            return idxs
+
     class ForcesErrorDistPlot(BasicPlotWidget):
         def __init__(self, handler, **kwargs):
             super().__init__(
                 handler,
                 title="Forces MAE distribution",
-                isSubbable=False,
+                isSubbable=False, # not finding a good way to do it
+                # If we say: at least one force component f with x0 < f < x1
+                # then for large molecules, even small windows have a shitload
+                # of indices
+                # If we average the force error by geometry
+                # then outliers can be hidden within otherwise okay geometries
+                # as tested on DHA
+                # Perhaps error scatters are better for the outliers,
+                # but there only one/two points can realistically be selected
+                # at the same time
                 name="Force Error Distribution",
                 **kwargs
             )
@@ -158,6 +180,22 @@ def loadUI(UIHandler, env):
                 de = data["dataEntry"]
                 x, y = de.get("distX"), de.get("distY")
                 self.plot(x, y, autoColor=data)
+
+        def getDatasetSubIndices(self, dataset, model):
+            (xRange, yRange) = self.getRanges()
+            N = dataset.getN()
+            x0, x1 = xRange
+
+            err = env.getData("forcesError", model=model, dataset=dataset)
+            diff = np.abs(err.get("diff"))
+            nConf = diff.shape[0]
+            diff = diff.reshape(-1)
+            nAtoms = dataset.getNAtoms()
+
+            idxs = np.argwhere((diff >= x0) & (diff <= x1))
+            idxs = np.unique(idxs // (nAtoms*3))
+            
+            return idxs
 
     class EnergyErrorPlot(BasicPlotWidget):
         smoothing = 1

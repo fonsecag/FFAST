@@ -11,6 +11,7 @@ import os, glob
 import numpy as np
 import asyncio
 from utils import loadModules, mixColors
+import json
 
 logger = logging.getLogger("FFAST")
 
@@ -119,8 +120,11 @@ class Environment(EventClass):
     def getAllModelKeys(self):
         return list(self.models.keys())
 
-    def getAllModels(self):
-        return list(self.models.values())
+    def getAllModels(self, excludeGhosts=False):
+        if excludeGhosts:
+            return [m for m in self.models.values() if not m.isGhost]
+        else:
+            return list(self.models.values())
 
     def taskLoadModel(self, path):
         self.newTask(
@@ -614,6 +618,21 @@ class Environment(EventClass):
                 **entity.data,
             )
 
+        ## GENERATE INFO
+        info = {"objects" : {}}
+        objects = self.getAllDatasets(excludeSubs=True) + self.getAllModels()
+        for o in objects:
+            info["objects"][o.fingerprint] = {"name":o.getName(), "path":o.path}
+        
+        # dataset/model names and paths
+
+
+        ## SAVE INFO
+        infoFile = os.path.join(path, "info.json")
+        with open(infoFile, "w") as f:
+            json.dump(info,f, indent = 4)
+
+
     def taskLoad(self, path):
         self.newTask(
             self.load,
@@ -626,8 +645,8 @@ class Environment(EventClass):
     def load(self, path, taskID=None):
         ## LOAD CACHE
         cacheDir = os.path.join(path, "cache")
-        for path in glob.glob(os.path.join(cacheDir, "*.npz")):
-            d = dict(np.load(path, allow_pickle=True))
+        for npzPath in glob.glob(os.path.join(cacheDir, "*.npz")):
+            d = dict(np.load(npzPath, allow_pickle=True))
             dataTypeKey = str(d.pop("entityDataTypeKey"))
             cacheKey = str(d.pop("cacheKey"))
             dataType = self.getDataType(dataTypeKey)
@@ -642,6 +661,23 @@ class Environment(EventClass):
             self.eventPush("DATA_UPDATED", cacheKey)
 
         self.lookForGhosts()
+
+        # load info (names etc)
+        infoFile = os.path.join(path, "info.json")
+        if os.path.exists(infoFile):
+            with open(infoFile, "r") as f:
+                info = json.load(f)
+            self.loadInfo(info)
+
+    def loadInfo(self, info):
+        # OBJECT NAMES
+        for key, value in info['objects'].items():
+            obj = self.getModelOrDataset(key)
+            if obj is None:
+                continue
+            
+            obj.path = value['path']
+            obj.setName(value['name'])
 
     def lookForGhosts(self):
         for cacheKey in self.cache.keys():

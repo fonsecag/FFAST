@@ -66,6 +66,7 @@ class DataloaderButton(PushButton, EventChildClass):
 
         # self.setIcon(QtGui.QIcon(getIcon("load")))
         self.dataWatcher.addRefreshWidget(self)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
         self.eventSubscribe("WIDGET_REFRESH", self.onWidgetRefresh)
         self.clicked.connect(self.dataWatcher.loadContent)
@@ -122,7 +123,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.layout.setSpacing(8)
 
         # TOOLBAR
-        self.toolbar = Widget(layout="horizontal", color="green")
+        self.toolbar = Widget(layout="horizontal")
         self.toolbar.setFixedHeight(30)
         self.toolbar.setObjectName("plotToolbar")
         self.layout.addWidget(self.toolbar)
@@ -131,6 +132,12 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         divider = Widget(color="@TextColor3")
         divider.setFixedHeight(1)
         self.layout.addWidget(divider)
+
+        # OPTIONS
+        self.optionsToolbar = Widget(layout="horizontal")
+        self.optionsToolbar.setObjectName("plotoptionsToolbar")
+        self.optionsToolbar.layout.addStretch()
+        self.layout.addWidget(self.optionsToolbar)
 
         # PLOTWIDGET
         self.plotWidget = pyqtgraph.PlotWidget(name=f"{name}PlotWidget")
@@ -337,10 +344,10 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         # placeholder, should be implemented by user
         return NotImplementedError
 
-    def visualRefresh(self):
+    def visualRefresh(self, force=False):
         # when many refresh events happen in a single loop, no need to
         # refresh every time since information won't change
-        if self.eventStamp <= self.lastUpdatedStamp:
+        if (not force) and self.eventStamp <= self.lastUpdatedStamp:
             return
 
         self.lastUpdatedStamp = self.eventStamp
@@ -446,3 +453,6 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
             return
 
         self.visualRefresh()  # includes legend
+
+    def addOption(self, widget):
+        self.optionsToolbar.layout.insertWidget(0, widget)

@@ -380,6 +380,9 @@ class Loupe(Widget, EventChildClass):
         # VIDEO PANE
         self.initialiseVideoPane()
 
+        # EVENTS
+        self.eventSubscribe("SUBDATASET_INDICES_CHANGED", self.onSubChanged)
+
     # SETTINGS
     def initialiseSettings(self):
         self.settings = Settings()
@@ -447,8 +450,9 @@ class Loupe(Widget, EventChildClass):
             return
         self.updateCurrentIndex()
 
-    def onDatasetSelected(self, key):
-        if key == self.selectedDatasetKey:
+    def onDatasetSelected(self, key, force=False):
+        # we force when sub indices change, becasue thats not reflected in the key
+        if (not force) and (key == self.selectedDatasetKey):
             return
         self.selectedDatasetKey = key
 
@@ -463,6 +467,12 @@ class Loupe(Widget, EventChildClass):
         if self.selectedDatasetKey is None:
             return None
         return self.env.getDataset(self.selectedDatasetKey)
+
+    def onSubChanged(self, key):
+        if self.selectedDatasetKey != key:
+            return
+
+        self.onDatasetSelected(key, force=True)
 
     # INDEX
     def updateCurrentIndex(self):
@@ -530,6 +540,7 @@ class Loupe(Widget, EventChildClass):
             return
         self.panes[name] = pane
         collapsibleWidget = self.sideBar.addContent(name, pane)
+        # collapsibleWidget.setMaximumWidth(self.sideBar.width())
         if isinstance(pane, SettingsPane):
             collapsibleWidget.setCallback(pane.updateVisibilities)
 

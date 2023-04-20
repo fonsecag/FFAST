@@ -16,12 +16,12 @@ class MenuHandler(EventClass):
         # FILE
         File = mb.addMenu("&File")
         File.addAction("Save", self.onSave)
-        File.addAction("Load", self.onLoad)
+        File.addAction("Load", self.onLoad, "Ctrl+l")
 
-        File.addAction("Load Dataset", self.onDatasetLoad)
-        File.addAction("Load Model", self.onModelLoad)
+        File.addAction("Load Dataset", self.onDatasetLoad, "Ctrl+d")
+        File.addAction("Load Model", self.onModelLoad, "Ctrl+e")
 
-        File.addAction("Load Prediction", self.loadPrepredictedModel)
+        # File.addAction("Load Prediction", self.loadPrepredictedModel)
 
         # File.addAction("Preferences", self.onPreferences)
         # File.addAction("Exit", self.onExit)

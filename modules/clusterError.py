@@ -341,8 +341,8 @@ def loadUI(UIHandler, env):
                 reg.hide()
                 reg.show()
 
-            if self.isSubbing():
-                self.updateSub()
+            # if self.isSubbing():
+            #     self.updateSub()
 
         def toggleSelectCluster(self, idx):
             if idx in self.selectedRegions:
@@ -351,6 +351,7 @@ def loadUI(UIHandler, env):
                 self.selectedRegions.append(idx)
 
             self.updateRegionBrushes()
+            self.updateSub()
 
         def getDatasetSubIndices(self, dataset, model):
             indices = self.modelOrder[model.fingerprint][self.selectedRegions]

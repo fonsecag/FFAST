@@ -153,9 +153,17 @@ class Slider(Widget):
 
     callbackFunc = None
     quiet = False
+    smoothing = 1
 
     def __init__(
-        self, *args, hasEditBox=True, nMin=0, nMax=99999, interval=1, **kwargs
+        self,
+        *args,
+        hasEditBox=True,
+        label=None,
+        nMin=0,
+        nMax=99999,
+        interval=1,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs, layout="horizontal")
 
@@ -171,6 +179,11 @@ class Slider(Widget):
             self.lineEdit.setFixedWidth(70)
             self.layout.addWidget(self.lineEdit)
             self.lineEdit.setOnEdit(self.onUpdateLineEdit)
+
+        if label is not None:
+            self.label = QtWidgets.QLabel(label)
+            self.layout.insertWidget(0, self.label)
+            self.layout.setSpacing(8)
 
         self.setMinMax(nMin, nMax, interval)
 
@@ -499,6 +512,8 @@ class CollapsibleWidget(Widget):
         self.scrollArea = ExpandingScrollArea()
         self.scrollArea.setContent(self.scrollWidget)
 
+        self.scrollWidget.setMaximumWidth(self.titleButton.width())
+
         self.layout.addWidget(self.scrollArea)
 
         self.titleButton.setCollapsingWidget(self.scrollArea)
@@ -531,6 +546,10 @@ class CollapsibleWidget(Widget):
 
     def setCallback(self, func):
         self.titleButton.setCallback(func)
+
+    def resizeEvent(self, event):
+        Widget.resizeEvent(self, event)
+        self.scrollWidget.setMaximumWidth(self.titleButton.width())
 
 
 class ContentBar(Widget):
@@ -968,6 +987,8 @@ class SettingsWidgetBase(Widget, EventChildClass):
         self.hasSettingsKey = (settings is not None) and (
             settingsKey is not None
         )
+
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
         if fixedHeight:
             self.setFixedHeight(40)

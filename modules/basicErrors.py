@@ -116,6 +116,7 @@ def loadData(env):
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab, DatasetModelSelector
     from UI.Plots import BasicPlotWidget
+    from UI.Templates import Slider
 
     ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Basic Errors")
@@ -159,6 +160,8 @@ def loadUI(UIHandler, env):
                 self.plot(x, y, autoColor=data)
 
     class EnergyErrorPlot(BasicPlotWidget):
+        smoothing = 1
+
         def __init__(self, handler, **kwargs):
             super().__init__(
                 handler,
@@ -170,18 +173,38 @@ def loadUI(UIHandler, env):
             self.setXLabel("Configuration index")
             self.setYLabel("Energy MAE")
 
+            self.slider = Slider(
+                hasEditBox=True, label="Smoothing", nMin=1, nMax=10000
+            )
+            self.addOption(self.slider)
+            self.slider.setCallbackFunc(self.updateSmoothing)
+
+        def updateSmoothing(self, value):
+            self.smoothing = value
+            self.visualRefresh(force=True)
+
         def addPlots(self):
+            smoothing = self.smoothing
             for data in self.getWatchedData():
                 err = data["dataEntry"].get("diff")
+                err = np.convolve(
+                    err, np.ones(smoothing) / smoothing, mode="valid"
+                )
                 self.plot(np.arange(err.shape[0]), np.abs(err), autoColor=data)
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()
             N = dataset.getN()
             x0, x1 = xRange
-            return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
+            return np.arange(
+                max(0, int(x0 + self.smoothing)),
+                min(N, int(x1 + self.smoothing)),
+            )
 
     class ForcesErrorPlot(BasicPlotWidget):
+
+        smoothing = 1
+
         def __init__(self, handler, **kwargs):
             super().__init__(
                 handler,
@@ -193,18 +216,35 @@ def loadUI(UIHandler, env):
             self.setXLabel("Configuration index")
             self.setYLabel("Forces MAE")
 
+            self.slider = Slider(
+                hasEditBox=True, label="Smoothing", nMin=1, nMax=10000
+            )
+            self.addOption(self.slider)
+            self.slider.setCallbackFunc(self.updateSmoothing)
+
+        def updateSmoothing(self, value):
+            self.smoothing = value
+            self.visualRefresh(force=True)
+
         def addPlots(self):
+            smoothing = self.smoothing
             for data in self.getWatchedData():
                 err = data["dataEntry"].get("diff")
                 mae = err.reshape(err.shape[0], -1)
                 mae = np.mean(np.abs(mae), axis=1)
+                mae = np.convolve(
+                    mae, np.ones(smoothing) / smoothing, mode="valid"
+                )
                 self.plot(np.arange(mae.shape[0]), mae, autoColor=data)
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()
             N = dataset.getN()
             x0, x1 = xRange
-            return np.arange(max(0, int(x0 + 1)), min(N, int(x1 + 1)))
+            return np.arange(
+                max(0, int(x0 + self.smoothing)),
+                min(N, int(x1 + self.smoothing)),
+            )
 
     plt = EnergyErrorDistPlot(UIHandler, parent=ct)
     ct.addWidget(plt, 0, 0)

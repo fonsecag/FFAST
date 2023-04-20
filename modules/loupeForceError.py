@@ -108,6 +108,7 @@ class ForceErrorColorProperty(CanvasProperty):
         super().__init__(*args, **kwargs)
         self.colorMap = Colormap(
             [
+                (0.1, 0.1, 0.9),
                 (0.1, 0.9, 0.1),
                 (0.9, 0.9, 0.1),
                 (0.5, 0.1, 0.1),

@@ -844,17 +844,17 @@ QSlider::groove:vertical {
 
 QSlider::handle:horizontal {
   image: url(icon:/primary/slider.svg);
-  width: 24px;
-  height: 24px;
-  margin: -24px -12px;
+  width: 12px;
+  height: 12px;
+  margin: -12px -6px;
 }
 
 QSlider::handle:vertical {
   image: url(icon:/primary/slider.svg);
-  border-radius: 24px;
-  width: 24px;
-  height: 24px;
-  margin: -12px -24px;
+  border-radius: 23px;
+  width: 23px;
+  height: 23px;
+  margin: -6px -23px;
 }
 
 QSlider::add-page {

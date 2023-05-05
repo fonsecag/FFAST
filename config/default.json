@@ -21,5 +21,6 @@
     "loupeHoverColor":  "#FF0000",
     "loupeSelectColor":  "#00FF00",
     "loupeAtomColorDimming": 0.93,
-    "loupeBondsLenience": 1.1
+    "loupeBondsLenience": 1.1,
+    "loupeForceErrorPercentile":0.995
 }

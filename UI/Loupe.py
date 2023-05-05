@@ -241,6 +241,7 @@ class InteractiveCanvas(Widget):
             return self._currentR
 
     def setIndex(self, index):
+        index = min(index, self.dataset.getN() - 1)
         self.index = index
         self.onNewGeometry()
 
@@ -405,9 +406,9 @@ class Loupe(Widget, EventChildClass):
         playbackWindow.layout.addWidget(self.indexSlider)
 
         arrowBar = Widget(parent=pane, layout="horizontal")
-        self.indexLeftArrow = ToolButton(self.onPrevious, "left")
+        self.indexLeftArrow = ToolButton(self.onPrevious, "leftArrow")
         self.playButton = ToolButton(self.toggleVideo, "start")
-        self.indexRightArrow = ToolButton(self.onNext, "right")
+        self.indexRightArrow = ToolButton(self.onNext, "rightArrow")
 
         arrowBar.layout.addStretch()
         arrowBar.layout.addWidget(self.indexLeftArrow)

@@ -1,6 +1,7 @@
 from UI.loupeProperties import VisualElement, CanvasProperty
 from client.dataWatcher import DataWatcher
 import numpy as np
+from config.userConfig import getConfig
 
 DEPENDENCIES = ["basicErrors", "loupeAtoms"]
 
@@ -134,12 +135,13 @@ class ForceErrorColorProperty(CanvasProperty):
         de = data[0]  # just one dataset-model combination is watched
         atomicMAE = de.get("atomicMAE")
         meanAtomicMAE = np.mean(atomicMAE, axis=0)
+        perc = getConfig("loupeForceErrorPercentile")*100
 
         self.set(
             atomicMAE=atomicMAE,
             meanAtomicMAE=meanAtomicMAE,
             min=0,
-            max=np.max(atomicMAE),
+            max=np.percentile(atomicMAE, perc),
             meanMin=np.min(meanAtomicMAE),
             meanMax=np.max(meanAtomicMAE),
         )

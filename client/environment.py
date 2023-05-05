@@ -632,7 +632,6 @@ class Environment(EventClass):
         with open(infoFile, "w") as f:
             json.dump(info,f, indent = 4)
 
-
     def taskLoad(self, path):
         self.newTask(
             self.load,

@@ -30,6 +30,10 @@ config = {
         "rename": "rename.png",
         "legend": "legend.png",
         "subbing": "subbing.png",
+        "leftArrow": "collapsedLeft.png",
+        "rightArrow":"collapsed.png",
+        "start":"start.png",
+        "pause":"pause.png"
     },
 }
 

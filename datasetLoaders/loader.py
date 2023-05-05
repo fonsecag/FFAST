@@ -15,7 +15,6 @@ from utils import cleanBondIdxsArray
 logger = logging.getLogger("FFAST")
 GLOBAL_DATASETS_COUNTER = 0
 
-
 def toDistance(R):
     shape = R.shape
     try:
@@ -34,7 +33,7 @@ def toDistance(R):
     return y
 
 
-def loadDataset(path, fromCache=False):
+def loadDataset(path):
     """
     Entry function for loading any dataset. This function simply decides which
     loader class should be used to load a dataset given a path, then returns

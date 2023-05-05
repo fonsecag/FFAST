@@ -1,4 +1,4 @@
-from .loader import ModelLoader
+from loaders.modelLoader import ModelLoader
 import numpy as np
 from utils import md5FromArraysAndStrings
 
@@ -119,3 +119,7 @@ class SchNetModelLoader(ModelLoader):
         fp = md5FromArraysAndStrings(str(self.model))
 
         return fp
+
+
+def loadData(env):
+    env.initialiseModelType(SchNetModelLoader)

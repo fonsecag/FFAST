@@ -10,7 +10,7 @@ import pyqtgraph
 import logging
 from client.dataWatcher import DataWatcher
 import numpy as np
-from datasetLoaders.loader import SubDataset
+from loaders.datasetLoader import SubDataset
 
 
 class DataDependentObject:

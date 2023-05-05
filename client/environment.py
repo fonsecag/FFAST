@@ -1,7 +1,6 @@
 from events import EventClass
-from modelLoaders.loader import loadModel
-from datasetLoaders.loader import loadDataset, SubDataset
-from modelLoaders.ghost import GhostModelLoader
+from loaders.datasetLoader import SubDataset
+from loaders.modelGhost import GhostModelLoader
 from tasks import TaskManager
 from client.dataType import DataEntity
 from utils import md5FromArraysAndStrings
@@ -69,6 +68,8 @@ class Environment(EventClass):
         self.models = {}
         self.cache = {}
         self.dataTypes = {}
+        self.modelTypes = {}
+        self.datasetTypes = {}
         self.tm = TaskManager()
 
         self.initialiseDataTypes()
@@ -83,6 +84,10 @@ class Environment(EventClass):
         self.eventSubscribe(
             "SUBDATASET_INDICES_CHANGED", self.deleteCacheByDataset
         )
+
+    #############
+    ## DATA TYPES
+    #############
 
     def initialiseDataTypes(self):
         from client.dataType import EnergyPredictionData, ForcesPredictionData
@@ -106,60 +111,23 @@ class Environment(EventClass):
 
         self.dataTypes[dataType.key] = dataType(self)
 
-    def setNewModel(self, key, model):
-        self.models[key] = model
+    def getRegisteredDataType(self, dataTypeKey):
+        return self.dataTypes.get(dataTypeKey, None)
+
+    #############
+    ## MODELS
+    #############
+
+    def initialiseModelType(self, modelType):
+        self.modelTypes[modelType.modelName] = modelType
+
+    def setNewModel(self, model):
+        self.models[model.fingerprint] = model
         model.loaded = True
-        self.eventPush("MODEL_LOADED", key)
+        self.eventPush("MODEL_LOADED", model.fingerprint)
 
     def getModel(self, key):
         return self.models.get(key, None)
-
-    def modelExists(self, key):
-        return key in self.models.keys()
-
-    def getAllModelKeys(self):
-        return list(self.models.keys())
-
-    def getAllModels(self, excludeGhosts=False):
-        if excludeGhosts:
-            return [m for m in self.models.values() if not m.isGhost]
-        else:
-            return list(self.models.values())
-
-    def taskLoadModel(self, path):
-        self.newTask(
-            self.loadModel,
-            args=(path,),
-            visual=True,
-            name="Loading model",
-            threaded=True,
-        )
-
-    def loadModel(self, path, taskID=None):
-        """
-        Asks the environment to load a model from a given path and save it at a
-        newly generated key.
-
-        Should be called as a threaded task.
-
-        Args:
-            path ([type]): path to the model
-            taskID ([type], optional): [description]. Defaults to None.
-        """
-        model = loadModel(self, path)
-        if model is None:
-            logging.warn(f"Model `{path}` did not load successfully")
-            return
-
-        key = model.fingerprint
-        self.setNewModel(key, model)
-        logging.info(f"Model `{path}` successfully loaded")
-
-    def deleteObject(self, key):
-        if self.datasetExists(key):
-            self.deleteDataset(key)
-        elif self.modelExists(key):
-            self.deleteModel(key)
 
     def deleteModel(self, key):
         model = self.getModel(key)
@@ -171,6 +139,92 @@ class Environment(EventClass):
         logger.info(f"Model {key} deleted")
         self.eventPush("MODEL_DELETED", key)
 
+    def modelExists(self, key):
+        return key in self.models.keys()
+
+    def datasetExists(self, key):
+        return key in self.datasets.keys()
+
+    def getAllModelKeys(self):
+        return list(self.models.keys())
+
+    def getAllModels(self, excludeGhosts=False):
+        if excludeGhosts:
+            return [m for m in self.models.values() if not m.isGhost]
+        else:
+            return list(self.models.values())
+
+    def taskLoadModel(self, path, modelType):
+        self.newTask(
+            self.loadModel,
+            args=(path, modelType),
+            visual=True,
+            name="Loading model",
+            threaded=True,
+        )
+
+    def loadModel(self, path, modelType, taskID=None):
+        if not os.path.exists(path):
+            logger.error(f"Tried to load dataset, but path `{path}` not found")
+            return None
+
+        if modelType not in self.modelTypes:
+            logger.error(
+                f"Tried to load dataset, but dataset type {modelType} not recognised"
+            )
+            return None
+
+        model = self.modelTypes[modelType](self, path)
+        if model is None:
+            logging.warn(f"Model `{path}` did not load successfully")
+            return
+        model.initialise()
+
+        self.setNewModel(model)
+        logging.info(f"Model `{path}` successfully loaded")
+
+    def loadPrepredictedDataset(self, path, datasetKey):
+        d = np.load(path, allow_pickle=True)
+        E, F = d["E"], d["F"]
+
+        dataset = self.getDataset(datasetKey)
+        eDataset = dataset.getEnergies()
+        if E.shape != eDataset.shape:
+            logger.error(
+                f"Shape mismatch when loading prepredicted model. Model energy shape: {E.shape}, dataset energy shape: {eDataset.shape}"
+            )
+
+        modelKey = md5FromArraysAndStrings(E, F)
+
+        energyDataType = self.getDataType("energy")
+        energyDataEntity = energyDataType.newDataEntity(energy=E)
+        self.setData(
+            energyDataEntity, "energy", model=modelKey, dataset=dataset
+        )
+
+        forcesDataType = self.getDataType("forces")
+        forcesDataEntity = forcesDataType.newDataEntity(forces=F)
+        self.setData(
+            forcesDataEntity, "forces", model=modelKey, dataset=dataset
+        )
+
+        self.lookForGhosts()
+
+    #############
+    ## DATASETS
+    #############
+
+    def initialiseDatasetType(self, datasetType):
+        self.datasetTypes[datasetType.datasetName] = datasetType
+
+    def setNewDataset(self, dataset):
+        self.datasets[dataset.fingerprint] = dataset
+        dataset.loaded = True
+        self.eventPush("DATASET_LOADED", dataset.fingerprint)
+
+    def getDataset(self, key):
+        return self.datasets.get(key, None)
+
     def deleteDataset(self, key):
         dataset = self.getDataset(key)
         if dataset is None:
@@ -181,28 +235,10 @@ class Environment(EventClass):
         logger.info(f"Dataset {key} deleted")
         self.eventPush("DATASET_DELETED", key)
 
-    def setNewDataset(self, dataset):
-        self.datasets[dataset.fingerprint] = dataset
-        dataset.loaded = True
-        self.eventPush("DATASET_LOADED", dataset.fingerprint)
-
-    def getModelOrDataset(self, key):
-        model = self.getModel(key)
-        if model is None:
-            return self.getDataset(key)
-        else:
-            return model
-
-    def getDataset(self, key):
-        return self.datasets.get(key, None)
-
     def getAllDatasetKeys(self):
         ds = self.getAllDatasets()
         return [x.fingerprint for x in ds]
         # return list(self.datasets.keys())
-
-    def datasetExists(self, key):
-        return key in self.datasets.keys()
 
     def getAllDatasets(self, subOnly=False, excludeSubs=False):
         ds = [x for x in self.datasets.values() if x.active]
@@ -213,32 +249,32 @@ class Environment(EventClass):
         else:
             return ds
 
-    def taskLoadDataset(self, path):
+    def taskLoadDataset(self, path, datasetType):
         self.newTask(
             self.loadDataset,
-            args=(path,),
+            args=(path, datasetType),
             visual=True,
             name="Loading dataset",
             threaded=True,
         )
 
-    def loadDataset(self, path, taskID=None):
-        """
-        Asks the environment to load a dataset from a given path and save it at a newly generated key.
+    def loadDataset(self, path, datasetType, taskID=None):
+        if not os.path.exists(path):
+            logger.error(f"Tried to load dataset, but path `{path}` not found")
+            return None
 
-        Should be called as a threaded task.
+        if datasetType not in self.datasetTypes:
+            logger.error(
+                f"Tried to load dataset, but dataset type {datasetType} not recognised"
+            )
+            return None
 
-        Args:
-            path (str): path to dataset
-            taskID (int, optional): [description]. Defaults to None.
-        """
-
-        dataset = loadDataset(path)
+        dataset = self.datasetTypes[datasetType](path)
         if dataset is None:
             logging.warn(f"Dataset `{path}` did not load successfully")
             return
+        dataset.initialise()
 
-        key = dataset.fingerprint
         self.setNewDataset(dataset)
         logging.info(f"Dataset `{path}` successfully loaded")
         self.lookForGhosts()
@@ -262,12 +298,161 @@ class Environment(EventClass):
             sub.setIndices(idx)
             sub.setActive(True)
 
+    #############
+    ## OBJECTS (MODELS & DATASETS)
+    #############
+
+    def getModelOrDataset(self, key):
+        model = self.getModel(key)
+        if model is None:
+            return self.getDataset(key)
+        else:
+            return model
+
+    def getKeyFromPath(self, path):
+        # check dataset
+        for dataset in self.getAllDatasets(excludeSubs=True):
+            if dataset.path == path:
+                return dataset.fingerprint
+
+        for model in self.getAllModels():
+            if model.path == path:
+                return model.fingerprint
+
+        return None
+
+    def deleteObject(self, key):
+        if self.datasetExists(key):
+            self.deleteDataset(key)
+        elif self.modelExists(key):
+            self.deleteModel(key)
+
+    #############
+    ## TASKS
+    #############
+
     def newTask(self, *args, **kwargs):
         """See newTask method of TaskManager class."""
         return self.tm.queueTask(*args, **kwargs)
 
     def getTask(self, *args, **kwargs):
         return self.tm.getTask(*args, **kwargs)
+
+    def onTaskCancel(self, taskID):
+        task = self.tm.getTask(taskID)
+
+        if task["componentParent"] is not None:
+            queue = self.generationQueue
+            cacheKey = task["componentParent"]
+
+            if cacheKey in queue:
+                queue.discard(cacheKey)
+
+            logger.info(
+                f"Removed {cacheKey} from data generation queue because child task got cancelled."
+            )
+
+    def onTaskDone(self, taskID):
+        if taskID in self.queuedTasks:
+            self.queuedTasks.remove(taskID)
+
+    async def waitForTasks(self, verbose=False, dt=1):
+        tm = self.tm
+        while (
+            (tm.taskQueue.qsize() > 0)
+            or (len(tm.runningTasks) > 0)
+            or (len(self.generationQueue) > 0)
+        ) and not self.quitReady:
+            if verbose:
+                print("-" * 20)
+                lTaskQueue = tm.taskQueue.qsize()
+                if lTaskQueue > 0:
+                    print(f"{lTaskQueue} tasks queued.\n")
+
+                lRunningTasks = len(tm.runningTasks)
+                if lRunningTasks > 0:
+                    print(f"{lRunningTasks} tasks running:")
+                    for taskID in tm.runningTasks:
+                        task = tm.getTask(taskID)
+                        prog = "?%"
+                        if task["progress"] is not None:
+                            prog = f'{task["progress"]*100:.0f}%'
+
+                        print(
+                            f'{prog:<4} {task["name"]:<20}  {task["progressMessage"]}'
+                        )
+                    print()
+
+                lGenQueue = len(self.generationQueue)
+                if lGenQueue > 0:
+                    print(f"{lGenQueue} tasks in generation queue:")
+                    for i in self.generationQueue:
+                        print(i)
+
+                print(flush=True)
+
+            await asyncio.sleep(dt)
+
+    #############
+    ## DATA
+    #############
+
+    def getData(self, dataTypeKey, model=None, dataset=None):
+        dataType = self.getRegisteredDataType(dataTypeKey)
+
+        if dataType is None:
+            logger.error(
+                f"Tried to get data for dataTypeKey {dataTypeKey}, "
+                + "but no such key was registered"
+            )
+            return None
+
+        cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
+        if (
+            (dataset is not None)
+            and (dataset.isSubDataset)
+            and dataType.iterable
+            and not self.hasCacheKey(cacheKey, subChecks=False)
+        ):
+            cacheKey = dataType.getCacheKey(
+                model=model, dataset=dataset.parent
+            )
+            data = self.cache.get(cacheKey, None)
+            if data is not None:
+                data = data.getSubEntity(indices=dataset.indices)
+        else:
+            data = self.cache.get(cacheKey, None)
+
+        return data
+
+    def setData(self, dataEntity, dataTypeKey, model=None, dataset=None):
+        dataType = self.getRegisteredDataType(dataTypeKey)
+
+        if dataType is None:
+            logger.error(
+                f"Tried to set data for dataTypeKey {dataTypeKey}, "
+                + "but no such key was registered"
+            )
+            return None
+
+        cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
+
+        self.cache[cacheKey] = dataEntity
+        logger.info(f"Data for key {cacheKey} set, {self.cache[cacheKey]}")
+        self.eventPush("DATA_UPDATED", cacheKey)
+
+    def getCacheKey(self, dataTypeKey, model=None, dataset=None):
+        dataType = self.getRegisteredDataType(dataTypeKey)
+        if dataType is None:
+            return None
+
+        cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
+
+        return cacheKey
+
+    #############
+    ## DATA GENERATION
+    #############
 
     def taskGenerateDataByKey(self, key, **kwargs):
         (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
@@ -321,24 +506,6 @@ class Environment(EventClass):
             taskKey=f"{dataKey}",
             componentParent=componentParent,
         )
-
-    def onTaskCancel(self, taskID):
-        task = self.tm.getTask(taskID)
-
-        if task["componentParent"] is not None:
-            queue = self.generationQueue
-            cacheKey = task["componentParent"]
-
-            if cacheKey in queue:
-                queue.discard(cacheKey)
-
-            logger.info(
-                f"Removed {cacheKey} from data generation queue because child task got cancelled."
-            )
-
-    def onTaskDone(self, taskID):
-        if taskID in self.queuedTasks:
-            self.queuedTasks.remove(taskID)
 
     async def generateDataAsync(self, *args, **kwargs):
         self.generateData(*args, **kwargs)
@@ -418,18 +585,6 @@ class Environment(EventClass):
         if self.headless:
             print(f"Added {cacheKey} to generation queue", flush=True)
 
-    def getKeyFromPath(self, path):
-        # check dataset
-        for dataset in self.getAllDatasets(excludeSubs=True):
-            if dataset.path == path:
-                return dataset.fingerprint
-
-        for model in self.getAllModels():
-            if model.path == path:
-                return model.fingerprint
-
-        return None
-
     async def handleGenerationQueue(self, *args):
         queue = self.generationQueue
 
@@ -491,62 +646,6 @@ class Environment(EventClass):
             for key in compKeys
         ]
 
-    def getData(self, dataTypeKey, model=None, dataset=None):
-        dataType = self.getRegisteredDataType(dataTypeKey)
-
-        if dataType is None:
-            logger.error(
-                f"Tried to get data for dataTypeKey {dataTypeKey}, "
-                + "but no such key was registered"
-            )
-            return None
-
-        cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
-        if (
-            (dataset is not None)
-            and (dataset.isSubDataset)
-            and dataType.iterable
-            and not self.hasCacheKey(cacheKey, subChecks=False)
-        ):
-            cacheKey = dataType.getCacheKey(
-                model=model, dataset=dataset.parent
-            )
-            data = self.cache.get(cacheKey, None)
-            if data is not None:
-                data = data.getSubEntity(indices=dataset.indices)
-        else:
-            data = self.cache.get(cacheKey, None)
-
-        return data
-
-    def setData(self, dataEntity, dataTypeKey, model=None, dataset=None):
-        dataType = self.getRegisteredDataType(dataTypeKey)
-
-        if dataType is None:
-            logger.error(
-                f"Tried to set data for dataTypeKey {dataTypeKey}, "
-                + "but no such key was registered"
-            )
-            return None
-
-        cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
-
-        self.cache[cacheKey] = dataEntity
-        logger.info(f"Data for key {cacheKey} set, {self.cache[cacheKey]}")
-        self.eventPush("DATA_UPDATED", cacheKey)
-
-    def getCacheKey(self, dataTypeKey, model=None, dataset=None):
-        dataType = self.getRegisteredDataType(dataTypeKey)
-        if dataType is None:
-            return None
-
-        cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
-
-        return cacheKey
-
-    def getRegisteredDataType(self, dataTypeKey):
-        return self.dataTypes.get(dataTypeKey, None)
-
     def deleteCacheByDataset(self, datasetKey):
         toDelete = []
         for key in self.cache.keys():
@@ -598,6 +697,10 @@ class Environment(EventClass):
 
         return (dataTypeKey, model, dataset)
 
+    #############
+    ## SAVE/LOAD
+    #############
+
     def save(self, path, taskID=None):
         if not os.path.exists(path):
             os.mkdir(path)
@@ -619,18 +722,20 @@ class Environment(EventClass):
             )
 
         ## GENERATE INFO
-        info = {"objects" : {}}
+        info = {"objects": {}}
         objects = self.getAllDatasets(excludeSubs=True) + self.getAllModels()
         for o in objects:
-            info["objects"][o.fingerprint] = {"name":o.getName(), "path":o.path}
-        
-        # dataset/model names and paths
+            info["objects"][o.fingerprint] = {
+                "name": o.getName(),
+                "path": o.path,
+            }
 
+        # dataset/model names and paths
 
         ## SAVE INFO
         infoFile = os.path.join(path, "info.json")
         with open(infoFile, "w") as f:
-            json.dump(info,f, indent = 4)
+            json.dump(info, f, indent=4)
 
     def taskLoad(self, path):
         self.newTask(
@@ -670,13 +775,27 @@ class Environment(EventClass):
 
     def loadInfo(self, info):
         # OBJECT NAMES
-        for key, value in info['objects'].items():
+        for key, value in info["objects"].items():
             obj = self.getModelOrDataset(key)
             if obj is None:
                 continue
-            
-            obj.path = value['path']
-            obj.setName(value['name'])
+
+            obj.path = value["path"]
+            obj.setName(value["name"])
+
+    #############
+    ## MISC
+    #############
+
+    def getColorMix(self, dataset=None, model=None):
+        if dataset is None and model is None:
+            return (255, 255, 255)
+        elif dataset is None:
+            return model.color
+        elif model is None:
+            return dataset.color
+        else:
+            return mixColors(model.color, dataset.color)
 
     def lookForGhosts(self):
         for cacheKey in self.cache.keys():
@@ -688,78 +807,4 @@ class Environment(EventClass):
             ):
                 model = GhostModelLoader(self, modelKey)
                 model.initialise()
-                self.setNewModel(modelKey, model)
-
-    def loadPrepredictedDataset(self, path, datasetKey):
-        d = np.load(path, allow_pickle=True)
-        E, F = d["E"], d["F"]
-
-        dataset = self.getDataset(datasetKey)
-        eDataset = dataset.getEnergies()
-        if E.shape != eDataset.shape:
-            logger.error(
-                f"Shape mismatch when loading prepredicted model. Model energy shape: {E.shape}, dataset energy shape: {eDataset.shape}"
-            )
-
-        modelKey = md5FromArraysAndStrings(E, F)
-
-        energyDataType = self.getDataType("energy")
-        energyDataEntity = energyDataType.newDataEntity(energy=E)
-        self.setData(
-            energyDataEntity, "energy", model=modelKey, dataset=dataset
-        )
-
-        forcesDataType = self.getDataType("forces")
-        forcesDataEntity = forcesDataType.newDataEntity(forces=F)
-        self.setData(
-            forcesDataEntity, "forces", model=modelKey, dataset=dataset
-        )
-
-        self.lookForGhosts()
-
-    async def waitForTasks(self, verbose=False, dt=1):
-        tm = self.tm
-        while (
-            (tm.taskQueue.qsize() > 0)
-            or (len(tm.runningTasks) > 0)
-            or (len(self.generationQueue) > 0)
-        ) and not self.quitReady:
-            if verbose:
-                print("-" * 20)
-                lTaskQueue = tm.taskQueue.qsize()
-                if lTaskQueue > 0:
-                    print(f"{lTaskQueue} tasks queued.\n")
-
-                lRunningTasks = len(tm.runningTasks)
-                if lRunningTasks > 0:
-                    print(f"{lRunningTasks} tasks running:")
-                    for taskID in tm.runningTasks:
-                        task = tm.getTask(taskID)
-                        prog = "?%"
-                        if task["progress"] is not None:
-                            prog = f'{task["progress"]*100:.0f}%'
-
-                        print(
-                            f'{prog:<4} {task["name"]:<20}  {task["progressMessage"]}'
-                        )
-                    print()
-
-                lGenQueue = len(self.generationQueue)
-                if lGenQueue > 0:
-                    print(f"{lGenQueue} tasks in generation queue:")
-                    for i in self.generationQueue:
-                        print(i)
-
-                print(flush=True)
-
-            await asyncio.sleep(dt)
-
-    def getColorMix(self, dataset=None, model=None):
-        if dataset is None and model is None:
-            return (255, 255, 255)
-        elif dataset is None:
-            return model.color
-        elif model is None:
-            return dataset.color
-        else:
-            return mixColors(model.color, dataset.color)
+                self.setNewModel(model)

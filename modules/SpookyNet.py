@@ -1,6 +1,5 @@
-from .loader import ModelLoader
+from loaders.modelLoader import ModelLoader
 import torch
-from utils import md5FromArraysAndStrings
 import numpy as np
 
 
@@ -166,3 +165,7 @@ class SpookyNetModelLoader(ModelLoader):
         F = np.concatenate(F, axis=0)
 
         return (E.flatten(), F.reshape(-1, batcher.nAtoms, 3))
+
+
+def loadData(env):
+    env.initialiseModelType(SpookyNetModelLoader)

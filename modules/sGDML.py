@@ -1,6 +1,7 @@
-from .loader import ModelLoader
+from loaders.modelLoader import ModelLoader
 import numpy as np
 from utils import md5FromArraysAndStrings
+from loaders.datasetLoader import DatasetLoader
 
 
 class sGDMLModelLoader(ModelLoader):
@@ -12,6 +13,7 @@ class sGDMLModelLoader(ModelLoader):
     # when False, it's separate
     singlePredict = True
     modelName = "sGDML"
+    modelFileExtension = "*.npz"
 
     def __init__(self, env, path, *args, **kwargs):
         """
@@ -101,3 +103,62 @@ class sGDMLModelLoader(ModelLoader):
             ("N. train", f"{len(self.modelInfo['idxs_train'])}"),
             ("Code ver.", f"{self.modelInfo['code_version']}"),
         ]
+
+
+class sGDMLDatasetLoader(DatasetLoader):
+    datasetName = "sGDML"
+    datasetFileExtension = "*.npz"
+
+    def __init__(self, path, *args, **kwargs):
+        super().__init__(path)
+        self.data = np.load(path, allow_pickle=True)
+        self.chem = self.zToChemicalFormula(self.data["z"])
+        self.R = self.data["R"]
+        self.E = self.data["E"]
+        self.F = self.data["F"]
+        self.z = self.data["z"]
+        self.N = self.R.shape[0]
+        self.nAtoms = self.R.shape[1]
+
+        if "lattice" in self.data:
+            self.lattice = self.data["lattice"]
+        else:
+            self.lattice = np.eye(3)
+
+    def getN(self):
+        return self.N
+
+    def getNAtoms(self):
+        return self.nAtoms
+
+    def getChemicalFormula(self):
+        return self.chem
+
+    def getCoordinates(self, indices=None):
+        if indices is None:
+            return self.R
+        else:
+            return self.R[indices]
+
+    def getEnergies(self, indices=None):
+        if indices is None:
+            return self.E.reshape(-1)
+        else:
+            return self.E[indices].reshape(-1)
+
+    def getForces(self, indices=None):
+        if indices is None:
+            return self.F
+        else:
+            return self.F[indices]
+
+    def getElements(self):
+        return self.z
+
+    def getLattice(self):
+        return
+
+
+def loadData(env):
+    env.initialiseModelType(sGDMLModelLoader)
+    env.initialiseDatasetType(sGDMLDatasetLoader)

@@ -176,7 +176,6 @@ class LoadPrepredictFileDialog(EventChildClass, QtWidgets.QFileDialog):
         self.setOption(QtWidgets.QFileDialog.HideNameFilterDetails, True)
         layout = self.layout()
         self.setFileMode(QtWidgets.QFileDialog.ExistingFile)
-        # self.setNameFilters([".npz"])
 
         cbLabel = QtWidgets.QLabel()
         cbLabel.setText("Dataset")

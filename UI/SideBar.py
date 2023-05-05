@@ -145,7 +145,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         dataset = self.handler.env.getDataset(self.id)
         if dataset is not None:
             self.setName(dataset.getDisplayName())
-            self.setInfoLabel(dataset.datasetType)
+            self.setInfoLabel(dataset.datasetName)
 
             info = dataset.getBaseInfo() + dataset.getInfo()
             self.infoWidget.setInfo(*info)

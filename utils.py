@@ -9,9 +9,9 @@ import logging
 logger = logging.getLogger("FFAST")
 
 
-def setupLogger():
+def setupLogger(level=logging.INFO):
     logging.basicConfig(
-        level=logging.INFO,
+        level=level,
         format="[%(levelname)s] %(message)s",
         handlers=[logging.FileHandler("debug.log"), logging.StreamHandler()],
     )
@@ -97,7 +97,10 @@ def loadModules(UI, env, headless=False):
         spec.loader.exec_module(mod)
 
         mods[name] = mod
-        depGraph[name] = mod.DEPENDENCIES
+        if hasattr(mod, "DEPENDENCIES"):
+            depGraph[name] = mod.DEPENDENCIES
+        else:
+            depGraph[name] = []
 
     depGraph = checkForInvalidDependencies(depGraph)
     order, degreeMap = kahnsAlgorithm(depGraph)

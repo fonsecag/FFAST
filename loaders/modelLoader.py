@@ -11,61 +11,6 @@ logger = logging.getLogger("FFAST")
 GLOBAL_MODELS_COUNTER = 0
 
 
-def loadModel(env, path):
-    """
-    Entry function for loading any model. This function simply decides which
-    loader class should be used to load a model given a path, then returns
-    a loaded object according.
-
-    Args:
-        path (str): path to the model
-        fromCache (bool, optional): Flag controlling whether to load a dummy
-            model. Used e.g. when the cache contains information on a model
-            whose path is unknown or no longer exists. Defaults to False.
-
-    Returns:
-        ModelLoader: ModelLoader object for given path
-    """
-    model = None
-
-    from .sGDML import sGDMLModelLoader
-    from .SchNet import SchNetModelLoader
-    from .Nequip import NequipModelLoader
-    from .MACE import MACEModelLoader
-    from .SpookyNet import SpookyNetModelLoader
-
-    if not os.path.exists(path):
-        logger.error(f"Tried to load model, but path `{path}` not found")
-        return None
-
-    # TODO put each of those into the respective model files
-    if path.endswith(".npz"):
-        model = sGDMLModelLoader(env, path)
-    elif "." not in path:
-        model = SchNetModelLoader(env, path)
-    elif path.endswith(".pth"):
-        from nequip.scripts.deploy import _ALL_METADATA_KEYS
-
-        metadata = {k: "" for k in _ALL_METADATA_KEYS}
-        fil = torch.jit.load(path, _extra_files=metadata)
-        if metadata["nequip_version"] == "":
-            logger.warn(f"Tried loading {path} as Nequip model, but failed.")
-            model = None
-        else:
-            model = NequipModelLoader(env, path)
-    elif path.endswith(".pt"):
-        model = SpookyNetModelLoader(env, path)
-    elif path.endswith(".model"):
-        model = MACEModelLoader(env, path)
-    else:
-        model = None
-
-    if model is not None:
-        model.initialise()
-
-    return model
-
-
 class ModelLoader(EventClass):
     """
     Base class for any model. Contains all model-agnostic methods such as
@@ -97,6 +42,7 @@ class ModelLoader(EventClass):
     isGhost = False
     singlePredict = False
     modelName = "N/A"
+    modelFileExtension = "*"
 
     def setName(self, name):
         if name == "":

@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 from config.uiConfig import config, configStyleSheet
 from PySide6.QtCore import QEvent, Qt
-from PySide6.QtWidgets import QWidget, QTabWidget
+from PySide6.QtWidgets import QWidget, QTabWidget, QFileDialog
 from config.uiConfig import config, getIcon
 from PySide6.QtWidgets import QSizePolicy
 import pyqtgraph
@@ -1303,3 +1303,29 @@ class SettingsPane(Widget, EventChildClass):
     def updateVisibilities(self):
         for _, v in self.settingsWidgets.items():
             v.updateVisibility()
+
+
+#############
+## MISC
+#############
+
+
+def customFileDialog(parent, fileTypes=None, extensions=None):
+    options = QFileDialog.Options()
+
+    if fileTypes is None:
+        fileName, selectedFilter = QFileDialog.getOpenFileName(
+            parent, "Open File", "", options=options
+        )
+        return fileName, None
+    else:
+        filterList = [
+            f"{fileTypes[i]} ({extensions[i]})" for i in range(len(fileTypes))
+        ]
+        filterString = ";;".join(filterList)
+        fileName, selectedFilter = QFileDialog.getOpenFileName(
+            parent, "Open File", "", filterString, options=options
+        )
+
+        filterIndex = filterList.index(selectedFilter)
+        return fileName, fileTypes[filterIndex]

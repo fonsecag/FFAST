@@ -1,5 +1,4 @@
-from .loader import ModelLoaderACE
-from .loader import ModelLoaderACE
+from loaders.modelLoader import ModelLoaderACE
 import numpy as np
 from utils import md5FromArraysAndStrings
 import torch
@@ -8,6 +7,7 @@ import torch
 class NequipModelLoader(ModelLoaderACE):
     singlePredict = True
     modelName = "Nequip"
+    modelFileExtension = "*.pth"
 
     def __init__(self, env, path):
         super().__init__(env, path)
@@ -31,3 +31,7 @@ class NequipModelLoader(ModelLoaderACE):
 
         fp = md5FromArraysAndStrings(*lst)
         return fp
+
+
+def loadData(env):
+    env.initialiseModelType(NequipModelLoader)

@@ -1,4 +1,4 @@
-from .loader import ModelLoader
+from loaders.modelLoader import ModelLoader
 import numpy as np
 from utils import md5FromArraysAndStrings
 

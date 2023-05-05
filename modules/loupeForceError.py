@@ -135,7 +135,7 @@ class ForceErrorColorProperty(CanvasProperty):
         de = data[0]  # just one dataset-model combination is watched
         atomicMAE = de.get("atomicMAE")
         meanAtomicMAE = np.mean(atomicMAE, axis=0)
-        perc = getConfig("loupeForceErrorPercentile")*100
+        perc = getConfig("loupeForceErrorPercentile") * 100
 
         self.set(
             atomicMAE=atomicMAE,

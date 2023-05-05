@@ -150,7 +150,7 @@ def loadUI(UIHandler, env):
 
             idxs = np.argwhere((diff >= x0) & (diff <= x1))
             idxs = np.unique(idxs)
-            
+
             return idxs
 
     class ForcesErrorDistPlot(BasicPlotWidget):
@@ -158,7 +158,7 @@ def loadUI(UIHandler, env):
             super().__init__(
                 handler,
                 title="Forces MAE distribution",
-                isSubbable=False, # not finding a good way to do it
+                isSubbable=False,  # not finding a good way to do it
                 # If we say: at least one force component f with x0 < f < x1
                 # then for large molecules, even small windows have a shitload
                 # of indices
@@ -193,8 +193,8 @@ def loadUI(UIHandler, env):
             nAtoms = dataset.getNAtoms()
 
             idxs = np.argwhere((diff >= x0) & (diff <= x1))
-            idxs = np.unique(idxs // (nAtoms*3))
-            
+            idxs = np.unique(idxs // (nAtoms * 3))
+
             return idxs
 
     class EnergyErrorPlot(BasicPlotWidget):

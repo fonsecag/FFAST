@@ -15,6 +15,7 @@ from utils import cleanBondIdxsArray
 logger = logging.getLogger("FFAST")
 GLOBAL_DATASETS_COUNTER = 0
 
+
 def toDistance(R):
     shape = R.shape
     try:
@@ -31,33 +32,6 @@ def toDistance(R):
 
     y = np.array(y)
     return y
-
-
-def loadDataset(path):
-    """
-    Entry function for loading any dataset. This function simply decides which
-    loader class should be used to load a dataset given a path, then returns
-    a loaded object according.
-
-    Args:
-        path (str): path to the dataset
-        fromCache (bool, optional): Flag controlling whether to load a dummy
-            dataset. Used e.g. when the cache contains information on a dataset
-            whose path is unknown or no longer exists. Defaults to False.
-
-    Returns:
-        DatasetLoader: DatasetLoader object for given path
-    """
-
-    from .sGDML import sGDMLDatasetLoader
-
-    if not os.path.exists(path):
-        logger.error(f"Tried to load dataset, but path `{path}` not found")
-        return None
-
-    dataset = sGDMLDatasetLoader(path)
-    dataset.initialise()
-    return dataset
 
 
 class DatasetLoader(EventClass):
@@ -88,7 +62,8 @@ class DatasetLoader(EventClass):
     zIntToZStr = zIntToZStr
     zStrToZInt = zStrToZInt
 
-    datasetType = "N/A"
+    datasetName = "N/A"
+    datasetFileExtension = "*"
 
     name = "N/A"
     loaded = False

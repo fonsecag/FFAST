@@ -1,5 +1,6 @@
 from events import EventClass
 from PySide6.QtWidgets import QFileDialog
+from UI.Templates import customFileDialog
 import os
 
 
@@ -63,35 +64,26 @@ class MenuHandler(EventClass):
         self.eventPush("QUIT_EVENT")
 
     def onDatasetLoad(self):
-        (path, _) = QFileDialog.getOpenFileName(self.handler.window)
-        if path is None or path.strip() == "":
-            return
-
         env = self.handler.env
-        env.newTask(
-            env.loadDataset,
-            args=(path,),
-            visual=True,
-            name=f"Loading dataset {os.path.basename(path)}",
-            threaded=True,
+        fileTypes = list(env.datasetTypes.keys())
+        extensions = [
+            env.datasetTypes[x].datasetFileExtension for x in fileTypes
+        ]
+        path, typ = customFileDialog(
+            self.handler.window, fileTypes=fileTypes, extensions=extensions
         )
+
+        env.taskLoadDataset(path, typ)
 
     def onModelLoad(self):
-        (path, _) = QFileDialog.getOpenFileName(self.handler.window)
-        if path is None or path.strip() == "":
-            return
-
         env = self.handler.env
-        env.newTask(
-            env.loadModel,
-            args=(path,),
-            visual=True,
-            name=f"Loading model {os.path.basename(path)}",
-            threaded=True,
+        fileTypes = list(env.modelTypes.keys())
+        extensions = [env.modelTypes[x].modelFileExtension for x in fileTypes]
+        path, typ = customFileDialog(
+            self.handler.window, fileTypes=fileTypes, extensions=extensions
         )
+
+        env.taskLoadModel(path, typ)
 
     def newLoupe(self):
         self.handler.newLoupe()
-
-    def loadPrepredictedModel(self):
-        self.handler.loadPrepredictPopup()

@@ -1175,7 +1175,7 @@ class SettingsLineEdit(SettingsWidgetBase):
             val = QtGui.QIntValidator(nMin, nMax)
             self.lineEdit.setValidator(val)
         elif self.isFloat:
-            val = QtGui.QDoubleValidator(nMin, nMax)
+            val = QtGui.QDoubleValidator(nMin, nMax,4, notation=QtGui.QDoubleValidator.StandardNotation)
             self.lineEdit.setValidator(val)
 
         self.setDefault()

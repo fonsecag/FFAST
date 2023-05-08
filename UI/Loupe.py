@@ -163,7 +163,7 @@ class InteractiveCanvas(Widget):
 
     def visualRefresh(self, force=False):
         for element in self.elements.values():
-            if (force or element.visualRefreshQueued) and (not element.hidden):
+            if (force or element.visualRefreshQueued): # and (not element.hidden):
                 element.draw(picking=False, pickingColors=None)
                 element.visualRefreshQueued = False
 
@@ -299,7 +299,6 @@ class InteractiveCanvas(Widget):
             self.visualRefresh(force=True)
 
     def isActiveAtomSelectTool(self, tool):
-        print(self.activeAtomSelectTool, tool)
         if tool is None:
             return self.activeAtomSelectTool is None
         return isinstance(self.activeAtomSelectTool, tool)
@@ -389,6 +388,7 @@ class Loupe(Widget, EventChildClass):
         self.settings = Settings()
         self.settings.addAction("updateIndex", self.updateCurrentIndex)
         self.settings.addAction("updateGeometry", self.updateCurrentIndex)
+        self.settings.addAction("cameraChange", self.onCameraChange)
         self.settings.addAction("pause", self.onPause)
         self.settings.addAction("datasetSelected", self.onDatasetSelected)
 
@@ -566,3 +566,6 @@ class Loupe(Widget, EventChildClass):
         # print(event.key(), QtCore.Qt.Key_Escape)
         # print(event.key()==QtCore.Qt.Key_Escape)
         event.accept()
+
+    def onCameraChange(self):
+        self.canvas.onCameraChange()

@@ -41,9 +41,7 @@ class BondsElement(VisualElement):
         if bondType == "Dynamic":
             bonds = self.canvas.props["dynamicBonds"].get("R")
         elif bondType == "Fixed":
-            bondIndices = self.canvas.settings.get("bondIndices")
-            if bondIndices is None:
-                bonds = self.canvas.props["fixedBonds"].get("R")
+            bonds = self.canvas.props["fixedBonds"].get("R")
 
         width = self.canvas.props["camera"].get("distance")
 
@@ -51,8 +49,9 @@ class BondsElement(VisualElement):
             width = 1
 
         if bonds is None:
-            self.lines.set_data(width=0)
+            self.hide()
         else:
+            self.show()
             self.lines.set_data(pos=bonds, width=self.width / width)
 
 

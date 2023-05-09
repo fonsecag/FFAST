@@ -33,7 +33,7 @@ class CameraInfo(CanvasProperty):
             fy *= h / w
 
         # self.set(distance=camera._actual_distance, center=camera.center)
-        self.set(distance = fy, center=camera.center)
+        self.set(distance=fy, center=camera.center)
 
     def centeringCOM(self):
         return self.canvas.settings.get("originCenterOfMass")
@@ -63,9 +63,8 @@ class CameraInfo(CanvasProperty):
 def loadLoupe(UIHandler, loupe):
     from UI.Templates import SettingsPane
 
-
     # SETTINGS
-    def test(*args):
+    def updateOrthographicCamera(*args):
         ortho = loupe.canvas.settings.get("cameraOrthographic")
         if ortho:
             loupe.canvas.camera.fov = 0
@@ -73,28 +72,27 @@ def loadLoupe(UIHandler, loupe):
             loupe.canvas.camera.fov = 45
 
     settings = loupe.settings
-    settings.addParameters(**{
-        "originCenterOfMass": [True, "updateGeometry"],
-        "cameraOrthographic": [False, test, "onCameraChange"],
-    })
+    settings.addParameters(
+        **{
+            "originCenterOfMass": [True, "updateGeometry"],
+            "cameraOrthographic": [
+                False,
+                updateOrthographicCamera,
+                "onCameraChange",
+            ],
+        }
+    )
 
     # SETTINGS PANE
     pane = SettingsPane(UIHandler, loupe.settings, parent=loupe)
 
     pane.addSetting("CheckBox", "Origin COM", settingsKey="originCenterOfMass")
-    # pane.addSetting(
-    #     "LineEdit",
-    #     "FOV",
-    #     settingsKey="cameraFOV",
-    #     isFloat=True,
-    #     nMin=0.00001,
-    #     nMax=90.0,
-    # )
-    pane.addSetting("CheckBox", "Orthographic", settingsKey="cameraOrthographic")
+    pane.addSetting(
+        "CheckBox", "Orthographic", settingsKey="cameraOrthographic"
+    )
 
     # add pane
     loupe.addSidebarPane("CAMERA", pane)
-
 
     # PROPERTIES
     loupe.addCanvasProperty(CameraInfo)

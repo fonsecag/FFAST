@@ -82,7 +82,7 @@ async def eventLoop(UI, env):
         # env.taskLoadModel("private/neq_sal_1000.pth")
         # env.taskLoadModel("private/ethanol_def_1000.npz")
         # env.taskLoadModel("private/eth_schnet")
-        # env.taskLoadModel("private/eth_il_1000.npz")
+        env.taskLoadModel("private/eth_il_1000.npz", "sGDML")
         pass
 
     # env.newTask(nh.taskWatchDog, name="TaskWatchDog", visual=True)

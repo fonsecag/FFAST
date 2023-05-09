@@ -22,6 +22,7 @@ class MenuHandler(EventClass):
         File.addAction("Load Dataset", self.onDatasetLoad, "Ctrl+d")
         File.addAction("Load Model", self.onModelLoad, "Ctrl+e")
 
+        File.addAction("Load Zero Model", self.loadZeroModel)
         # File.addAction("Load Prediction", self.loadPrepredictedModel)
 
         # File.addAction("Preferences", self.onPreferences)
@@ -87,3 +88,7 @@ class MenuHandler(EventClass):
 
     def newLoupe(self):
         self.handler.newLoupe()
+
+    def loadZeroModel(self):
+        env = self.handler.env
+        env.loadZeroModel()

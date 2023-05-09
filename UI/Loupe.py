@@ -16,6 +16,7 @@ from vispy.geometry.generation import create_sphere
 import asyncio
 from config.userConfig import Settings, getConfig
 from vispy.scene.cameras.turntable import TurntableCamera
+from vispy.visuals.transforms import STTransform
 
 logger = logging.getLogger("FFAST")
 
@@ -156,14 +157,19 @@ class InteractiveCanvas(Widget):
 
     ## VISUAL ELEMENTS & PROPERTIES
 
-    def addVisualElement(self, Element, name):
-        el = Element(parent=self.scene)
+    def addVisualElement(self, Element, name, viewParent=False):
+        if viewParent:
+            el = Element(parent=self.view)
+        else:
+            el = Element(parent=self.scene)
         el.canvas = self
         self.elements[name] = el
 
     def visualRefresh(self, force=False):
         for element in self.elements.values():
-            if (force or element.visualRefreshQueued): # and (not element.hidden):
+            if (
+                force or element.visualRefreshQueued
+            ):  # and (not element.hidden):
                 element.draw(picking=False, pickingColors=None)
                 element.visualRefreshQueued = False
 
@@ -334,6 +340,20 @@ class InteractiveCanvas(Widget):
     def keyPressEvent(self, event):
         self.parent().keyPressEvent(event)
 
+    ## MISC
+    def resizeEvent(self, event):
+        self.onResize()
+        return super(InteractiveCanvas, self).resizeEvent(event)
+
+    def onResize(self):
+        for prop in self.props.values():
+            prop.onCanvasResize()
+
+        for element in self.elements.values():
+            element.onCanvasResize()
+
+        self.visualRefresh()
+
 
 class Loupe(Widget, EventChildClass):
 
@@ -488,8 +508,8 @@ class Loupe(Widget, EventChildClass):
         self.updateCurrentIndex()
 
     # ELEMENTS
-    def addVisualElement(self, Element, name):
-        self.canvas.addVisualElement(Element, name)
+    def addVisualElement(self, Element, name, viewParent=False):
+        self.canvas.addVisualElement(Element, name, viewParent=viewParent)
 
     def addCanvasProperty(self, Prop):
         self.canvas.addProperty(Prop)

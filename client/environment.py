@@ -1,6 +1,7 @@
 from events import EventClass
 from loaders.datasetLoader import SubDataset
 from loaders.modelGhost import GhostModelLoader
+from loaders.zeroModel import ZeroModelLoader
 from tasks import TaskManager
 from client.dataType import DataEntity
 from utils import md5FromArraysAndStrings
@@ -808,3 +809,11 @@ class Environment(EventClass):
                 model = GhostModelLoader(self, modelKey)
                 model.initialise()
                 self.setNewModel(model)
+
+    def loadZeroModel(self):
+        fp = ZeroModelLoader.fingerprint
+        if self.modelExists(fp):
+            return
+        model = ZeroModelLoader(self)
+        model.initialise()
+        self.setNewModel(model)

@@ -17,6 +17,9 @@ class CanvasProperty:
     def onCameraChange(self):
         pass
 
+    def onCanvasResize(self):
+        pass
+
     def set(self, **kwargs):
         self.content.update(kwargs)
         self.cleared = False

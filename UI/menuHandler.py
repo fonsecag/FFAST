@@ -22,7 +22,7 @@ class MenuHandler(EventClass):
         File.addAction("Load Dataset", self.onDatasetLoad, "Ctrl+d")
         File.addAction("Load Model", self.onModelLoad, "Ctrl+e")
 
-        File.addAction("Load Zero Model", self.loadZeroModel)
+        File.addAction("Load Zero Model", self.loadZeroModel, "Ctrl+0")
         # File.addAction("Load Prediction", self.loadPrepredictedModel)
 
         # File.addAction("Preferences", self.onPreferences)

@@ -876,6 +876,8 @@ class FlexibleListSelector(Widget):
 class ObjectComboBox(ComboBox, EventChildClass):
 
     updateFunc = None
+    selectedKey = None
+    currentlyUpdatingList = False
 
     def __init__(
         self, handler, hasDatasets=True, watcher=None, *args, **kwargs
@@ -904,6 +906,7 @@ class ObjectComboBox(ComboBox, EventChildClass):
         self.currentIndexChanged.connect(self.onIndexChanged)
 
     def updateList(self, *args):
+        self.currentlyUpdatingList = True
         l = []
         if self.hasDatasets:
             l = l + self.env.getAllDatasetKeys()
@@ -913,6 +916,16 @@ class ObjectComboBox(ComboBox, EventChildClass):
 
         self.currentKeyList = l
         self.updateComboBox()
+        self.currentlyUpdatingList = False
+
+        # RESELECT PREVIOUS ONE
+        if self.selectedKey in self.currentKeyList:
+            index = self.currentKeyList.index(self.selectedKey)
+            self.setCurrentIndex(index)
+        elif len(self.currentKeyList) > 0:
+            self.setCurrentIndex(0)
+            self.forceUpdate()
+
 
     def updateComboBox(self, *args):
         self.clear()
@@ -922,7 +935,6 @@ class ObjectComboBox(ComboBox, EventChildClass):
                 for x in self.currentKeyList
             ]
         )
-        # self.onIndexChanged(None)
 
     def setOnIndexChanged(self, func):
         self.updateFunc = func
@@ -930,20 +942,29 @@ class ObjectComboBox(ComboBox, EventChildClass):
     def forceUpdate(self):
         self.onIndexChanged(self.currentIndex())
 
-    def updateWatcher(self, key):
+    def updateWatcher(self):
+        key = self.getActiveKey()
         if self.hasDatasets:
             self.watcher.setDatasetDependencies(key)
         else:
             self.watcher.setModelDependencies(key)
 
-    def onIndexChanged(self, index):
+    def getActiveKey(self):
+        index = self.currentIndex()
         if (index < 0) or (index >= len(self.currentKeyList)):
+            return None
+        
+        return self.currentKeyList[index]
+        
+    def onIndexChanged(self, index):
+        if self.currentlyUpdatingList:
             return
-
-        key = self.currentKeyList[index]
+        
+        key = self.getActiveKey()
+        self.selectedKey = key
 
         if self.watcher is not None:
-            self.updateWatcher(key)
+            self.updateWatcher()
 
         if self.updateFunc is not None:
             self.updateFunc(key)

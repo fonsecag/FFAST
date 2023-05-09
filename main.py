@@ -77,10 +77,11 @@ async def eventLoop(UI, env):
         # env.taskLoadDataset("private/big.npz", "sGDML")
         # env.taskLoadDataset("private/myoglobin_1000.npz")
         env.taskLoadDataset("private/ethanol_spl_200.npz", "sGDML")
+        # env.taskLoadDataset("private/grid.npz", "sGDML")
         # env.taskLoadDataset("private/md22_DHA.npz")
         # env.taskLoadDataset("private/md22_stachyose.npz")
         # env.taskLoadModel("private/neq_sal_1000.pth")
-        # env.taskLoadModel("private/ethanol_def_1000.npz")
+        env.taskLoadModel("private/ethanol_def_1000.npz", "sGDML")
         # env.taskLoadModel("private/eth_schnet")
         env.taskLoadModel("private/eth_il_1000.npz", "sGDML")
         pass

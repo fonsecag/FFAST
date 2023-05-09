@@ -71,6 +71,8 @@ class DataloaderButton(PushButton, EventChildClass):
         self.eventSubscribe("WIDGET_REFRESH", self.onWidgetRefresh)
         self.clicked.connect(self.dataWatcher.loadContent)
 
+        self.onWidgetRefresh(self)
+
     def onWidgetRefresh(self, widget):
         if self is not widget:
             return

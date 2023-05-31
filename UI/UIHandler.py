@@ -25,6 +25,10 @@ class UIHandler(EventClass):
 
     def quitEvent(self):
         self.eventPush("QUIT_EVENT")
+        # self.app.quit()
+        self.setQuitReady()
+
+    def quit(self):
         self.app.quit()
 
     quitReady = False

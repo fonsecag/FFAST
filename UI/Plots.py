@@ -11,6 +11,7 @@ import logging
 from client.dataWatcher import DataWatcher
 import numpy as np
 from loaders.datasetLoader import SubDataset
+from config.userConfig import getConfig
 
 
 class DataDependentObject:
@@ -415,7 +416,8 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
                 color = self.env.getColorMix(
                     dataset=autoColor["dataset"], model=autoColor["model"]
                 )
-            pen = pyqtgraph.mkPen(color, width=2.5)
+            width = float(getConfig("plotPenWidth"))
+            pen = pyqtgraph.mkPen(color, width=width)
 
         # plotItem = self.plotWidget.plot(x, y, pen=pyqtgraph.mkPen(color, width=2.5))
         if scatter:

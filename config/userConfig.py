@@ -87,6 +87,8 @@ def getConfig(key, fallback=None):
     c = config.get(key, None)
     if c is None:
         return default.get(key, fallback)
+    else:
+        return c
 
 
 def addConfig(key, defaultValue):

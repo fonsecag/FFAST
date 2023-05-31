@@ -374,7 +374,7 @@ def loadUI(UIHandler, env):
             )
 
             self.setDataDependencies("clusterForceError")
-            self.setYLabel("Force MAE")
+            self.setYLabel("Force MAE", getConfig("forceUnit"))
 
     class EnergyClusterErrorPlot(ClusterErrorPlot):
         def __init__(self, handler, **kwargs):
@@ -383,7 +383,7 @@ def loadUI(UIHandler, env):
             )
 
             self.setDataDependencies("clusterEnergyError")
-            self.setYLabel("Energy MAE")
+            self.setYLabel("Energy MAE", getConfig("energyUnit"))
 
     ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Cluster error")

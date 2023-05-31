@@ -2,6 +2,7 @@ import numpy as np
 from client.dataType import DataType
 import logging
 from scipy.stats import gaussian_kde
+from config.userConfig import getConfig
 
 logger = logging.getLogger("FFAST")
 
@@ -72,7 +73,7 @@ def loadData(env):
 
             kde = gaussian_kde(diff)
 
-            distX = np.linspace(np.min(diff) * 0.95, np.max(diff) * 1.05)
+            distX = np.linspace(np.min(diff) * 0.95, np.max(diff) * 1.05, getConfig("plotDistNum"))
             distY = kde(distX)
 
             de = self.newDataEntity(distY=distY, distX=distX)
@@ -100,7 +101,7 @@ def loadData(env):
 
             kde = gaussian_kde(np.abs(mae))
 
-            distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05)
+            distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05, getConfig("plotDistNum"))
             distY = kde(distX)
 
             de = self.newDataEntity(distY=distY, distX=distX)
@@ -131,7 +132,7 @@ def loadUI(UIHandler, env):
                 **kwargs
             )
             self.setDataDependencies("energyErrorDist")
-            self.setXLabel("Energy MAE")
+            self.setXLabel("Energy MAE", getConfig("energyUnit"))
             self.setYLabel("Density")
 
         def addPlots(self):
@@ -172,7 +173,7 @@ def loadUI(UIHandler, env):
                 **kwargs
             )
             self.setDataDependencies("forcesErrorDist")
-            self.setXLabel("Forces MAE")
+            self.setXLabel("Forces MAE", getConfig("forceUnit"))
             self.setYLabel("Density")
 
         def addPlots(self):
@@ -209,7 +210,7 @@ def loadUI(UIHandler, env):
             )
             self.setDataDependencies("energyError")
             self.setXLabel("Configuration index")
-            self.setYLabel("Energy MAE")
+            self.setYLabel("Energy MAE", getConfig("energyUnit"))
 
             self.slider = Slider(
                 hasEditBox=True, label="Smoothing", nMin=1, nMax=10000
@@ -252,7 +253,7 @@ def loadUI(UIHandler, env):
             )
             self.setDataDependencies("forcesError")
             self.setXLabel("Configuration index")
-            self.setYLabel("Forces MAE")
+            self.setYLabel("Forces MAE", getConfig("forceUnit"))
 
             self.slider = Slider(
                 hasEditBox=True, label="Smoothing", nMin=1, nMax=10000

@@ -22,5 +22,9 @@
     "loupeSelectColor":  "#00FF00",
     "loupeAtomColorDimming": 0.93,
     "loupeBondsLenience": 1.1,
-    "loupeForceErrorPercentile":0.995
+    "loupeForceErrorPercentile":0.995,
+    "energyUnit": null,
+    "forceUnit": null,
+    "plotPenWidth": 5,
+    "plotDistNum":500
 }

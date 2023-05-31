@@ -3,11 +3,11 @@ from client.dataType import DataType
 import logging
 from scipy.stats import gaussian_kde
 from config.atoms import zIntToZStr, atomColors
+from config.userConfig import getConfig
 
 logger = logging.getLogger("FFAST")
 
 DEPENDENCIES = ["basicErrors"]
-
 
 def loadData(env):
     class AtomicForcesErrorDist(DataType):
@@ -40,7 +40,7 @@ def loadData(env):
 
                 kde = gaussian_kde(np.abs(mae))
 
-                distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05)
+                distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05, getConfig("plotDistNum"))
                 distY = kde(distX)
 
                 out[zIntToZStr[i]] = {"distY": distY, "distX": distX}
@@ -50,7 +50,6 @@ def loadData(env):
             return True
 
     env.registerDataType(AtomicForcesErrorDist)
-
 
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab, DatasetModelSelector, ListCheckButton
@@ -155,7 +154,7 @@ def loadUI(UIHandler, env):
             self.setDataDependencies(
                 "atomicForcesErrorDist", "forcesErrorDist"
             )
-            self.setXLabel("Forces MAE")
+            self.setXLabel("Forces MAE", getConfig("forceUnit"))
             self.setYLabel("Density")
 
         def addPlots(self):

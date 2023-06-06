@@ -198,7 +198,7 @@ class Environment(EventClass):
         modelKey = md5FromArraysAndStrings(E, F)
 
         energyDataType = self.getDataType("energy")
-        energyDataEntity = energyDataType.newDataEntity(energy=E)
+        energyDataEntity = energyDataType.newDataEntity(energy=E.flatten())
         self.setData(
             energyDataEntity, "energy", model=modelKey, dataset=dataset
         )
@@ -357,7 +357,7 @@ class Environment(EventClass):
         if taskID in self.queuedTasks:
             self.queuedTasks.remove(taskID)
 
-    async def waitForTasks(self, verbose=False, dt=1):
+    async def waitForTasks(self, verbose=False, dt=5):
         tm = self.tm
         while (
             (tm.taskQueue.qsize() > 0)
@@ -600,6 +600,7 @@ class Environment(EventClass):
             (dataTypeKey, model, dataset) = self.cacheKeyToComponents(cacheKey)
 
             if self.hasCacheKey(cacheKey):
+                queue.discard(cacheKey)
                 continue
 
             if self.canGenerateData(dataTypeKey, model=model, dataset=dataset):
@@ -622,7 +623,7 @@ class Environment(EventClass):
                         keysToGenerate[
                             key
                         ] = cacheKey  # indicates the parent key
-
+        
         for key, parentKey in keysToGenerate.items():
             (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
 
@@ -743,7 +744,7 @@ class Environment(EventClass):
             self.load,
             args=(path,),
             visual=True,
-            name="Loading dataset",
+            name="Loading save",
             threaded=True,
         )
 
@@ -799,6 +800,7 @@ class Environment(EventClass):
             return mixColors(model.color, dataset.color)
 
     def lookForGhosts(self):
+        
         for cacheKey in self.cache.keys():
             (dataKey, modelKey, datasetKey) = cacheKey.split("__")
             if (
@@ -817,3 +819,7 @@ class Environment(EventClass):
         model = ZeroModelLoader(self)
         model.initialise()
         self.setNewModel(model)
+
+    def startInteract(self, **kwargs):
+        import code
+        code.interact(local=kwargs)

@@ -49,7 +49,43 @@ def loadData(env):
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 
+    class AtomicForceErrors(DataType):
+        modelDependent = True
+        datasetDependent = True
+        key = "atomicForcesError"
+        dependencies = ["forcesError"]
+        iterable = False
+
+        def __init__(self, *args):
+            super().__init__(*args)
+
+        def data(self, dataset=None, model=None, taskID=None):
+            env = self.env
+
+            err = env.getData("forcesError", model=model, dataset=dataset)
+            z = dataset.getElements()
+
+            diffAll = err.get("diff")
+            out = {}
+
+            for i in np.unique(z):
+                idxs = np.argwhere(z == i)
+                idxs = idxs.flatten()
+
+                diff = diffAll[:, idxs, :]
+
+                diff = diff.reshape(diff.shape[0], -1)
+                mae = np.mean(np.abs(diff))
+                rmse = np.sqrt(np.mean(diff**2))
+
+                out[zIntToZStr[i]] = {"mae": mae, "rmse": rmse}
+
+            de = self.newDataEntity(**out)
+            env.setData(de, self.key, model=model, dataset=dataset)
+            return True
+
     env.registerDataType(AtomicForcesErrorDist)
+    env.registerDataType(AtomicForceErrors)
 
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab, DatasetModelSelector, ListCheckButton

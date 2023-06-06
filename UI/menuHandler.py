@@ -23,7 +23,7 @@ class MenuHandler(EventClass):
         File.addAction("Load Model", self.onModelLoad, "Ctrl+e")
 
         File.addAction("Load Zero Model", self.loadZeroModel, "Ctrl+0")
-        # File.addAction("Load Prediction", self.loadPrepredictedModel)
+        File.addAction("Load Prediction", self.loadPrepredictedModel)
 
         # File.addAction("Preferences", self.onPreferences)
         # File.addAction("Exit", self.onExit)
@@ -85,6 +85,18 @@ class MenuHandler(EventClass):
         )
 
         env.taskLoadModel(path, typ)
+
+    def loadPrepredictedModel(self):
+        env = self.handler.env
+        names = [x.getName() for x in env.getAllDatasets(excludeSubs = True)]
+        keys = [x.fingerprint for x in env.getAllDatasets(excludeSubs = True)]
+        extensions = ["*.npz"]*len(names)
+
+        path, typ = customFileDialog(
+            self.handler.window, fileTypes=names, extensions = extensions
+        )
+        idx = names.index(typ)
+        env.loadPrepredictedDataset(path, keys[idx])
 
     def newLoupe(self):
         self.handler.newLoupe()

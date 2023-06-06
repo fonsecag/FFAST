@@ -27,7 +27,8 @@ def loadData(env):
             eData = dataset.getEnergies()
 
             diff = ePred.get("energy") - eData
-            de = self.newDataEntity(diff=diff)
+            mae = np.mean(np.abs(diff))
+            de = self.newDataEntity(diff=diff, mae = mae)
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 
@@ -49,8 +50,10 @@ def loadData(env):
 
             diff = fPred.get("forces") - fData
             atomicMAE = np.mean(np.abs(diff), axis=2)
+            mae = np.mean(np.abs(diff))
+            rmse = np.sqrt(np.mean(diff**2))
 
-            de = self.newDataEntity(diff=diff, atomicMAE=atomicMAE)
+            de = self.newDataEntity(diff=diff, atomicMAE=atomicMAE, mae=mae, rmse = rmse)
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 

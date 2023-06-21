@@ -12,42 +12,9 @@ import numpy as np
 import asyncio
 from utils import loadModules, mixColors
 import json
+import threading, time
 
 logger = logging.getLogger("FFAST")
-
-
-async def headlessEventLoop(env):
-    taskManager = env.tm
-    while not env.quitReady:
-        await env.eventHandle()
-        await env.handleGenerationQueue()
-        await taskManager.eventHandle()
-        await taskManager.handleTaskQueue()
-        await asyncio.sleep(0.1)
-
-    await env.eventHandle()
-    await taskManager.eventHandle()
-
-
-def runHeadless(func):
-    # https://stackoverflow.com/questions/27480967/why-does-the-asyncios-event-loop-suppress-the-keyboardinterrupt-on-windows
-    # Without it, it just gets stuck forever...
-    # It's dirty but it's the only way it's worked so far
-    import signal
-
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    async def funcWrapper(env):
-        await func(env)
-        env.quitReady = True
-
-    loop = asyncio.get_event_loop()
-    env = Environment()
-    loadModules(None, env, headless=True)
-
-    tasks = asyncio.gather(headlessEventLoop(env), funcWrapper(env))
-
-    loop.run_until_complete(tasks)
 
 
 class Environment(EventClass):
@@ -81,6 +48,7 @@ class Environment(EventClass):
         # self.eventSubscribe("DATA_UPDATED", self.handleGenerationQueue)
         # self.eventSubscribe("GENERATION_QUEUE_CHANGED", self.handleGenerationQueue)
         self.eventSubscribe("TASK_CANCEL", self.onTaskCancel)
+        self.eventSubscribe("TASK_FAILED", self.onTaskFailed)
         self.eventSubscribe("TASK_DONE", self.onTaskDone)
         self.eventSubscribe(
             "SUBDATASET_INDICES_CHANGED", self.deleteCacheByDataset
@@ -129,6 +97,9 @@ class Environment(EventClass):
 
     def getModel(self, key):
         return self.models.get(key, None)
+
+    def getModelFromPath(self, path):
+        return self.getModel(self.getKeyFromPath(path))
 
     def deleteModel(self, key):
         model = self.getModel(key)
@@ -225,6 +196,9 @@ class Environment(EventClass):
 
     def getDataset(self, key):
         return self.datasets.get(key, None)
+
+    def getDatasetFromPath(self, path):
+        return self.getDataset(self.getKeyFromPath(path))
 
     def deleteDataset(self, key):
         dataset = self.getDataset(key)
@@ -353,46 +327,17 @@ class Environment(EventClass):
                 f"Removed {cacheKey} from data generation queue because child task got cancelled."
             )
 
+    def onTaskFailed(self, taskID):
+        self.onTaskCancel(taskID)
+
     def onTaskDone(self, taskID):
         if taskID in self.queuedTasks:
             self.queuedTasks.remove(taskID)
 
-    async def waitForTasks(self, verbose=False, dt=5):
-        tm = self.tm
-        while (
-            (tm.taskQueue.qsize() > 0)
-            or (len(tm.runningTasks) > 0)
-            or (len(self.generationQueue) > 0)
-        ) and not self.quitReady:
-            if verbose:
-                print("-" * 20)
-                lTaskQueue = tm.taskQueue.qsize()
-                if lTaskQueue > 0:
-                    print(f"{lTaskQueue} tasks queued.\n")
-
-                lRunningTasks = len(tm.runningTasks)
-                if lRunningTasks > 0:
-                    print(f"{lRunningTasks} tasks running:")
-                    for taskID in tm.runningTasks:
-                        task = tm.getTask(taskID)
-                        prog = "?%"
-                        if task["progress"] is not None:
-                            prog = f'{task["progress"]*100:.0f}%'
-
-                        print(
-                            f'{prog:<4} {task["name"]:<20}  {task["progressMessage"]}'
-                        )
-                    print()
-
-                lGenQueue = len(self.generationQueue)
-                if lGenQueue > 0:
-                    print(f"{lGenQueue} tasks in generation queue:")
-                    for i in self.generationQueue:
-                        print(i)
-
-                print(flush=True)
-
-            await asyncio.sleep(dt)
+        # if the task was also in the generation queue, that means it crashed
+        # gotta remove it then
+        if taskID in self.generationQueue:
+            self.generationQueue.discard(taskID)
 
     #############
     ## DATA
@@ -823,3 +768,80 @@ class Environment(EventClass):
     def startInteract(self, **kwargs):
         import code
         code.interact(local=kwargs)
+
+
+class HeadlessEnvironment(Environment, threading.Thread):
+    def __init__(self):
+        Environment.__init__(self, headless=True)
+        threading.Thread.__init__(self)
+        self.loop = None
+
+    def run(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_until_complete(self.headlessEventLoop())
+
+    async def headlessEventLoop(self):
+        taskManager = self.tm
+        while not self.quitReady:
+            await self.eventHandle()
+            await self.handleGenerationQueue()
+            await taskManager.eventHandle()
+            await taskManager.handleTaskQueue()
+            await asyncio.sleep(0.1)
+
+        await self.eventHandle()
+        await taskManager.eventHandle()
+        
+    def headlessQuit(self):
+        self.quitReady = True
+
+    def waitForTasks(self, verbose=False, dt=5):
+        tm = self.tm
+        while (
+            (tm.taskQueue.qsize() > 0)
+            or (len(tm.runningTasks) > 0)
+            or (len(self.generationQueue) > 0)
+        ) and not self.quitReady:
+            if verbose:
+                print("-" * 20)
+                lTaskQueue = tm.taskQueue.qsize()
+                if lTaskQueue > 0:
+                    print(f"{lTaskQueue} tasks queued.\n")
+
+                lRunningTasks = len(tm.runningTasks)
+                if lRunningTasks > 0:
+                    print(f"{lRunningTasks} tasks running:")
+                    for taskID in tm.runningTasks:
+                        task = tm.getTask(taskID)
+                        prog = "?%"
+                        if task["progress"] is not None:
+                            prog = f'{task["progress"]*100:.0f}%'
+
+                        print(
+                            f'{prog:<4} {task["name"]:<20}  {task["progressMessage"]}'
+                        )
+                    print()
+
+                lGenQueue = len(self.generationQueue)
+                if lGenQueue > 0:
+                    print(f"{lGenQueue} tasks in generation queue:")
+                    for i in self.generationQueue:
+                        print(i)
+
+                print(flush=True)
+
+            time.sleep(dt)
+
+
+def startHeadlessEnvironment():
+    from utils import setupLogger
+
+    thread = HeadlessEnvironment()
+    setupLogger()
+
+    loadModules(None, thread, headless=True)
+    thread.start()
+
+    return thread
+

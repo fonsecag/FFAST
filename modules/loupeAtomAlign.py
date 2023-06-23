@@ -164,7 +164,12 @@ def addSettings(UIHandler, loupe):
 
     ## SETTINGS PANE
     pane = loupe.getSettingsPane("ATOMS")
-    pane.addSetting("CheckBox", "Align Atoms", settingsKey="alignAtoms")
+    pane.addSetting(
+        "CheckBox",
+        "Align Atoms",
+        settingsKey="alignAtoms",
+        toolTip="Select 3 atoms to visualise on a fixed plane",
+    )
 
     container = pane.addSetting(
         "Container", "Align Atoms Indices Container", layout="horizontal"
@@ -181,6 +186,7 @@ def addSettings(UIHandler, loupe):
         singleLine=True,
     )
     container.layout.addWidget(codeBox)
+    codeBox.setToolTip("Set 3 atom indices to visualise on a fixed plane")
 
     ## SELECT BUTTON
     def selectAlignAtomIndices():
@@ -188,6 +194,9 @@ def addSettings(UIHandler, loupe):
 
     selectButton = PushButton("Select")
     selectButton.clicked.connect(selectAlignAtomIndices)
+    selectButton.setToolTip(
+        "Manually select 3 atoms to visualise on a fixed plane"
+    )
     container.layout.addWidget(selectButton)
 
 

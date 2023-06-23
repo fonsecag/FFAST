@@ -181,6 +181,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
                 self.handler, self.updateLegend, icon="legend"
             )
             layout.addWidget(self.legendCheckBox)
+            self.legendCheckBox.setToolTip("Toggle legend")
 
         if self.isSubbable:
             self.subCheckBox = ToolCheckButton(
@@ -188,6 +189,9 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
             )
             layout.addWidget(self.subCheckBox)
             self.plotWidget.sigRangeChanged.connect(self.updateSub)
+            self.subCheckBox.setToolTip(
+                "Toggle subbing: create dataset of selected subsection"
+            )
 
         self.loadButton = DataloaderButton(self.handler, self.dataWatcher)
         layout.addWidget(self.loadButton)

@@ -335,7 +335,7 @@ class Environment(EventClass):
             self.queuedTasks.remove(taskID)
 
         # if the task was also in the generation queue, that means it crashed
-        # gotta remove it then
+        #  gotta remove it then
         if taskID in self.generationQueue:
             self.generationQueue.discard(taskID)
 
@@ -568,7 +568,7 @@ class Environment(EventClass):
                         keysToGenerate[
                             key
                         ] = cacheKey  # indicates the parent key
-        
+
         for key, parentKey in keysToGenerate.items():
             (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
 
@@ -745,7 +745,7 @@ class Environment(EventClass):
             return mixColors(model.color, dataset.color)
 
     def lookForGhosts(self):
-        
+
         for cacheKey in self.cache.keys():
             (dataKey, modelKey, datasetKey) = cacheKey.split("__")
             if (
@@ -767,6 +767,7 @@ class Environment(EventClass):
 
     def startInteract(self, **kwargs):
         import code
+
         code.interact(local=kwargs)
 
 
@@ -792,7 +793,7 @@ class HeadlessEnvironment(Environment, threading.Thread):
 
         await self.eventHandle()
         await taskManager.eventHandle()
-        
+
     def headlessQuit(self):
         self.quitReady = True
 
@@ -844,4 +845,3 @@ def startHeadlessEnvironment():
     thread.start()
 
     return thread
-

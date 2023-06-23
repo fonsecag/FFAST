@@ -22,7 +22,7 @@ def smallestMaxDistanceEuclidean(sample, clData):
     return np.argmin(g)
 
 
-def agglomerative(desc, n, nInitPoints):
+def agglomerative(desc, n, nInitPoints, env, taskID):
     indAll = np.arange(len(desc))
     indInit = np.random.permutation(indAll)[:nInitPoints]
 
@@ -48,13 +48,15 @@ def agglomerative(desc, n, nInitPoints):
         cldesc.append(np.array(desc[clind[i]]))
 
     for i in range(lDescRest):
+        if (i % 100 == 0) and (not env.tm.isTaskRunning(taskID)):
+            return None
         c = smallestMaxDistanceEuclidean(descRest[i], cldesc)
         clind[c].append(indRest[i])
 
     return [np.array(x) for x in clind]
 
 
-def kMeans(desc, n):
+def kMeans(desc, n, env, taskID):
     clLabels = KMeans(n_clusters=n, init="k-means++").fit_predict(desc)
 
     clind = []
@@ -82,7 +84,7 @@ def loadData(env):
         def __init__(self, *args):
             super().__init__(*args)
 
-        def cluster(self, dataset, scheme, indices=None, taskID=None):
+        def cluster(self, dataset, scheme, env, indices=None, taskID=None):
             env = self.env
             if scheme["desc"] == "Coulomb":
                 d = dataset.getPDist(indices=indices)
@@ -97,10 +99,10 @@ def loadData(env):
 
             if scheme["type"] == "Agglo":
                 localClind = agglomerative(
-                    d, nClusters, getConfig("aggloNInitPoints")
+                    d, nClusters, getConfig("aggloNInitPoints"), env, taskID
                 )
             elif scheme["type"] == "KMeans":
-                localClind = kMeans(d, nClusters)
+                localClind = kMeans(d, nClusters, env, taskID)
             else:
                 logger.error(
                     f"Unrecognised cluster scheme type {scheme['type']}"
@@ -132,9 +134,12 @@ def loadData(env):
             for s in schemes:
                 newClinds = []
                 for idxs in clinds:
-                    clind = self.cluster(dataset, s, idxs)
+                    if not self.env.tm.isTaskRunning(taskID):
+                        return None
+                    clind = self.cluster(
+                        dataset, s, self.env, indices=idxs, taskID=taskID
+                    )
                     newClinds += clind
-
                 clinds = newClinds
 
             clinds = np.array(clinds, dtype="object")

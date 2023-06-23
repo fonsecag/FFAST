@@ -81,5 +81,8 @@ def loadLoupe(UIHandler, loupe):
         loupe.setActiveAtomSelectTool(AtomInfoSelect)
 
     selectButton = PushButton("Select")
+    selectButton.setToolTip(
+        "Select to 1/2/3/4 atom(s) to see position/distance/angle/dihedral"
+    )
     selectButton.clicked.connect(selectAtomInfoIndices)
     container.layout.addWidget(selectButton)

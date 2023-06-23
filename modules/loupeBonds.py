@@ -197,6 +197,7 @@ def addSettingsPane(UIHandler, loupe):
         f"Bonds Type",
         settingsKey="bondType",
         items=["Fixed", "Dynamic"],
+        toolTip="Change how bonds are generated",
     )
 
     s = pane.addSetting(
@@ -221,6 +222,9 @@ def addSettingsPane(UIHandler, loupe):
         loupe.settings.setParameter("fixedBondIndices", idxs, refresh=True)
 
     dynamicFillBtn = PushButton("Dynamic")
+    dynamicFillBtn.setToolTip(
+        "Click to fill the bond indices based on current pairwise distances"
+    )
     dynamicFillBtn.clicked.connect(bondsDynamicFill)
     container.layout.addWidget(dynamicFillBtn)
 
@@ -230,6 +234,9 @@ def addSettingsPane(UIHandler, loupe):
         loupe.setActiveAtomSelectTool(BondSelect)
 
     selectButton = PushButton("Select")
+    selectButton.setToolTip(
+        "Click to manually add/remove bonds in the visualiser"
+    )
     selectButton.clicked.connect(selectBonds)
     container.layout.addWidget(selectButton)
 

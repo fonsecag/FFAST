@@ -176,7 +176,6 @@ class TaskManager(EventClass):
             if task.taskID is not None:
                 self.eventPush("TASK_DONE", task.taskID)
                 self.eventPush("TASK_FAILED", task.taskID)
-            
 
     def queueTask(self, *args, taskKey=None, **kwargs):
         if (taskKey is not None) and (taskKey in self.runningTasks):

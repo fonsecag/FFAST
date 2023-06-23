@@ -28,7 +28,7 @@ def loadData(env):
 
             diff = ePred.get("energy") - eData
             mae = np.mean(np.abs(diff))
-            de = self.newDataEntity(diff=diff, mae = mae)
+            de = self.newDataEntity(diff=diff, mae=mae)
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 
@@ -51,9 +51,11 @@ def loadData(env):
             diff = fPred.get("forces") - fData
             atomicMAE = np.mean(np.abs(diff), axis=2)
             mae = np.mean(np.abs(diff))
-            rmse = np.sqrt(np.mean(diff**2))
+            rmse = np.sqrt(np.mean(diff ** 2))
 
-            de = self.newDataEntity(diff=diff, atomicMAE=atomicMAE, mae=mae, rmse = rmse)
+            de = self.newDataEntity(
+                diff=diff, atomicMAE=atomicMAE, mae=mae, rmse=rmse
+            )
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 
@@ -76,7 +78,11 @@ def loadData(env):
 
             kde = gaussian_kde(diff)
 
-            distX = np.linspace(np.min(diff) * 0.95, np.max(diff) * 1.05, getConfig("plotDistNum"))
+            distX = np.linspace(
+                np.min(diff) * 0.95,
+                np.max(diff) * 1.05,
+                getConfig("plotDistNum"),
+            )
             distY = kde(distX)
 
             de = self.newDataEntity(distY=distY, distX=distX)
@@ -104,7 +110,11 @@ def loadData(env):
 
             kde = gaussian_kde(np.abs(mae))
 
-            distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05, getConfig("plotDistNum"))
+            distX = np.linspace(
+                np.min(mae) * 0.95,
+                np.max(mae) * 1.05,
+                getConfig("plotDistNum"),
+            )
             distY = kde(distX)
 
             de = self.newDataEntity(distY=distY, distX=distX)
@@ -208,7 +218,7 @@ def loadUI(UIHandler, env):
             super().__init__(
                 handler,
                 title="Energy MAE timeline",
-                name="Energy Error Timeline",
+                name="Energy Error TimelineP",
                 **kwargs
             )
             self.setDataDependencies("energyError")
@@ -218,6 +228,7 @@ def loadUI(UIHandler, env):
             self.slider = Slider(
                 hasEditBox=True, label="Smoothing", nMin=1, nMax=10000
             )
+            self.slider.setToolTip("Number of points in sliding average")
             self.addOption(self.slider)
             self.slider.setCallbackFunc(self.updateSmoothing)
 

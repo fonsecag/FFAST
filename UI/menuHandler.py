@@ -88,12 +88,12 @@ class MenuHandler(EventClass):
 
     def loadPrepredictedModel(self):
         env = self.handler.env
-        names = [x.getName() for x in env.getAllDatasets(excludeSubs = True)]
-        keys = [x.fingerprint for x in env.getAllDatasets(excludeSubs = True)]
-        extensions = ["*.npz"]*len(names)
+        names = [x.getName() for x in env.getAllDatasets(excludeSubs=True)]
+        keys = [x.fingerprint for x in env.getAllDatasets(excludeSubs=True)]
+        extensions = ["*.npz"] * len(names)
 
         path, typ = customFileDialog(
-            self.handler.window, fileTypes=names, extensions = extensions
+            self.handler.window, fileTypes=names, extensions=extensions
         )
         idx = names.index(typ)
         env.loadPrepredictedDataset(path, keys[idx])

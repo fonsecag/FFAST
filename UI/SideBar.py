@@ -7,6 +7,7 @@ from UI.Templates import (
     InfoWidget,
     ToolButton,
     LineEdit,
+    ProgressBar,
 )
 from config.uiConfig import configStyleSheet
 from utils import rgbToHex
@@ -86,6 +87,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         layout = self.labelLayout
 
         self.renameButton = ToolButton(self.renameObject, icon="rename")
+        self.renameButton.setToolTip("Rename")
         self.renameButton.setFixedSize(25, 25)
 
         # SET LINE EDIT PARAMETERS
@@ -99,6 +101,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         if not self.getObject().isSubDataset:
             self.deleteButton = ToolButton(self.deleteObject, icon="delete")
             self.deleteButton.setFixedSize(25, 25)
+            self.deleteButton.setToolTip("Remove")
             layout.addWidget(self.deleteButton)
 
     def applyStyle(self):
@@ -213,6 +216,112 @@ class ModelsObjectList(ObjectList, EventChildClass):
         self.removeObject(id)
 
 
+class TaskItem(ObjectListItem, EventChildClass):
+    def __init__(self, *args, **kwargs):
+        # self.handler is set automatically
+        super().__init__(*args, layout="vertical", **kwargs)
+        EventChildClass.__init__(self)
+
+        taskID = self.id
+        self.task = self.handler.env.getTask(taskID)
+
+        self.eventSubscribe("TASK_PROGRESS", self.setProgress)
+
+        self.layout.setContentsMargins(16, 8, 16, 8)
+        self.layout.setSpacing(8)
+
+        self.topLayout = QtWidgets.QHBoxLayout()
+        self.topLayout.setSpacing(4)
+        self.layout.addLayout(self.topLayout)
+
+        self.bottomLayout = QtWidgets.QHBoxLayout()
+        self.bottomLayout.setSpacing(4)
+        self.layout.addLayout(self.bottomLayout)
+
+        ## TOP
+        self.titleLabel = QtWidgets.QLabel(self.task["name"])
+        self.titleLabel.setObjectName("titleLabel")
+        self.topLayout.addWidget(self.titleLabel)
+
+        self.topLayout.addStretch()
+
+        ## TOP TOOLBAR
+        self.cancelButton = ToolButton(self.cancel, icon="delete")
+        self.cancelButton.setFixedSize(25, 25)
+        self.setToolTip("Cancel task")
+        self.topLayout.addWidget(self.cancelButton)
+
+        ## BOTTOM
+        self.messageLabel = QtWidgets.QLabel("Working...")
+        self.bottomLayout.addWidget(self.messageLabel)
+
+        self.bottomLayout.addStretch()
+
+        self.progressLabel = QtWidgets.QLabel("/")
+        self.bottomLayout.addWidget(self.progressLabel)
+
+        ## BAR
+        self.progressBar = ProgressBar()
+        self.progressBar.setFixedHeight(10)
+        self.layout.addWidget(self.progressBar)
+
+    def setProgress(
+        self,
+        taskID,
+        progMax=None,
+        prog=None,
+        percent=False,
+        message="Working...",
+    ):
+        if taskID is not self.id:
+            return
+
+        hasProg = (prog is not None) and (progMax is not None)
+
+        # prog text
+        progText = ""
+        if hasProg:
+            if percent:
+                progText = f"{prog / progMax * 100:.0f}%"
+            else:
+                progText = f"{prog}/{progMax}"
+        self.progressLabel.setText(progText)
+
+        # prog bar
+        if hasProg:
+            self.progressBar.setValue(prog)
+            self.progressBar.setMaximum(progMax)
+        else:
+            pass
+
+        # message
+        self.messageLabel.setText(message)
+
+    def cancel(self):
+        taskID = self.id
+        self.eventPush("TASK_CANCEL", taskID)
+
+
+class TasksList(ObjectList, EventChildClass):
+    def __init__(self, handler, **kwargs):
+        self.handler = handler
+        super().__init__(handler, TaskItem, **kwargs)
+        EventChildClass.__init__(self)
+
+        self.eventSubscribe("TASK_CREATED", self.onTaskCreated)
+        self.eventSubscribe("TASK_DONE", self.onTaskDone)
+
+    def onTaskCreated(self, taskID):
+        task = self.handler.env.getTask(taskID)
+        if (task is None) or (not task["visual"]):
+            return
+
+        self.newObject(taskID)
+
+    def onTaskDone(self, taskID):
+        self.removeObject(taskID)
+
+
 class SideBar(ContentBar):
     def __init__(self, handler, **kwargs):
         super().__init__(handler, **kwargs)
@@ -228,3 +337,7 @@ class SideBar(ContentBar):
         self.datasetsList = DatasetObjectList(self.handler, parent=self)
         self.addContent("DATASETS", widget=self.datasetsList)
         self.setExpanded("DATASETS")
+
+        self.tasksList = TasksList(self.handler, parent=self)
+        self.addContent("TASKS", widget=self.tasksList)
+        self.setExpanded("TASKS")

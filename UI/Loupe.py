@@ -379,6 +379,7 @@ class Loupe(Widget, EventChildClass):
 
         self.datasetComboBox = ObjectComboBox(handler, hasDatasets=True)
         self.datasetComboBox.setOnIndexChanged(self.onDatasetSelected)
+        self.datasetComboBox.setToolTip("Select dataset to show")
         self.sideBarContainer.layout.addWidget(self.datasetComboBox)
 
         self.sideBar = SideBar(handler, parent=self)
@@ -427,8 +428,11 @@ class Loupe(Widget, EventChildClass):
 
         arrowBar = Widget(parent=pane, layout="horizontal")
         self.indexLeftArrow = ToolButton(self.onPrevious, "leftArrow")
+        self.indexLeftArrow.setToolTip("Previous frame")
         self.playButton = ToolButton(self.toggleVideo, "start")
+        self.playButton.setToolTip("Toggle animation")
         self.indexRightArrow = ToolButton(self.onNext, "rightArrow")
+        self.indexRightArrow.setToolTip("Next frame")
 
         arrowBar.layout.addStretch()
         arrowBar.layout.addWidget(self.indexLeftArrow)

@@ -149,6 +149,14 @@ class WidgetButton(Widget):
         pass
 
 
+class ProgressBar(QtWidgets.QProgressBar):
+    def __init__(self, parent=None, color=None, styleSheet=""):
+        super().__init__(parent=parent)
+
+        Widget.applyDefaultName(self)
+        Widget.applyDefaultStyleSheet(self, color=color, styleSheet=styleSheet)
+
+
 class Slider(Widget):
 
     callbackFunc = None
@@ -607,6 +615,8 @@ class ObjectList(Widget):
         self.widgets[id] = w
         self.layout.addWidget(w)
 
+        self.forceUpdateParent()
+
     def getWidget(self, id):
         return self.widgets.get(id, None)
 
@@ -926,7 +936,6 @@ class ObjectComboBox(ComboBox, EventChildClass):
             self.setCurrentIndex(0)
             self.forceUpdate()
 
-
     def updateComboBox(self, *args):
         self.clear()
         self.addItems(
@@ -953,13 +962,13 @@ class ObjectComboBox(ComboBox, EventChildClass):
         index = self.currentIndex()
         if (index < 0) or (index >= len(self.currentKeyList)):
             return None
-        
+
         return self.currentKeyList[index]
-        
+
     def onIndexChanged(self, index):
         if self.currentlyUpdatingList:
             return
-        
+
         key = self.getActiveKey()
         self.selectedKey = key
 
@@ -1243,6 +1252,7 @@ class SettingsPane(Widget, EventChildClass):
         manualLayout=False,
         insertIndex=None,
         settingsKey=None,
+        toolTip=None,
         **kwargs,
     ):
 
@@ -1312,6 +1322,9 @@ class SettingsPane(Widget, EventChildClass):
             else:
                 self.layout.insertWidget(insertIndex, el)
             self.settingsWidgets[name] = el
+
+        if toolTip is not None:
+            el.setToolTip(toolTip)
 
         self.updateVisibilities()
 

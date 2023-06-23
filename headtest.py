@@ -8,15 +8,15 @@ mpath = "private/ethanol_def_1000.npz"
 env.taskLoadDataset(dpath, "sGDML")
 env.taskLoadModel(mpath, "sGDML")
 
-env.waitForTasks(verbose = True)
+env.waitForTasks(verbose=True)
 
 d = env.getDatasetFromPath(dpath)
 m = env.getModelFromPath(mpath)
 
-env.addToGenerationQueue("atomicForcesError", model = m, dataset = d)
-env.waitForTasks(verbose = True)
+env.addToGenerationQueue("atomicForcesError", model=m, dataset=d)
+env.waitForTasks(verbose=True)
 
-de = env.getData("forcesError", model = m, dataset = d)
+de = env.getData("forcesError", model=m, dataset=d)
 # print(de.keys())
 
 env.headlessQuit()

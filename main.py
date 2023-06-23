@@ -76,19 +76,19 @@ async def eventLoop(UI, env):
     if True and os.path.exists("private"):
         # env.taskLoadDataset("private/big.npz", "sGDML")
         # env.taskLoadDataset("private/myoglobin_1000.npz")
-        env.taskLoadDataset("private/ethanol_spl_200.npz", "sGDML")
+        env.taskLoadDataset("private/ethanol.npz", "sGDML")
         # env.taskLoadDataset("private/grid.npz", "sGDML")
         # env.taskLoadDataset("private/DHA_1000.xyz", "ase")
         # env.taskLoadDataset("private/md22_DHA.npz", "sGDML")
         # env.taskLoadDataset("private/md22_stachyose.npz", "sGDML")
         # env.taskLoadModel("private/neq_DHA_1000.pth", "Nequip")
         # env.taskLoadModel("private/neq_sal_1000.pth")
-        # env.taskLoadModel("private/ethanol_def_1000.npz", "sGDML")
+        env.taskLoadModel("private/ethanol_def_1000.npz", "sGDML")
         # env.taskLoadModel("private/eth_schnet")
         # env.taskLoadModel("private/eth_il_1000.npz", "sGDML")
         pass
 
-    # env.newTask(nh.taskWatchDog, name="TaskWatchDog", visual=True)
+    # env.newTask(nh.countingTask, name="TaskWatchDog", visual=True)
     while not UI.quitReady:
         await UI.eventHandle()
         await env.eventHandle()
@@ -97,7 +97,7 @@ async def eventLoop(UI, env):
         await taskManager.eventHandle()
         await taskManager.handleTaskQueue()
         await asyncio.sleep(0.1)
-    
+
     await UI.eventHandle()
     await env.eventHandle()
     await taskManager.eventHandle()
@@ -116,6 +116,7 @@ async def main():
     loadModules(UI, env)
 
     await eventLoop(UI, env)
+
 
 if __name__ == "__main__":
     # add logging filters

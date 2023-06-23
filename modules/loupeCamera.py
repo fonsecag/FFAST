@@ -86,9 +86,17 @@ def loadLoupe(UIHandler, loupe):
     # SETTINGS PANE
     pane = SettingsPane(UIHandler, loupe.settings, parent=loupe)
 
-    pane.addSetting("CheckBox", "Origin COM", settingsKey="originCenterOfMass")
     pane.addSetting(
-        "CheckBox", "Orthographic", settingsKey="cameraOrthographic"
+        "CheckBox",
+        "Origin COM",
+        settingsKey="originCenterOfMass",
+        toolTip="Dynamically move the center of the camera to the centre of mass of the molecule",
+    )
+    pane.addSetting(
+        "CheckBox",
+        "Orthographic",
+        settingsKey="cameraOrthographic",
+        toolTip="Toggle parallel projection, useful for periodic systems",
     )
 
     # add pane

@@ -9,6 +9,7 @@ logger = logging.getLogger("FFAST")
 
 DEPENDENCIES = ["basicErrors"]
 
+
 def loadData(env):
     class AtomicForcesErrorDist(DataType):
         modelDependent = True
@@ -40,7 +41,11 @@ def loadData(env):
 
                 kde = gaussian_kde(np.abs(mae))
 
-                distX = np.linspace(np.min(mae) * 0.95, np.max(mae) * 1.05, getConfig("plotDistNum"))
+                distX = np.linspace(
+                    np.min(mae) * 0.95,
+                    np.max(mae) * 1.05,
+                    getConfig("plotDistNum"),
+                )
                 distY = kde(distX)
 
                 out[zIntToZStr[i]] = {"distY": distY, "distX": distX}
@@ -76,7 +81,7 @@ def loadData(env):
 
                 diff = diff.reshape(diff.shape[0], -1)
                 mae = np.mean(np.abs(diff))
-                rmse = np.sqrt(np.mean(diff**2))
+                rmse = np.sqrt(np.mean(diff ** 2))
 
                 out[zIntToZStr[i]] = {"mae": mae, "rmse": rmse}
 
@@ -86,6 +91,7 @@ def loadData(env):
 
     env.registerDataType(AtomicForcesErrorDist)
     env.registerDataType(AtomicForceErrors)
+
 
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab, DatasetModelSelector, ListCheckButton

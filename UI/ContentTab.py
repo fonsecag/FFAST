@@ -105,6 +105,7 @@ class DatasetModelSelector(Widget, EventChildClass):
 
         self.eventSubscribe("DATASET_LOADED", self.updateDatasetsList)
         self.eventSubscribe("DATASET_DELETED", self.updateDatasetsList)
+        self.eventSubscribe("DATASET_STATE_CHANGED", self.updateDatasetsList)
 
         self.eventSubscribe("MODEL_LOADED", self.updateModelsList)
         self.eventSubscribe("MODEL_DELETED", self.updateModelsList)

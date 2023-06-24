@@ -45,6 +45,7 @@ class DatasetLoader(EventClass):
 
     isSubDataset = False
     isGhost = False
+    frozen = False
 
     def __init__(self, path):
         self.path = path
@@ -180,12 +181,18 @@ class DatasetLoader(EventClass):
 
         return idxs
 
+    def isDependentOn(self, fp):
+        # base datasets cant depend on other things, thats for subdatasets
+        return False
+
 
 class SubDataset(DatasetLoader):
     loadeeType = "dataset"
     isSubDataset = True
 
-    datasetType = "Sub-dataset"
+    datasetName = "SubDataset"
+    datasetType = "SubDataset"
+
     loaded = False
     modelDep = None
     parent = None
@@ -291,3 +298,59 @@ class SubDataset(DatasetLoader):
 
     def getElementsName(self):
         return self.parent.getElementsName()
+
+    def getInfo(self):
+        model = "None"
+        if self.modelDep is not None:
+            model = self.modelDep.getDisplayName()
+        return [
+            ("Parent", self.parent.getDisplayName()),
+            ("Model", model),
+            ("Plots", self.subName),
+        ]
+
+    def isDependentOn(self, obj):
+        if obj is None:
+            return False
+
+        if self.parent is obj:
+            return True
+
+        if self.modelDep is obj:
+            return True
+
+        return False
+
+
+class FrozenSubDataset(SubDataset):
+
+    frozen = True
+    datasetName = "SubDataset (frozen)"
+    datasetType = "FrozenSubDataset"
+
+    def __init__(self, *args):
+        super().__init__(*args)
+
+    def setIndices(self):
+        pass
+
+    def getFingerprint(
+        self, parent=None, model=None, subName=None, indices=None
+    ):
+        if parent is None:
+            parent = self.parent
+        if model is None:
+            model = self.modelDep
+        if subName is None:
+            subName = self.subName
+        if indices is None:
+            indices = self.indices
+
+        if model is None:
+            fp = md5FromArraysAndStrings(parent.fingerprint, subName, indices)
+        else:
+            fp = md5FromArraysAndStrings(
+                parent.fingerprint, model.fingerprint, subName, indices
+            )
+
+        return fp

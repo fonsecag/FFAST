@@ -128,7 +128,7 @@ def loadData(env):
 
 
 def loadUI(UIHandler, env):
-    from UI.ContentTab import ContentTab, DatasetModelSelector
+    from UI.ContentTab import ContentTab
     from UI.Plots import BasicPlotWidget
     from UI.Templates import Slider
 

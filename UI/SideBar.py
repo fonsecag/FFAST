@@ -41,6 +41,10 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         )
 
         self.eventSubscribe("DATASET_UPDATED", self.applyInfo)
+        self.eventSubscribe("OBJECT_NAME_CHANGED", self.applyInfo)
+        self.eventSubscribe(
+            "DATASET_STATE_CHANGED", self.onDatasetStateChanged
+        )
 
         ## TOP PART
         self.layout.setContentsMargins(8, 8, 8, 8)
@@ -98,7 +102,14 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
 
         layout.addWidget(self.renameButton)
 
-        if not self.getObject().isSubDataset:
+        if (self.getObject().isSubDataset) and not (self.getObject().frozen):
+            self.freezeButton = ToolButton(self.freezeObject, icon="freeze")
+            self.freezeButton.setFixedSize(25, 25)
+            self.freezeButton.setToolTip(
+                "Freeze current indices to keep subdataset as is"
+            )
+            layout.addWidget(self.freezeButton)
+        else:
             self.deleteButton = ToolButton(self.deleteObject, icon="delete")
             self.deleteButton.setFixedSize(25, 25)
             self.deleteButton.setToolTip("Remove")
@@ -143,7 +154,13 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
     def applyInfo(self, key=None):
         if key is not None:
             if key != self.id:
-                return
+                # if subdataset, could care about name changes of parents
+                dataset = self.handler.env.getDataset(self.id)
+                if dataset is None:
+                    return
+                obj = self.handler.env.getObject(key)
+                if not dataset.isDependentOn(obj):
+                    return
 
         dataset = self.handler.env.getDataset(self.id)
         if dataset is not None:
@@ -166,6 +183,9 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
     def deleteObject(self):
         self.handler.env.deleteObject(self.id)
 
+    def freezeObject(self):
+        self.handler.env.freezeSubDataset(self.id)
+
     def renameObject(self):
         self.titleLabel.setText(
             self.getObject().getName()
@@ -179,6 +199,18 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
             self.titleLabel.text()
         )  # also calls the event
         self.applyInfo()
+
+    def onDatasetStateChanged(self, fingerprint):
+        if fingerprint != self.id:
+            return
+
+        dataset = self.getObject()
+        if dataset.active:
+            self.show()
+        else:
+            self.hide()
+
+        self.forceUpdateParent()
 
 
 class DatasetObjectList(ObjectList, EventChildClass):

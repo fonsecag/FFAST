@@ -1,5 +1,5 @@
 from events import EventClass
-from loaders.datasetLoader import SubDataset
+from loaders.datasetLoader import SubDataset, FrozenSubDataset
 from loaders.modelGhost import GhostModelLoader
 from loaders.zeroModel import ZeroModelLoader
 from tasks import TaskManager
@@ -273,6 +273,27 @@ class Environment(EventClass):
             sub.setIndices(idx)
             sub.setActive(True)
 
+    def freezeSubDataset(self, fingerprint):
+        dataset = self.getDataset(fingerprint)
+        if (dataset is None) or (not dataset.isSubDataset):
+            return
+
+        fp = FrozenSubDataset.getFingerprint(
+            FrozenSubDataset,
+            parent=dataset.parent,
+            model=dataset.modelDep,
+            indices=dataset.indices,
+            subName=dataset.subName,
+        )
+        if self.getDataset(fp) is not None:
+            return
+
+        sub = FrozenSubDataset(
+            dataset.parent, dataset.modelDep, dataset.indices, dataset.subName
+        )
+        sub.initialise()
+        self.setNewDataset(sub)
+
     #############
     ## OBJECTS (MODELS & DATASETS)
     #############
@@ -283,6 +304,9 @@ class Environment(EventClass):
             return self.getDataset(key)
         else:
             return model
+
+    def getObject(self, *args):
+        return self.getModelOrDataset(*args)
 
     def getKeyFromPath(self, path):
         # check dataset

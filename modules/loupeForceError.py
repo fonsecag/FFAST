@@ -134,6 +134,8 @@ class ForceErrorColorProperty(CanvasProperty):
             return
         de = data[0]  # just one dataset-model combination is watched
         atomicMAE = de.get("atomicMAE")
+        if atomicMAE is None:
+            return
         meanAtomicMAE = np.mean(atomicMAE, axis=0)
         perc = getConfig("loupeForceErrorPercentile") * 100
 
@@ -229,7 +231,7 @@ def addSettings(UIHandler, loupe):
 
     dw = DataWatcher(loupe.env)
     loupe.forceErrorDataWatcher = dw
-    dw.setDataDependencies("forcesError")
+    dw.setDataDependencies("forcesErrorMetrics")
     dw.addCallback(updateForceErrorColor)
 
     settings = loupe.settings

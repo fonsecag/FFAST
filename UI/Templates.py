@@ -105,13 +105,14 @@ class Widget(QWidget):
                 # otherwise things just dont update properly
                 # also, only .adjustSize is also not good enough for some reason
                 w.forceUpdateLayout()
+                w.forceUpdateSize()
                 d += 1
             elif isinstance(w, HorizontalExpandingScrollArea) or isinstance(
                 w, ExpandingScrollArea
             ):
                 # w.adjustSize()
                 w.forceUpdateSize()
-                # forces resize event, gives invalid "previous size" to force it
+                # forces resize event, gives invalid "previous size" to force an update
                 d += 1
 
             elif anyWidget:
@@ -479,7 +480,7 @@ class HorizontalExpandingScrollArea(QtWidgets.QScrollArea):
         super().__init__(**kwargs)
         self.setWidgetResizable(True)
         # horizontal then vertical
-        self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Minimum)
+        self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
         self.setMaximumWidth(0)
         self.setMinimumWidth(0)
 
@@ -498,12 +499,34 @@ class HorizontalExpandingScrollArea(QtWidgets.QScrollArea):
         return QtCore.QSize(w, super().sizeHint().height() + 10)
 
     def resizeEvent(self, *args):
-        h = self.contentWidget.sizeHint().height()
         self.setMinimumHeight(self.contentWidget.sizeHint().height() + 10)
+        self.setMaximumHeight(self.contentWidget.sizeHint().height() + 10)
         QtWidgets.QScrollArea.resizeEvent(self, *args)
 
     def forceUpdateSize(self):
+        self.contentWidget.forceUpdateSize()
         self.resizeEvent(QtGui.QResizeEvent(self.size(), QtCore.QSize()))
+
+
+class HorizontalContainerScrollArea(Widget):
+    def __init__(self, **kwargs):
+        super().__init__(layout="vertical", **kwargs)
+        self.scrollArea = HorizontalExpandingScrollArea()
+        self.content = Widget(layout="horizontal")
+        self.scrollArea.setContent(self.content)
+        self.layout.addWidget(self.scrollArea)
+
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
+    def addContent(self, widget):
+        self.content.layout.addWidget(widget)
+
+    def addStretch(self):
+        self.content.layout.addStretch()
+
+    def resizeEvent(self, *args):
+        Widget.resizeEvent(self, *args)
+        self.scrollArea.setMaximumWidth(self.width())
 
 
 class CollapseButton(QtWidgets.QPushButton, Widget):
@@ -551,7 +574,6 @@ class CollapseButton(QtWidgets.QPushButton, Widget):
         return self.collapsingWidget.isVisible()
 
     def updateSize(self):
-        w = self
         self.forceUpdateParent()
 
     def setCallback(self, func):
@@ -1116,40 +1138,32 @@ class TableView(Widget):
         self.headerTop = headerTop
 
         self.labels = []
+        self.headerTopLabels = []
+        self.headerLeftLabels = []
+        self.cornerLabel = BasicLabelWidget(
+            widgetName="tableHeaderLabelCorner",
+            styleSheet=self.headerLabelStyleSheet,
+            spacing=self.spacing,
+            color="transparent",
+        )
         self.columnWidgets = []
+        self.headerLeftWidget = Widget(layout="vertical")
+        self.headerLeftWidget.layout.addWidget(self.cornerLabel)
+        self.layout.addWidget(self.headerLeftWidget)
 
     def setSize(self, nRows, nCols):
+        self.tableSize = (nRows, nCols)
+        self.updateHeaders()
 
         # create labels if necessary
-        for col in range(0, nCols + 1):
-
-            if col >= len(self.labels):
-                self.columnWidgets.append(Widget(layout="vertical"))
-                self.layout.addWidget(self.columnWidgets[col])
-                self.labels.append([])
-
-            for row in range(len(self.labels[col]), nRows + 1):
-
-                if (col == 0) or (row == 0):
-                    if (col == 0) and (row == 0):
-                        name = "tableHeaderLabelCorner"
-                    elif col == 0:
-                        name = "tableHeaderLabelLeft"
-                    elif row == 0:
-                        name = "tableHeaderLabelTop"
-                    label = BasicLabelWidget(
-                        widgetName=name,
-                        styleSheet=self.headerLabelStyleSheet,
-                        spacing=self.spacing,
-                        color="transparent",
-                    )
-                else:
-                    label = BasicLabelWidget(
-                        widgetName="tableHeaderLabel",
-                        styleSheet=self.labelStyleSheet,
-                        spacing=self.spacing,
-                        color="transparent",
-                    )
+        for col in range(0, nCols):
+            for row in range(len(self.labels[col]), nRows):
+                label = BasicLabelWidget(
+                    widgetName="tableHeaderLabel",
+                    styleSheet=self.labelStyleSheet,
+                    spacing=self.spacing,
+                    color="transparent",
+                )
                 # need transparent color for borders to show, idk why and honestly I dont care to find out
 
                 self.labels[col].append(label)
@@ -1157,22 +1171,14 @@ class TableView(Widget):
 
         # hide/show those needed
         for col in range(len(self.labels)):
-
-            # hide entire column if not needed
-            if col >= nCols + 1:
-                self.hideLabel(self.columnWidgets[col])
-            else:
-                self.showLabel(self.columnWidgets[col])
-
             for row in range(len(self.labels[col])):
 
-                if row >= nRows + 1:
+                if (row >= nRows) or (col >= nCols):
                     self.hideLabel(self.labels[col][row])
                 else:
                     self.showLabel(self.labels[col][row])
 
-        self.tableSize = (nRows, nCols)
-        self.updateHeaders()
+        self.forceUpdateParent()  # doesnt do anything, idk whyyyy
 
     def showLabel(self, label):
         label.show()
@@ -1181,17 +1187,53 @@ class TableView(Widget):
         label.hide()
 
     def updateHeaders(self):
-        for col in range(len(self.labels)):
-            if self.headerTop:
-                self.showLabel(self.labels[col][0])
-            else:
-                self.hideLabel(self.labels[col][0])
+        nRows, nCols = self.tableSize
 
-        for row in range(len(self.labels)):
-            if self.headerTop:
-                self.showLabel(self.labels[0][row])
+        # CREATE LEFT HEADERS
+        for row in range(len(self.headerLeftLabels), nRows):
+            label = BasicLabelWidget(
+                widgetName="tableHeaderLabelLeft",
+                styleSheet=self.headerLabelStyleSheet,
+                spacing=self.spacing,
+                color="transparent",
+            )
+            self.headerLeftLabels.append(label)
+            self.headerLeftWidget.layout.addWidget(label)
+
+        # CREATE TOP HEADERS
+        for col in range(len(self.columnWidgets), nCols):
+            self.columnWidgets.append(Widget(layout="vertical"))
+            self.layout.addWidget(self.columnWidgets[col])
+            self.labels.append([])
+
+            label = BasicLabelWidget(
+                widgetName="tableHeaderLabelTop",
+                styleSheet=self.headerLabelStyleSheet,
+                spacing=self.spacing,
+                color="transparent",
+            )
+            self.headerTopLabels.append(label)
+            self.columnWidgets[col].layout.addWidget(label)
+
+        # CORNER LABEL
+        if not self.headerTop:
+            self.cornerLabel.hide()
+        else:
+            self.cornerLabel.show()
+
+        # HIDE/SHOW LEFT HEADERS
+        for row in range(len(self.headerLeftLabels)):
+            if self.headerLeft and row < nRows:
+                self.showLabel(self.headerLeftLabels[row])
             else:
-                self.hideLabel(self.labels[0][row])
+                self.hideLabel(self.headerLeftLabels[row])
+
+        # HIDE/SHOW TOP HEADERS
+        for col in range(len(self.headerTopLabels)):
+            if self.headerTop and col < nCols:
+                self.showLabel(self.headerTopLabels[col])
+            else:
+                self.hideLabel(self.headerTopLabels[col])
 
     def setValue(self, row, col, s):
         nRows, nCols = self.tableSize
@@ -1201,14 +1243,14 @@ class TableView(Widget):
                 f"Tried to set table value at ({row},{col}) but size is {self.tableSize}"
             )
 
-        label = self.labels[col + 1][row + 1]
+        label = self.labels[col][row]
         label.setText(s)
 
     def setLeftHeader(self, row, s):
-        self.labels[0][row + 1].setText(s)
+        self.headerLeftLabels[row].setText(s)
 
     def setTopHeader(self, col, s):
-        self.labels[col + 1][0].setText(s)
+        self.headerTopLabels[col].setText(s)
 
 
 #############

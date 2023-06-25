@@ -496,13 +496,16 @@ class Table(Widget, EventChildClass, DataDependentObject):
             **kwargs,
         )
 
-        self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        # self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 
         EventChildClass.__init__(self)
         DataDependentObject.__init__(self)
 
         self.layout.setContentsMargins(13, 13, 13, 13)
         self.layout.setSpacing(8)
+        self.eventSubscribe(
+            "OBJECT_NAME_CHANGED", self.onModelDatasetNameChanged
+        )
 
         # TOOLBAR
         self.toolbar = Widget(layout="horizontal")
@@ -551,8 +554,7 @@ class Table(Widget, EventChildClass, DataDependentObject):
         self.loadButton = DataloaderButton(self.handler, self.dataWatcher)
         layout.addWidget(self.loadButton)
 
-    def visualRefresh(self):
-        self.table.setSize(*self.getSize())
+    def refreshHeaders(self):
         nRows, nCols = self.table.tableSize
 
         # HEADERS
@@ -561,6 +563,19 @@ class Table(Widget, EventChildClass, DataDependentObject):
 
         for row in range(nRows):
             self.setLeftHeader(row, self.getLeftHeader(row))
+
+    def refreshValues(self):
+        nRows, nCols = self.table.tableSize
+
+        for row in range(nRows):
+            for col in range(nCols):
+                self.setValue(row, col, self.getValue(row, col))
+
+    def visualRefresh(self):
+        self.table.setSize(*self.getSize())
+
+        self.refreshHeaders()
+        self.refreshValues()
 
         self.forceUpdateParent()
 
@@ -600,3 +615,9 @@ class Table(Widget, EventChildClass, DataDependentObject):
 
     def getTopHeader(self, i):
         return NotImplementedError
+
+    def onModelDatasetNameChanged(self, key):
+        if not self.dataWatcher.isDependentOn(key):
+            return
+
+        self.refreshHeaders()

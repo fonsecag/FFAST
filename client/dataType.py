@@ -27,7 +27,7 @@ class DataEntity:
             else:
                 return None
 
-        return self.data[key]
+        return self.data.get(key, None)
 
     def keys(self):
         return list(self.data.keys())

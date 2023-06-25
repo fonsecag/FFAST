@@ -179,12 +179,15 @@ def loadData(env):
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab
     from UI.Plots import BasicPlotWidget, Table
-    from UI.Templates import Slider, Widget, HorizontalExpandingScrollArea
+    from UI.Templates import Slider, Widget, HorizontalContainerScrollArea
 
     ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Basic Errors")
 
     # TABLES
+    scrollContainer = HorizontalContainerScrollArea()
+    scrollContainer.content.layout.setSpacing(32)
+
     class BaseTable(Table):
         def __init__(self, **kwargs):
             super().__init__(UIHandler, parent=ct, **kwargs)
@@ -197,13 +200,14 @@ def loadUI(UIHandler, env):
             return (nRows, nCols)
 
         def getLeftHeader(self, i):
-            return f"Model {i}"
+            models = self.getModelDependencies()
+            model = self.handler.env.getModel(models[i])
+            return f"{model.getDisplayName()}"
 
         def getTopHeader(self, i):
-            return f"Dataset {i}"
-
-    container = Widget(layout="horizontal")
-    container.layout.setSpacing(32)
+            datasets = self.getDatasetDependencies()
+            dataset = self.handler.env.getDataset(datasets[i])
+            return f"{dataset.getDisplayName()}"
 
     class EnergyMAETable(BaseTable):
         def __init__(self):
@@ -211,9 +215,21 @@ def loadUI(UIHandler, env):
             self.setDataDependencies("energyErrorMetrics")
 
         def getValue(self, i, j):
-            return f"E {i},{j}"
+            env = self.handler.env
+            model = self.getModelDependencies()[i]
+            dataset = self.getDatasetDependencies()[j]
+            de = env.getData(
+                "energyErrorMetrics",
+                model=env.getModel(model),
+                dataset=env.getDataset(dataset),
+            )
 
-    container.layout.addWidget(EnergyMAETable())
+            if de is None:
+                return ""
+            else:
+                return f"{de.get('mae'):.2f}"
+
+    scrollContainer.addContent(EnergyMAETable())
 
     class EnergyRMSETable(BaseTable):
         def __init__(self):
@@ -221,9 +237,21 @@ def loadUI(UIHandler, env):
             self.setDataDependencies("energyErrorMetrics")
 
         def getValue(self, i, j):
-            return f"E {i},{j}"
+            env = self.handler.env
+            model = self.getModelDependencies()[i]
+            dataset = self.getDatasetDependencies()[j]
+            de = env.getData(
+                "energyErrorMetrics",
+                model=env.getModel(model),
+                dataset=env.getDataset(dataset),
+            )
 
-    container.layout.addWidget(EnergyRMSETable())
+            if de is None:
+                return ""
+            else:
+                return f"{de.get('rmse'):.2f}"
+
+    scrollContainer.addContent(EnergyRMSETable())
 
     class ForcesMAETable(BaseTable):
         def __init__(self):
@@ -231,9 +259,21 @@ def loadUI(UIHandler, env):
             self.setDataDependencies("forcesErrorMetrics")
 
         def getValue(self, i, j):
-            return f"F {i},{j}"
+            env = self.handler.env
+            model = self.getModelDependencies()[i]
+            dataset = self.getDatasetDependencies()[j]
+            de = env.getData(
+                "forcesErrorMetrics",
+                model=env.getModel(model),
+                dataset=env.getDataset(dataset),
+            )
 
-    container.layout.addWidget(ForcesMAETable())
+            if de is None:
+                return ""
+            else:
+                return f"{de.get('mae'):.2f}"
+
+    scrollContainer.addContent(ForcesMAETable())
 
     class ForcesRMSERable(BaseTable):
         def __init__(self):
@@ -241,14 +281,24 @@ def loadUI(UIHandler, env):
             self.setDataDependencies("forcesErrorMetrics")
 
         def getValue(self, i, j):
-            return f"F {i},{j}"
+            env = self.handler.env
+            model = self.getModelDependencies()[i]
+            dataset = self.getDatasetDependencies()[j]
+            de = env.getData(
+                "forcesErrorMetrics",
+                model=env.getModel(model),
+                dataset=env.getDataset(dataset),
+            )
 
-    container.layout.addWidget(ForcesRMSERable())
+            if de is None:
+                return ""
+            else:
+                return f"{de.get('rmse'):.2f}"
 
-    container.layout.addStretch()
-    scroll = HorizontalExpandingScrollArea()
-    scroll.setContent(container)
-    ct.addWidget(scroll, 0, 0, 1, 2)
+    scrollContainer.addContent(ForcesRMSERable())
+    scrollContainer.addStretch()
+
+    ct.addWidget(scrollContainer, 0, 0, 1, 2)
 
     # PLOTS
 

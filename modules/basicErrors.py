@@ -28,7 +28,7 @@ def loadData(env):
 
             diff = ePred.get("energy") - eData
             mae = np.mean(np.abs(diff))
-            de = self.newDataEntity(diff=diff, mae=mae)
+            de = self.newDataEntity(diff=diff)  # , mae=mae)
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 
@@ -54,7 +54,7 @@ def loadData(env):
             rmse = np.sqrt(np.mean(diff ** 2))
 
             de = self.newDataEntity(
-                diff=diff, atomicMAE=atomicMAE, mae=mae, rmse=rmse
+                diff=diff  # atomicMAE=atomicMAE, mae=mae, rmse=rmse
             )
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
@@ -121,27 +121,134 @@ def loadData(env):
             env.setData(de, self.key, model=model, dataset=dataset)
             return True
 
+    class EnergyErrorMetrics(DataType):
+        modelDependent = True
+        datasetDependent = True
+        key = "energyErrorMetrics"
+        dependencies = ["energyError"]
+        iterable = False
+
+        def __init__(self, *args):
+            super().__init__(*args)
+
+        def data(self, dataset=None, model=None, taskID=None):
+            env = self.env
+
+            eErr = env.getData("energyError", model=model, dataset=dataset)
+
+            diff = np.abs(eErr.get("diff"))
+            mae = np.mean(np.abs(diff))
+            rmse = np.sqrt(np.mean(diff ** 2))
+
+            de = self.newDataEntity(mae=mae, rmse=rmse)
+            env.setData(de, self.key, model=model, dataset=dataset)
+            return True
+
+    class ForcesErrorMetrics(DataType):
+        modelDependent = True
+        datasetDependent = True
+        key = "forcesErrorMetrics"
+        dependencies = ["forcesError"]
+        iterable = False
+
+        def __init__(self, *args):
+            super().__init__(*args)
+
+        def data(self, dataset=None, model=None, taskID=None):
+            env = self.env
+
+            err = env.getData("forcesError", model=model, dataset=dataset)
+
+            diff = np.abs(err.get("diff"))
+            atomicMAE = np.mean(np.abs(diff), axis=2)
+            mae = np.mean(np.abs(diff))
+            rmse = np.sqrt(np.mean(diff ** 2))
+
+            de = self.newDataEntity(atomicMAE=atomicMAE, mae=mae, rmse=rmse)
+            env.setData(de, self.key, model=model, dataset=dataset)
+            return True
+
     env.registerDataType(EnergyPredictionError)
     env.registerDataType(ForcesPredictionError)
     env.registerDataType(EnergyErrorDist)
     env.registerDataType(ForcesErrorDist)
+    env.registerDataType(EnergyErrorMetrics)
+    env.registerDataType(ForcesErrorMetrics)
 
 
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab
-    from UI.Plots import BasicPlotWidget
-    from UI.Templates import Slider, TableView
+    from UI.Plots import BasicPlotWidget, Table
+    from UI.Templates import Slider, Widget, HorizontalExpandingScrollArea
 
     ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Basic Errors")
 
     # TABLES
-    table = TableView()
-    ct.addWidget(table, 0, 0)
-    table.setSize(2,2)
-    table.setValue(0,1,"asah")
-    table.setValue(1,0, "AISUHFAU*HD")
-    table.setLeftHeader(1, "aifuh")
+    class BaseTable(Table):
+        def __init__(self, **kwargs):
+            super().__init__(UIHandler, parent=ct, **kwargs)
+            ct.addDataSelectionCallback(self.setModelDatasetDependencies)
+
+        def getSize(self):
+            # placeholder, should be implemented by user
+            nCols = len(self.getDatasetDependencies())
+            nRows = len(self.getModelDependencies())
+            return (nRows, nCols)
+
+        def getLeftHeader(self, i):
+            return f"Model {i}"
+
+        def getTopHeader(self, i):
+            return f"Dataset {i}"
+
+    container = Widget(layout="horizontal")
+    container.layout.setSpacing(32)
+
+    class EnergyMAETable(BaseTable):
+        def __init__(self):
+            super().__init__(title="Energy MAE")
+            self.setDataDependencies("energyErrorMetrics")
+
+        def getValue(self, i, j):
+            return f"E {i},{j}"
+
+    container.layout.addWidget(EnergyMAETable())
+
+    class EnergyRMSETable(BaseTable):
+        def __init__(self):
+            super().__init__(title="Energy RMSE")
+            self.setDataDependencies("energyErrorMetrics")
+
+        def getValue(self, i, j):
+            return f"E {i},{j}"
+
+    container.layout.addWidget(EnergyRMSETable())
+
+    class ForcesMAETable(BaseTable):
+        def __init__(self):
+            super().__init__(title="Forces MAE")
+            self.setDataDependencies("forcesErrorMetrics")
+
+        def getValue(self, i, j):
+            return f"F {i},{j}"
+
+    container.layout.addWidget(ForcesMAETable())
+
+    class ForcesRMSERable(BaseTable):
+        def __init__(self):
+            super().__init__(title="Forces RMSE")
+            self.setDataDependencies("forcesErrorMetrics")
+
+        def getValue(self, i, j):
+            return f"F {i},{j}"
+
+    container.layout.addWidget(ForcesRMSERable())
+
+    container.layout.addStretch()
+    scroll = HorizontalExpandingScrollArea()
+    scroll.setContent(container)
+    ct.addWidget(scroll, 0, 0, 1, 2)
 
     # PLOTS
 
@@ -152,7 +259,7 @@ def loadUI(UIHandler, env):
                 title="Energy MAE distribution",
                 isSubbable=True,
                 name="Energy Error Distribution",
-                **kwargs
+                **kwargs,
             )
             self.setDataDependencies("energyErrorDist")
             self.setXLabel("Energy MAE", getConfig("energyUnit"))
@@ -193,7 +300,7 @@ def loadUI(UIHandler, env):
                 # but there only one/two points can realistically be selected
                 # at the same time
                 name="Force Error Distribution",
-                **kwargs
+                **kwargs,
             )
             self.setDataDependencies("forcesErrorDist")
             self.setXLabel("Forces MAE", getConfig("forceUnit"))
@@ -229,7 +336,7 @@ def loadUI(UIHandler, env):
                 handler,
                 title="Energy MAE timeline",
                 name="Energy Error TimelineP",
-                **kwargs
+                **kwargs,
             )
             self.setDataDependencies("energyError")
             self.setXLabel("Configuration index")
@@ -273,7 +380,7 @@ def loadUI(UIHandler, env):
                 handler,
                 title="Forces MAE timeline",
                 name="Force Error Timeline",
-                **kwargs
+                **kwargs,
             )
             self.setDataDependencies("forcesError")
             self.setXLabel("Configuration index")

@@ -9,6 +9,7 @@ from config.uiConfig import configStyleSheet
 from utils import rgbToHex
 import logging
 from events import EventChildClass
+from PySide6.QtWidgets import QSizePolicy
 
 logger = logging.getLogger("FFAST")
 
@@ -43,6 +44,7 @@ class ContentTab(ExpandingScrollArea):
     ):
         self.handler = handler
         super().__init__(**kwargs)
+        # self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
         self.widget = Widget(layout="vertical", color=color, parent=self)
         self.setContent(self.widget)

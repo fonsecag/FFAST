@@ -84,7 +84,8 @@ async def eventLoop(UI, env):
         # env.taskLoadModel("private/neq_DHA_1000.pth", "Nequip")
         # env.taskLoadModel("private/neq_sal_1000.pth")
         env.taskLoadModel("private/ethanol_def_1000.npz", "sGDML")
-        # env.taskLoadModel("private/eth_schnet")
+        env.taskLoadModel("private/eth_il_1000.npz", "sGDML")
+        env.taskLoadModel("private/eth_schnet", "SchNet")
         # env.taskLoadModel("private/eth_il_1000.npz", "sGDML")
         pass
 

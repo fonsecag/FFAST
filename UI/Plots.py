@@ -1,4 +1,4 @@
-from UI.Templates import Widget, ToolCheckButton, PushButton
+from UI.Templates import Widget, ToolCheckButton, PushButton, TableView
 from PySide6 import QtCore, QtGui, QtWidgets
 from config.uiConfig import config, configStyleSheet
 from PySide6.QtCore import QEvent, Qt
@@ -32,6 +32,12 @@ class DataDependentObject:
 
     def setModelDatasetDependencies(self, *args):
         self.dataWatcher.setModelDatasetDependencies(*args)
+
+    def getDatasetDependencies(self):
+        return self.dataWatcher.getDatasetDependencies()
+
+    def getModelDependencies(self):
+        return self.dataWatcher.getModelDependencies()
 
     def initialiseWatcher(self):
         dw = DataWatcher(self.handler.env)
@@ -464,3 +470,133 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
     def addOption(self, widget):
         self.optionsToolbar.layout.insertWidget(0, widget)
+
+
+class Table(Widget, EventChildClass, DataDependentObject):
+
+    lastUpdatedStamp = -1
+    styleSheet = """
+    @OBJECT{
+        border-radius:10px;
+    }
+    """
+
+    def __init__(
+        self, handler, name="N/A", title="N/A", isSubbable=True, **kwargs
+    ):
+        self.handler = handler
+        self.env = handler.env
+        self.name = name
+        self.isSubbable = isSubbable
+
+        super().__init__(
+            layout="vertical",
+            color="@BGColor3",
+            styleSheet=self.styleSheet,
+            **kwargs,
+        )
+
+        self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+
+        EventChildClass.__init__(self)
+        DataDependentObject.__init__(self)
+
+        self.layout.setContentsMargins(13, 13, 13, 13)
+        self.layout.setSpacing(8)
+
+        # TOOLBAR
+        self.toolbar = Widget(layout="horizontal")
+        self.toolbar.setFixedHeight(30)
+        self.toolbar.setObjectName("plotToolbar")
+        self.layout.addWidget(self.toolbar)
+
+        # DIVIDER
+        divider = Widget(color="@TextColor3")
+        divider.setFixedHeight(1)
+        self.layout.addWidget(divider)
+
+        # OPTIONS
+        self.optionsToolbar = Widget(layout="horizontal")
+        self.optionsToolbar.setObjectName("plotoptionsToolbar")
+        self.optionsToolbar.layout.addStretch()
+        self.layout.addWidget(self.optionsToolbar)
+
+        # TABLEVIEW
+        self.table = TableView()
+        self.layout.addWidget(self.table)
+        self.applyToolbar(title=title)  # needs the table to exist (does it?)
+
+        # REFRESH
+        self.eventSubscribe("WIDGET_REFRESH", self.onWidgetRefresh)
+        self.eventSubscribe("WIDGET_VISUAL_REFRESH", self.visualRefresh)
+
+        # EVENTS
+        self.eventSubscribe(
+            "OBJECT_NAME_CHANGED", self.onModelDatasetNameChanged
+        )
+
+    def applyToolbar(self, title="N/A"):
+        layout = self.toolbar.layout
+        layout.setContentsMargins(20, 0, 0, 0)
+        layout.setSpacing(8)
+
+        self.titleLabel = QtWidgets.QLabel(title)
+        self.titleLabel.setObjectName("plotTitleLabel")
+        layout.addWidget(self.titleLabel)
+
+        layout.addStretch()
+
+        # add buttons here if needed
+
+        self.loadButton = DataloaderButton(self.handler, self.dataWatcher)
+        layout.addWidget(self.loadButton)
+
+    def visualRefresh(self):
+        self.table.setSize(*self.getSize())
+        nRows, nCols = self.table.tableSize
+
+        # HEADERS
+        for col in range(nCols):
+            self.setTopHeader(col, self.getTopHeader(col))
+
+        for row in range(nRows):
+            self.setLeftHeader(row, self.getLeftHeader(row))
+
+        self.forceUpdateParent()
+
+    def refresh(self):
+        self.visualRefresh()
+
+    def onModelDatasetNameChanged(self, key):
+        pass
+
+    def setValue(self, *args):
+        self.table.setValue(*args)
+
+    def setSize(self, *args):
+        self.table.setSize(*args)
+
+    def setLeftHeader(self, *args):
+        self.table.setLeftHeader(*args)
+
+    def setTopHeader(self, *args):
+        self.table.setTopHeader(*args)
+
+    def onWidgetRefresh(self, widget):
+        if self is not widget:
+            return
+        self.refresh()
+
+    def getValue(self, i, j):
+        # placeholder, should be implemented by user
+        return NotImplementedError
+
+    def getSize(self):
+        # placeholder, should be implemented by user
+        return NotImplementedError
+
+    def getLeftHeader(self, i):
+        return NotImplementedError
+
+    def getTopHeader(self, i):
+        return NotImplementedError

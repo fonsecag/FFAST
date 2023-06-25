@@ -77,8 +77,9 @@ class Widget(QWidget):
             ss = ss + f"@OBJECT{{background-color:{color};}}"
 
         ss = ss.replace("@OBJECT", f"QWidget#{self.objectName}")
+        ss = configStyleSheet(ss)
 
-        self.setStyleSheet(configStyleSheet(ss))
+        self.setStyleSheet(ss)
 
     def freeze(self):
         self.frozen = True
@@ -977,6 +978,159 @@ class ObjectComboBox(ComboBox, EventChildClass):
 
         if self.updateFunc is not None:
             self.updateFunc(key)
+
+
+class BasicLabelWidget(Widget):
+
+    def __init__(self, spacing = 0, **kwargs):
+        super().__init__(layout = 'vertical',  **kwargs)
+
+        self.layout.setContentsMargins(spacing, spacing, spacing, spacing)
+
+        self.label = QtWidgets.QLabel("")
+        self.layout.addWidget(self.label)
+
+    def setText(self, s):
+        self.label.setText(s)
+
+class TableView(Widget):
+    """Simple view-only table.
+
+    Note: internally everything is column major! Accessing externally is row.
+    """
+    size = (0, 0)
+    headerLeft = True
+    headerTop = True
+    spacing = 10
+
+    borderQSS = "1px inset black"
+
+    styleSheet = '''
+    '''
+
+    headerLabelStyleSheet='''
+        QLabel{
+            font-weight: bold;
+        }
+        @OBJECT{
+            border-right: @borderQSS;
+            border-bottom: @borderQSS;
+        }
+
+        QWidget#tableHeaderLabelCorner{
+            border-top: @borderQSS;
+            border-left: @borderQSS;
+        }
+
+        QWidget#tableHeaderLabelLeft{
+            border-left: @borderQSS;
+        }
+
+        QWidget#tableHeaderLabelTop{
+            border-top: @borderQSS;
+        }
+
+    '''
+
+    labelStyleSheet = '''
+        @OBJECT{
+            border-right: @borderQSS;
+            border-bottom: @borderQSS;
+        }
+    '''
+
+    def __init__(self, headerLeft = True, headerTop = True, spacing = None, **kwargs):
+        kwargs.update(layout = 'horizontal')
+        super().__init__(styleSheet=self.styleSheet, **kwargs)
+
+        if spacing is not None:
+            self.spacing = spacing
+        else:
+            spacing = self.spacing
+
+        self.headerLabelStyleSheet = self.headerLabelStyleSheet.replace("@borderQSS", self.borderQSS)
+        self.styleSheet = self.styleSheet.replace("@borderQSS", self.borderQSS)
+        self.labelStyleSheet = self.labelStyleSheet.replace("@borderQSS", self.borderQSS)
+
+        self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+
+        self.headerLeft = headerLeft
+        self.headerTop = headerTop
+
+        self.labels = []
+        self.columnWidgets = []
+
+    def setSize(self, nRows, nCols):
+
+        # create labels if necessary
+        for col in range(len(self.labels), nCols + 1):
+
+            self.columnWidgets.append(Widget(layout="vertical"))
+            self.layout.addWidget(self.columnWidgets[-1])
+
+            self.labels.append([])
+
+            for row in range(len(self.labels[col]), nRows + 1):
+                
+                if (col == 0) or (row == 0):
+                    if (col == 0) and (row == 0):
+                        name = "tableHeaderLabelCorner"
+                    elif col == 0:
+                        name = "tableHeaderLabelLeft"
+                    elif row == 0:
+                        name = "tableHeaderLabelTop"
+                    label = BasicLabelWidget(widgetName=name, styleSheet=self.headerLabelStyleSheet, spacing = self.spacing, color = '@BGColor1')
+                else:
+                    label = BasicLabelWidget(widgetName="tableHeaderLabel", styleSheet=self.labelStyleSheet, spacing = self.spacing, color = '@BGColor3')
+
+                self.labels[col].append(label)
+                self.columnWidgets[col].layout.addWidget(label)
+
+        # hide/show those needed
+        for col in range(len(self.labels)):
+
+            # hide entire column if not needed
+            if col >= nCols + 1:
+                self.columnWidgets[col].hide()
+            else:
+                self.columnWidgets[col].show()
+
+            for row in range(len(self.labels[col])):
+
+                if row >= nRows + 1:
+                    self.labels[col][row].hide()
+                else:
+                    self.labels[col][row].show()
+
+        self.size = (nRows, nCols)
+        self.updateHeaders()
+
+    def updateHeaders(self):
+        if self.headerLeft:
+            self.columnWidgets[0].show()
+        else:
+            self.columnWidgets[0].hide()
+
+        for col in range(len(self.labels)):
+            if self.headerTop:
+                self.labels[col][0].show()
+            else:
+                self.labels[col][0].hide()
+
+    def setValue(self, row, col, s):
+        nRows, nCols = self.size
+
+        if (row > nRows) or (col > nCols):
+            logger.error(f'Tried to set table value at ({row},{col}) but size is {self.size}')
+
+        label = self.labels[col + 1][row + 1]
+        label.setText(s)
+        
+    def setLeftHeader(self, row, s):
+        self.labels[0][row].setText(s)
+
+    def setTopHeader(self, col, s):
+        self.labels[col + 1][0].setText(s)
 
 
 #############

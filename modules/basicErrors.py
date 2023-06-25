@@ -130,10 +130,20 @@ def loadData(env):
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab
     from UI.Plots import BasicPlotWidget
-    from UI.Templates import Slider
+    from UI.Templates import Slider, TableView
 
     ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Basic Errors")
+
+    # TABLES
+    table = TableView()
+    ct.addWidget(table, 0, 0)
+    table.setSize(2,2)
+    table.setValue(0,1,"asah")
+    table.setValue(1,0, "AISUHFAU*HD")
+    table.setLeftHeader(1, "aifuh")
+
+    # PLOTS
 
     class EnergyErrorDistPlot(BasicPlotWidget):
         def __init__(self, handler, **kwargs):
@@ -300,17 +310,17 @@ def loadUI(UIHandler, env):
             )
 
     plt = EnergyErrorDistPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 0, 0)
-    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
-
-    plt = ForcesErrorDistPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 0, 1)
-    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
-
-    plt = EnergyErrorPlot(UIHandler, parent=ct)
     ct.addWidget(plt, 1, 0)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
 
-    plt = ForcesErrorPlot(UIHandler, parent=ct)
+    plt = ForcesErrorDistPlot(UIHandler, parent=ct)
     ct.addWidget(plt, 1, 1)
+    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
+
+    plt = EnergyErrorPlot(UIHandler, parent=ct)
+    ct.addWidget(plt, 2, 0)
+    ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
+
+    plt = ForcesErrorPlot(UIHandler, parent=ct)
+    ct.addWidget(plt, 2, 1)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)

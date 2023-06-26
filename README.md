@@ -1,3 +1,5 @@
+(Note: more complete documentation/tutorials coming soon)
+
 ## Installation
 
 Create a new python environment (conda/venv). It needs to be at least python 3.9
@@ -18,9 +20,13 @@ Currently only sGDML, SchNet, MACE, Nequip and SpookyNet are _fully_ implemented
 
 ### Datasets
 
-Currently just .npz, others coming very soon
+Currently .npz files (sGDML-style) and ase-supported datasets (.db, .extxy, .traj, ...).
 
-etc...
+### Data generation
+
+Calculations (e.g. predictions, clusters, mae...) are automatically done on-the-fly in the UI. However, for expensive calculations (e.g. predictions) one can instead pre-compute them in headless mode with a simple script that can be run locally or on a remote node without any need of a UI. Both the headless and the UI client can save computed data for future use. 
+
+An example of a simple headless script to compute the force prediction for a dataset/model combination is shown in `headless.py`. More tutorials on that soon...
 
 ### 3D Visualiser 
 

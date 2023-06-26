@@ -73,7 +73,7 @@ async def eventLoop(UI, env):
     taskManager = env.tm
 
     # Temporarily putting some preliminary tasks here
-    if True and os.path.exists("private"):
+    if False and os.path.exists("private"):
         # env.taskLoadDataset("private/big.npz", "sGDML")
         # env.taskLoadDataset("private/myoglobin_1000.npz")
         env.taskLoadDataset("private/ethanol_spl_200.npz", "sGDML")

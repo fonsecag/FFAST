@@ -13,7 +13,7 @@ env.waitForTasks(verbose=True)
 d = env.getDatasetFromPath(dpath)
 m = env.getModelFromPath(mpath)
 
-env.addToGenerationQueue("forcesError", model=m, dataset=d)
+env.addToGenerationQueue("forces", model=m, dataset=d)
 env.waitForTasks(verbose=True)
 
 de = env.getData("forcesError", model=m, dataset=d)

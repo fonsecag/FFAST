@@ -1620,22 +1620,39 @@ class SettingsPane(Widget, EventChildClass):
 #############
 
 
-def customFileDialog(parent, fileTypes=None, extensions=None):
+def customFileDialog(parent, fileTypes=None, extensions=None, save=False):
     options = QFileDialog.Options()
 
     if fileTypes is None:
-        fileName, selectedFilter = QFileDialog.getOpenFileName(
-            parent, "Open File", "", options=options
-        )
+        if save:
+            fileName, selectedFilter = QFileDialog.getSaveFileName(
+                parent, "Save File", "", options=options
+            )
+        else:
+            fileName, selectedFilter = QFileDialog.getOpenFileName(
+                parent, "Open File", "", options=options
+            )
         return fileName, None
     else:
+        if extensions is None:
+            extensions = ["*"] * len(fileTypes)
+
         filterList = [
             f"{fileTypes[i]} ({extensions[i]})" for i in range(len(fileTypes))
         ]
+
         filterString = ";;".join(filterList)
-        fileName, selectedFilter = QFileDialog.getOpenFileName(
-            parent, "Open File", "", filterString, options=options
-        )
+        if save:
+            fileName, selectedFilter = QFileDialog.getSaveFileName(
+                parent, "Save File", "", filterString, options=options
+            )
+        else:
+            fileName, selectedFilter = QFileDialog.getOpenFileName(
+                parent, "Open File", "", filterString, options=options
+            )
+
+        if fileName == "":
+            return None, None
 
         filterIndex = filterList.index(selectedFilter)
         return fileName, fileTypes[filterIndex]

@@ -8,6 +8,7 @@ from UI.Templates import (
     ToolButton,
     LineEdit,
     ProgressBar,
+    customFileDialog,
 )
 from config.uiConfig import configStyleSheet
 from utils import rgbToHex
@@ -115,6 +116,13 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
             self.deleteButton.setToolTip("Remove")
             layout.addWidget(self.deleteButton)
 
+        # save button
+        if self.getObject().loadeeType == "dataset":
+            self.saveButton = ToolButton(self.saveDataset)
+            self.saveButton.setFixedSize(25, 25)
+            self.saveButton.setToolTip("Save dataset")
+            layout.addWidget(self.saveButton)
+
     def applyStyle(self):
         obj = self.getObject()
         # button color
@@ -192,6 +200,31 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         )  # remove display name things
         self.titleLabel.setDisabled(False)
         self.titleLabel.setFocus()
+
+    def saveDataset(self):
+        env = self.handler.env
+        dataset = self.getObject()
+
+        # get the path from the user and the type of dataset
+        datasetTypes = [env.datasetTypes[x] for x in env.datasetTypes.keys()]
+        formats = {}
+        for dType in datasetTypes:
+            if not hasattr(dType, "saveDataset"):
+                continue
+            for form in dType.saveFormats:
+                if form is None:
+                    name = dType.datasetName
+                else:
+                    name = f"{dType.datasetName} [{form}]"
+                formats[name] = (dType.datasetName, form)
+
+        path, formatName = customFileDialog(
+            self.handler.window, fileTypes=list(formats.keys()), save=True
+        )
+        if path is None:
+            return
+        typ, form = formats[formatName]
+        env.taskSaveDataset(dataset, typ, form, path)
 
     def onNameEdited(self):
         self.titleLabel.setDisabled(True)
@@ -328,6 +361,7 @@ class TaskItem(ObjectListItem, EventChildClass):
 
         # message
         self.messageLabel.setText(message)
+        self.messageLabel.setToolTip(message)
 
     def cancel(self):
         taskID = self.id

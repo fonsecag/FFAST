@@ -7,6 +7,7 @@ from collections.abc import Iterable
 class aseDatasetLoader(DatasetLoader):
     datasetName = "ase"
     datasetFileExtension = "*"
+    saveFormats = ["db", "xyz", "extxyz", "traj", "vasp", "dftb"]
 
     def __init__(self, path, *args, **kwargs):
         super().__init__(path)
@@ -71,7 +72,32 @@ class aseDatasetLoader(DatasetLoader):
         return self.z
 
     def getLattice(self):
-        return
+        return None
+
+    @staticmethod
+    def saveDataset(dataset, path, format=None, taskID=None):
+        from ase import Atoms
+        from ase.calculators.calculator import Calculator
+
+        R, F = dataset.getCoordinates(), dataset.getForces()
+        E, zStr = dataset.getEnergies(), dataset.getElementsName()
+
+        atoms = []
+
+        class FakeCalc(Calculator):
+            def __init__(self):
+                pass
+
+        for i in range(R.shape[0]):
+            atom = Atoms(positions=R[i], symbols=zStr)
+            atom.calc = FakeCalc()
+            atom.calc.results = {
+                "forces": F[i],
+                "energy": E[i],
+            }
+            atoms.append(atom)
+
+        ase.io.write(path, atoms, format=format)
 
 
 def loadData(env):

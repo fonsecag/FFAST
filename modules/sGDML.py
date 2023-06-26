@@ -156,7 +156,23 @@ class sGDMLDatasetLoader(DatasetLoader):
         return self.z
 
     def getLattice(self):
-        return
+        return self.lattice
+
+    @staticmethod
+    def saveDataset(dataset, path, format=None, taskID=None):
+        data = {
+            "R": dataset.getCoordinates(),
+            "E": dataset.getEnergies(),
+            "F": dataset.getForces(),
+            "z": dataset.getElements(),
+            "lattice": dataset.getLattice(),  # not yet used at all
+            "name": path,
+        }
+
+        md5 = md5FromArraysAndStrings(data["R"], data["E"], data["F"])
+        data["md5"] = md5
+
+        np.savez_compressed(path, **data)
 
 
 def loadData(env):

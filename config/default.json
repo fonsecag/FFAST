@@ -13,6 +13,7 @@
     "datasetColors": ["#FFFFFF", "#909090", "#505050", "#101010"],
     "errorDistNKdePoints": 1000,
     "aggloNInitPoints": 10000,
+    "scatterPlotNPoints": 50000,
     "clusterScheme": [
         {"type": "Agglo", "desc": "Coulomb", "nClusters": 10},
         {"type": "KMeans", "desc": "Energy", "nClusters": 4}

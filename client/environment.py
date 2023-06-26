@@ -754,6 +754,39 @@ class Environment(EventClass):
             obj.path = value["path"]
             obj.setName(value["name"])
 
+    def saveDataset(self, dataset, datasetType, form, path, taskID=None):
+        self.eventPush(
+            "TASK_PROGRESS",
+            taskID,
+            message=f"Saving {dataset.getDisplayName()} as {datasetType} dataset at z`{path}`",
+            quiet=True,
+            percent=False,
+        )
+
+        datasetClass = self.datasetTypes.get(datasetType, None)
+        if datasetClass is None:
+            logger.error(
+                f"Tried saving dataset {dataset.getDisplayName()} as {datasetType} dataset, but type is not recognised"
+            )
+            return
+
+        if not hasattr(datasetClass, "saveDataset"):
+            logger.error(
+                f"Tried saving dataset {dataset.getDisplayName()} as {datasetType} dataset, but no saveDataset method defined"
+            )
+            return
+
+        datasetClass.saveDataset(dataset, path, format=form, taskID=taskID)
+
+    def taskSaveDataset(self, dataset, datasetType, form, path):
+        self.newTask(
+            self.saveDataset,
+            args=(dataset, datasetType, form, path),
+            visual=True,
+            name="Saving dataset",
+            threaded=True,
+        )
+
     #############
     ## MISC
     #############

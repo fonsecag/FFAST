@@ -245,9 +245,12 @@ class DataWatcher(EventChildClass):
 
                     dataEntry = env.getCacheByKey(key)
                     entry = {
-                        "key": dataTypeKey,
+                        "dataTypeKey": dataTypeKey,
                         "model": model,
+                        # "modelKey": model is not None and model.fingerprint,
                         "dataset": dataset,
+                        # "datasetKey": dataset is not None and dataset.fingerprint,
+                        "dataKey": key,
                         "dataEntry": dataEntry,
                     }
 

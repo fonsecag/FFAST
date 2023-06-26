@@ -432,7 +432,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         # plotItem = self.plotWidget.plot(x, y, pen=pyqtgraph.mkPen(color, width=2.5))
         if scatter:
             brush = pyqtgraph.mkBrush(color)
-            plotItem = pyqtgraph.ScatterPlotItem(x, y, symbolBrush=brush)
+            plotItem = pyqtgraph.ScatterPlotItem(x, y, brush=brush)
         else:
             plotItem = pyqtgraph.PlotDataItem(x, y, pen=pen, **kwargs)
 

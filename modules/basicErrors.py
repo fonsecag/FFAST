@@ -229,8 +229,6 @@ def loadUI(UIHandler, env):
             else:
                 return f"{de.get('mae'):.2f}"
 
-    scrollContainer.addContent(EnergyMAETable())
-
     class EnergyRMSETable(BaseTable):
         def __init__(self):
             super().__init__(title="Energy RMSE")
@@ -250,8 +248,6 @@ def loadUI(UIHandler, env):
                 return ""
             else:
                 return f"{de.get('rmse'):.2f}"
-
-    scrollContainer.addContent(EnergyRMSETable())
 
     class ForcesMAETable(BaseTable):
         def __init__(self):
@@ -273,8 +269,6 @@ def loadUI(UIHandler, env):
             else:
                 return f"{de.get('mae'):.2f}"
 
-    scrollContainer.addContent(ForcesMAETable())
-
     class ForcesRMSERable(BaseTable):
         def __init__(self):
             super().__init__(title="Forces RMSE")
@@ -295,9 +289,13 @@ def loadUI(UIHandler, env):
             else:
                 return f"{de.get('rmse'):.2f}"
 
+    scrollContainer.addContent(EnergyMAETable())
+    scrollContainer.addContent(EnergyRMSETable())
+    scrollContainer.addContent(ForcesMAETable())
     scrollContainer.addContent(ForcesRMSERable())
     scrollContainer.addStretch()
 
+    # argument are (row, col, rowSpan, colSpan)
     ct.addWidget(scrollContainer, 0, 0, 1, 2)
 
     # PLOTS

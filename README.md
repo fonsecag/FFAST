@@ -6,7 +6,11 @@ Create a new python environment (conda/venv). It needs to be at least python 3.9
 
 Install the following packages:
 
-`pip install pyside6 pyqtgraph vispy pyopengl qasync scipy sklearn sgdml schnetpack`
+`pip install pyside6==6.4.2 pyqtgraph vispy pyopengl qasync scipy scikit-learn ase torch`
+
+Support for individual MLFF models are subject to their own installation process! For example for sgdml and SchNet:
+
+`pip install sgdml schnetpack`
 
 ## Basic usage
 

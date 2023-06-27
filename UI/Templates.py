@@ -87,7 +87,7 @@ class Widget(QWidget):
     def unfreeze(self):
         self.frozen = False
 
-    def setDeleted(self):
+    def prepareDeletion(self):
         self.deleted = True
         self.deleteLater()
         if hasattr(self, "isEventChild") and self.isEventChild:
@@ -687,6 +687,7 @@ class ObjectList(Widget):
         self.widgetType = widgetType
         self.widgets = {}
         self.layout.setSpacing(2)
+        self.objectsRemoved = set()
 
     def newObject(self, id, **kwargs):
         if id in self.widgets:
@@ -694,6 +695,10 @@ class ObjectList(Widget):
                 f"ID {id} already exists for ObjectList {self} and widgetType {self.widgetType}."
             )
             return
+
+        if id in self.objectsRemoved:
+            self.objectsRemoved.remove(id)
+
         w = self.widgetType(self.handler, id, parent=self, **kwargs)
         self.widgets[id] = w
         self.layout.addWidget(w)
@@ -704,12 +709,20 @@ class ObjectList(Widget):
         return self.widgets.get(id, None)
 
     def removeObject(self, id):
+        if id is self.objectsRemoved:
+            return
+
         w = self.getWidget(id)
+
         if w is None:
             return
 
+        del self.widgets[id]
+
         self.layout.removeWidget(w)
-        w.deleteLater()
+        w.prepareDeletion()
+
+        self.objectsRemoved.add(id)
 
         # force udpate parents if they're collapsible scrollareas
         self.forceUpdateParent()
@@ -816,7 +829,7 @@ class FlexibleHList(Widget):
 
         if clear:
             for w in self.widgets:
-                w.setDeleted()
+                w.prepareDeletion()
             self.widgets = []
 
     def nElementsPerRow(self):

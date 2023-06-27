@@ -91,10 +91,7 @@ class aseDatasetLoader(DatasetLoader):
         for i in range(R.shape[0]):
             atom = Atoms(positions=R[i], symbols=zStr)
             atom.calc = FakeCalc()
-            atom.calc.results = {
-                "forces": F[i],
-                "energy": E[i],
-            }
+            atom.calc.results = {"forces": F[i], "energy": E[i]}
             atoms.append(atom)
 
         ase.io.write(path, atoms, format=format)

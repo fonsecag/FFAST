@@ -7,13 +7,6 @@ class GhostDatasetLoader(DatasetLoader):
     isGhost = True
 
     def __init__(self, env, fingerprint, *args, **kwargs):
-        """
-        Initialises the DatasetLoader given a path to the model. All methods
-        that are only called once (i.e. loading the model) are performed here.
-
-        Args:
-            path (str): path to the model
-        """
         self.fingerprint = fingerprint
         super().__init__(env, "N/A", *args, **kwargs)
 
@@ -27,4 +20,8 @@ class GhostDatasetLoader(DatasetLoader):
         return f"*{self.getName()}"
 
     def initialise(self):
-        self.setName(self.fingerprint)
+        # search for path and name in info
+        info = self.env.info["objects"].get(self.fingerprint, None)
+        if info is not None:
+            self.path = info["path"]
+            self.setName(info["name"])

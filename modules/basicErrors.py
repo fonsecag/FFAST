@@ -184,120 +184,6 @@ def loadUI(UIHandler, env):
     ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Basic Errors")
 
-    # TABLES
-    scrollContainer = HorizontalContainerScrollArea()
-    scrollContainer.content.layout.setSpacing(32)
-
-    class BaseTable(Table):
-        def __init__(self, **kwargs):
-            super().__init__(UIHandler, parent=ct, **kwargs)
-            ct.addDataSelectionCallback(self.setModelDatasetDependencies)
-
-        def getSize(self):
-            # placeholder, should be implemented by user
-            nCols = len(self.getDatasetDependencies())
-            nRows = len(self.getModelDependencies())
-            return (nRows, nCols)
-
-        def getLeftHeader(self, i):
-            models = self.getModelDependencies()
-            model = self.handler.env.getModel(models[i])
-            return f"{model.getDisplayName()}"
-
-        def getTopHeader(self, i):
-            datasets = self.getDatasetDependencies()
-            dataset = self.handler.env.getDataset(datasets[i])
-            return f"{dataset.getDisplayName()}"
-
-    class EnergyMAETable(BaseTable):
-        def __init__(self):
-            super().__init__(title="Energy MAE")
-            self.setDataDependencies("energyErrorMetrics")
-
-        def getValue(self, i, j):
-            env = self.handler.env
-            model = self.getModelDependencies()[i]
-            dataset = self.getDatasetDependencies()[j]
-            de = env.getData(
-                "energyErrorMetrics",
-                model=env.getModel(model),
-                dataset=env.getDataset(dataset),
-            )
-
-            if de is None:
-                return ""
-            else:
-                return f"{de.get('mae'):.2f}"
-
-    class EnergyRMSETable(BaseTable):
-        def __init__(self):
-            super().__init__(title="Energy RMSE")
-            self.setDataDependencies("energyErrorMetrics")
-
-        def getValue(self, i, j):
-            env = self.handler.env
-            model = self.getModelDependencies()[i]
-            dataset = self.getDatasetDependencies()[j]
-            de = env.getData(
-                "energyErrorMetrics",
-                model=env.getModel(model),
-                dataset=env.getDataset(dataset),
-            )
-
-            if de is None:
-                return ""
-            else:
-                return f"{de.get('rmse'):.2f}"
-
-    class ForcesMAETable(BaseTable):
-        def __init__(self):
-            super().__init__(title="Forces MAE")
-            self.setDataDependencies("forcesErrorMetrics")
-
-        def getValue(self, i, j):
-            env = self.handler.env
-            model = self.getModelDependencies()[i]
-            dataset = self.getDatasetDependencies()[j]
-            de = env.getData(
-                "forcesErrorMetrics",
-                model=env.getModel(model),
-                dataset=env.getDataset(dataset),
-            )
-
-            if de is None:
-                return ""
-            else:
-                return f"{de.get('mae'):.2f}"
-
-    class ForcesRMSERable(BaseTable):
-        def __init__(self):
-            super().__init__(title="Forces RMSE")
-            self.setDataDependencies("forcesErrorMetrics")
-
-        def getValue(self, i, j):
-            env = self.handler.env
-            model = self.getModelDependencies()[i]
-            dataset = self.getDatasetDependencies()[j]
-            de = env.getData(
-                "forcesErrorMetrics",
-                model=env.getModel(model),
-                dataset=env.getDataset(dataset),
-            )
-
-            if de is None:
-                return ""
-            else:
-                return f"{de.get('rmse'):.2f}"
-
-    scrollContainer.addContent(EnergyMAETable())
-    scrollContainer.addContent(EnergyRMSETable())
-    scrollContainer.addContent(ForcesMAETable())
-    scrollContainer.addContent(ForcesRMSERable())
-    scrollContainer.addStretch()
-
-    # argument are (row, col, rowSpan, colSpan)
-    ct.addWidget(scrollContainer, 0, 0, 1, 2)
-
     # PLOTS
 
     class EnergyErrorDistPlot(BasicPlotWidget):
@@ -465,17 +351,132 @@ def loadUI(UIHandler, env):
             )
 
     plt = EnergyErrorDistPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 1, 0)
+    ct.addWidget(plt, 0, 0)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
 
     plt = ForcesErrorDistPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 1, 1)
+    ct.addWidget(plt, 0, 1)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
 
     plt = EnergyErrorPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 2, 0)
+    ct.addWidget(plt, 1, 0)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
 
     plt = ForcesErrorPlot(UIHandler, parent=ct)
-    ct.addWidget(plt, 2, 1)
+    ct.addWidget(plt, 1, 1)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
+
+
+    # TABLES
+    scrollContainer = HorizontalContainerScrollArea()
+    scrollContainer.content.layout.setSpacing(32)
+
+    class BaseTable(Table):
+        def __init__(self, **kwargs):
+            super().__init__(UIHandler, parent=ct, **kwargs)
+            ct.addDataSelectionCallback(self.setModelDatasetDependencies)
+
+        def getSize(self):
+            # placeholder, should be implemented by user
+            nCols = len(self.getDatasetDependencies())
+            nRows = len(self.getModelDependencies())
+            return (nRows, nCols)
+
+        def getLeftHeader(self, i):
+            models = self.getModelDependencies()
+            model = self.handler.env.getModel(models[i])
+            return f"{model.getDisplayName()}"
+
+        def getTopHeader(self, i):
+            datasets = self.getDatasetDependencies()
+            dataset = self.handler.env.getDataset(datasets[i])
+            return f"{dataset.getDisplayName()}"
+
+    class EnergyMAETable(BaseTable):
+        def __init__(self):
+            super().__init__(title="Energy MAE")
+            self.setDataDependencies("energyErrorMetrics")
+
+        def getValue(self, i, j):
+            env = self.handler.env
+            model = self.getModelDependencies()[i]
+            dataset = self.getDatasetDependencies()[j]
+            de = env.getData(
+                "energyErrorMetrics",
+                model=env.getModel(model),
+                dataset=env.getDataset(dataset),
+            )
+
+            if de is None:
+                return ""
+            else:
+                return f"{de.get('mae'):.2f}"
+
+    class EnergyRMSETable(BaseTable):
+        def __init__(self):
+            super().__init__(title="Energy RMSE")
+            self.setDataDependencies("energyErrorMetrics")
+
+        def getValue(self, i, j):
+            env = self.handler.env
+            model = self.getModelDependencies()[i]
+            dataset = self.getDatasetDependencies()[j]
+            de = env.getData(
+                "energyErrorMetrics",
+                model=env.getModel(model),
+                dataset=env.getDataset(dataset),
+            )
+
+            if de is None:
+                return ""
+            else:
+                return f"{de.get('rmse'):.2f}"
+
+    class ForcesMAETable(BaseTable):
+        def __init__(self):
+            super().__init__(title="Forces MAE")
+            self.setDataDependencies("forcesErrorMetrics")
+
+        def getValue(self, i, j):
+            env = self.handler.env
+            model = self.getModelDependencies()[i]
+            dataset = self.getDatasetDependencies()[j]
+            de = env.getData(
+                "forcesErrorMetrics",
+                model=env.getModel(model),
+                dataset=env.getDataset(dataset),
+            )
+
+            if de is None:
+                return ""
+            else:
+                return f"{de.get('mae'):.2f}"
+
+    class ForcesRMSERable(BaseTable):
+        def __init__(self):
+            super().__init__(title="Forces RMSE")
+            self.setDataDependencies("forcesErrorMetrics")
+
+        def getValue(self, i, j):
+            env = self.handler.env
+            model = self.getModelDependencies()[i]
+            dataset = self.getDatasetDependencies()[j]
+            de = env.getData(
+                "forcesErrorMetrics",
+                model=env.getModel(model),
+                dataset=env.getDataset(dataset),
+            )
+
+            if de is None:
+                return ""
+            else:
+                return f"{de.get('rmse'):.2f}"
+
+    scrollContainer.addContent(EnergyMAETable())
+    scrollContainer.addContent(EnergyRMSETable())
+    scrollContainer.addContent(ForcesMAETable())
+    scrollContainer.addContent(ForcesRMSERable())
+    scrollContainer.addStretch()
+
+    # argument are (row, col, rowSpan, colSpan)
+    ct.addWidget(scrollContainer, 2, 0, 1, 2)

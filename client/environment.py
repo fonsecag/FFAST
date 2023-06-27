@@ -38,6 +38,7 @@ class Environment(EventClass):
         self.dataTypes = {}
         self.modelTypes = {}
         self.datasetTypes = {}
+        self.info = {}
         self.tm = TaskManager()
 
         self.initialiseDataTypes()
@@ -718,6 +719,13 @@ class Environment(EventClass):
         )
 
     def load(self, path, taskID=None):
+        # LOAD INFO (names etc)
+        infoFile = os.path.join(path, "info.json")
+        if os.path.exists(infoFile):
+            with open(infoFile, "r") as f:
+                info = json.load(f)
+            self.loadInfo(info)
+
         ## LOAD CACHE
         cacheDir = os.path.join(path, "cache")
         for npzPath in glob.glob(os.path.join(cacheDir, "*.npz")):
@@ -737,23 +745,9 @@ class Environment(EventClass):
 
         self.lookForGhosts()
 
-        # load info (names etc)
-        infoFile = os.path.join(path, "info.json")
-        if os.path.exists(infoFile):
-            with open(infoFile, "r") as f:
-                info = json.load(f)
-            self.loadInfo(info)
-
     def loadInfo(self, info):
-        # OBJECT NAMES
-        for key, value in info["objects"].items():
-            obj = self.getModelOrDataset(key)
-            if obj is None:
-                continue
-
-            obj.path = value["path"]
-            obj.setName(value["name"])
-
+        self.info.update(info)
+        
     def saveDataset(self, dataset, datasetType, form, path, taskID=None):
         self.eventPush(
             "TASK_PROGRESS",

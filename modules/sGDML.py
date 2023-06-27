@@ -113,15 +113,18 @@ class sGDMLDatasetLoader(DatasetLoader):
         super().__init__(path)
         self.data = np.load(path, allow_pickle=True)
         self.chem = self.zToChemicalFormula(self.data["z"])
-        self.R = self.data["R"]
-        self.E = self.data["E"]
-        self.F = self.data["F"]
-        self.z = self.data["z"]
+
+        data = {key.lower():value for key,value in self.data.items()}
+
+        self.R = data["r"]
+        self.E = data["e"]
+        self.F = data["f"]
+        self.z = data["z"]
         self.N = self.R.shape[0]
         self.nAtoms = self.R.shape[1]
 
-        if "lattice" in self.data:
-            self.lattice = self.data["lattice"]
+        if "lattice" in data:
+            self.lattice = data["lattice"]
         else:
             self.lattice = np.eye(3)
 

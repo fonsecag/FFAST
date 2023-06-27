@@ -207,7 +207,7 @@ def loadUI(UIHandler, env):
 
             for data in self.getWatchedData():
                 de = data["dataEntry"]
-                dataType = data["key"]
+                dataType = data["dataTypeKey"]
 
                 if dataType == "forcesErrorDist":
                     if not hasAll:

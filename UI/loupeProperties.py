@@ -68,7 +68,7 @@ class AtomSelectionBase:
     def hoverCallback(self):
         pass
 
-    def selectAtom(self, idx):
+    def selectAtom(self, idx, suppressCallback=False):
         if idx is None:
             return
 
@@ -81,6 +81,13 @@ class AtomSelectionBase:
 
         if self.cycle and (len(sp) > self.multiselect):
             self.selectedPoints = sp[-self.multiselect :]
+
+        if not suppressCallback:
+            self.selectCallback()
+
+    def selectAtoms(self, idxs):
+        for idx in idxs:
+            self.selectAtom(idx)
 
         self.selectCallback()
 
@@ -130,14 +137,19 @@ class VisualElement(CanvasProperty):
         if self.singleElement is None:
             return self._draw(picking=picking, **kwargs)
 
-        if not picking:
-            if not self.singleElement.visible:
+        if not self.singleElement.visible:
+            if not self.hidden:
                 self.singleElement.visible = True
+
+        if not picking:
             return self._draw(picking=False, **kwargs)
 
-        if not self.singleElement.visible and self.pickingVisible:
+        if (
+            (self.singleElement.visible)
+            and self.pickingVisible
+            and (not self.hidden)
+        ):
             self.singleElement.visible = True
-            return
 
         if self.singleElement.visible and not self.pickingVisible:
             self.singleElement.visible = False

@@ -17,8 +17,28 @@ import asyncio
 from config.userConfig import Settings, getConfig
 from vispy.scene.cameras.turntable import TurntableCamera
 from vispy.visuals.transforms import STTransform
+from vispy.util import keys
+from UI.loupeProperties import VisualElement
 
 logger = logging.getLogger("FFAST")
+
+
+class RectangleSelection(VisualElement):
+    def __init__(self, *args, parent=None, **kwargs):
+        self.rectangle = scene.visuals.Rectangle(
+            center=[0, 0],
+            color=(0.5, 0.5, 1, 0.3),
+            height=1,
+            width=1,
+            parent=parent,
+            border_width=2,
+            border_color=(0.5, 0.5, 1, 0.8),
+        )
+        self.rectangle.pos = np.array([[0, 0], [1, 0], [1, 1], [0, 1]])
+        super().__init__(*args, **kwargs, singleElement=self.rectangle)
+
+    def setPosition(self, arr):
+        self.rectangle.pos = arr
 
 
 class SideBar(ContentBar):
@@ -37,25 +57,38 @@ class SceneCanvas(scene.SceneCanvas):
     mouseClickActive = False
     widget = None
     pickingColors = None
+    isCtrlDragging = False
+    draggingStart = [0, 0]
 
     def __init__(self, widget, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.widget = widget
 
-    def getPickingRender(self, pos):
+    def getPickingRender(self, pos0=None, pos1=None):
         for element in self.widget.elements.values():
             element.draw(picking=True, pickingColors=self.pickingColors)
 
         tr = self.transforms.get_transform("canvas", "framebuffer")
-        p = tr.map(pos)[:2]
-        if pos is None:
-            img = self.render()
-        else:
-            img = self.render(crop=(p[0], p[1], 1, 1))
 
+        if (pos0 is not None) and (pos1 is not None):
+            p0 = tr.map(pos0)[:2]
+            p1 = tr.map(pos1)[:2]
+            img = self.render(
+                crop=(
+                    min(p0[0], p1[0]),
+                    min(p0[1], p1[1]),
+                    np.abs(p1[0] - p0[0]),
+                    np.abs(p1[1] - p0[1]),
+                )
+            )
+        elif (pos0 is not None) and (pos1 is None):
+            p = tr.map(pos0)[:2]
+            img = self.render(crop=(p[0], p[1], 1, 1))
+        else:
+            img = self.render()
         return img
 
-    def getPointAtPosition(self, pos, refresh=True):
+    def getAtomIndexAtPosition(self, pos, refresh=True):
         img = self.getPickingRender(pos)
         # single pixel right in the middle
         color = img[0, 0]
@@ -67,6 +100,23 @@ class SceneCanvas(scene.SceneCanvas):
         if refresh:
             self.widget.visualRefresh(force=True)
         return idx
+
+    def getAtomIndicesInRectangle(self, pos0, pos1, refresh=False):
+        img = self.getPickingRender(pos0, pos1)
+        colors = img.reshape(-1, 4)
+        colors = colors[colors[:, 2] == 255, :3]
+        uniqueColors = np.unique(colors, axis=0)
+
+        indices = []
+        for color in uniqueColors:
+            idx = self.colorToIndex(color)
+            if idx is not None:
+                indices.append(idx)
+
+        if refresh:
+            self.widget.visualRefresh(force=True)
+
+        return indices
 
     def on_mouse_press(self, event):
         if not self.mouseClickActive:
@@ -80,16 +130,50 @@ class SceneCanvas(scene.SceneCanvas):
         if self.widget.loupe.selectedDatasetKey is None:
             return
 
-        point = self.getPointAtPosition(event.pos, refresh=False)
-        self.widget.addSelectedPoint(point, refresh=True)
+        if keys.CONTROL in event.modifiers:
+            self.isCtrlDragging = True
+            self.draggingStart = event.pos
+        else:
+            point = self.getAtomIndexAtPosition(event.pos, refresh=False)
+            self.widget.addSelectedAtom(point, refresh=True)
 
-    def on_mouse_move(self, event):
-        if not self.mouseoverActive:
+    def on_mouse_release(self, event):
+
+        wasCtrlDragging = self.isCtrlDragging
+        self.isCtrlDragging = False
+
+        if not self.mouseClickActive:
+            return
+        # https://vispy.org/api/vispy.scene.events.html
+
+        # left click only
+        if event.button != 1:
             return
 
-        # not refreshing because we know we will refresh after setting the hovered point
-        point = self.getPointAtPosition(event.pos, refresh=False)
-        self.widget.setHoveredPoint(point, refresh=True)
+        if self.widget.loupe.selectedDatasetKey is None:
+            return
+
+        if wasCtrlDragging:
+            pos0, pos1 = self.draggingStart, event.pos
+            self.draggingStart = np.array([0, 0])
+
+            d = np.sqrt(np.sum(pos1 - pos0) ** 2)
+            if d > 1e-8:
+                indices = self.getAtomIndicesInRectangle(
+                    pos0, pos1, refresh=False
+                )
+                self.widget.hideSelectionRectangle()
+                self.widget.addSelectedAtoms(indices, refresh=True)
+
+    def on_mouse_move(self, event):
+
+        if self.mouseClickActive and not event.is_dragging:
+            # not refreshing because we know we will refresh after setting the hovered point
+            point = self.getAtomIndexAtPosition(event.pos, refresh=False)
+            self.widget.setHoveredPoint(point, refresh=True)
+
+        if self.isCtrlDragging:
+            self.widget.setSelectionRectanglePos(self.draggingStart, event.pos)
 
     def on_resize(self, *args):
         scene.SceneCanvas.on_resize(self, *args)
@@ -104,7 +188,7 @@ class SceneCanvas(scene.SceneCanvas):
         self.pickingColors = colors / 255
 
     def colorToIndex(self, color):
-        if color[2] == 0:
+        if color[2] != 255:
             return None
         idx = color[0] + color[1] * 256
         return idx
@@ -153,6 +237,8 @@ class InteractiveCanvas(Widget):
         self.addAtomSelectToolbar()
         self.setActiveAtomSelectTool(None)
 
+        self.createSelectionRectangle()
+
         self.freeze()
 
     ## VISUAL ELEMENTS & PROPERTIES
@@ -164,6 +250,8 @@ class InteractiveCanvas(Widget):
             el = Element(parent=self.scene)
         el.canvas = self
         self.elements[name] = el
+
+        return el
 
     def visualRefresh(self, force=False):
         for element in self.elements.values():
@@ -298,9 +386,15 @@ class InteractiveCanvas(Widget):
         if refresh:
             self.visualRefresh(force=True)
 
-    def addSelectedPoint(self, index, refresh=True):
+    def addSelectedAtom(self, index, refresh=True):
         if self.activeAtomSelectTool is not None:
             self.activeAtomSelectTool.selectAtom(index)
+        if refresh:
+            self.visualRefresh(force=True)
+
+    def addSelectedAtoms(self, indices, refresh=True):
+        if self.activeAtomSelectTool is not None:
+            self.activeAtomSelectTool.selectAtoms(indices)
         if refresh:
             self.visualRefresh(force=True)
 
@@ -339,6 +433,30 @@ class InteractiveCanvas(Widget):
 
     def keyPressEvent(self, event):
         self.parent().keyPressEvent(event)
+
+    ## SELECTION RECTANGLE
+    def setSelectionRectanglePos(self, oldPos, newPos):
+        if self.selectionRectangle.hidden:
+            self.selectionRectangle.show()
+
+        self.selectionRectangle.setPosition(
+            np.array(
+                [
+                    [oldPos[0], oldPos[1]],
+                    [newPos[0], oldPos[1]],
+                    [newPos[0], newPos[1]],
+                    [oldPos[0], newPos[1]],
+                ]
+            )
+        )
+
+    def createSelectionRectangle(self):
+        self.selectionRectangle = self.addVisualElement(
+            RectangleSelection, "SelectionRectangle", viewParent=True
+        )
+
+    def hideSelectionRectangle(self):
+        self.selectionRectangle.hide()
 
     ## MISC
     def resizeEvent(self, event):
@@ -582,7 +700,6 @@ class Loupe(Widget, EventChildClass):
     # SHORTCUTS
     # not yet working
     def keyPressEvent(self, event):
-        print("event")
         if event.key() == QtCore.Qt.Key_Q:
             print("Killing")
         elif event.key() == QtCore.Qt.Key_Enter:

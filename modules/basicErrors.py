@@ -366,7 +366,6 @@ def loadUI(UIHandler, env):
     ct.addWidget(plt, 1, 1)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
 
-
     # TABLES
     scrollContainer = HorizontalContainerScrollArea()
     scrollContainer.content.layout.setSpacing(32)

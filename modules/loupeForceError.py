@@ -278,4 +278,4 @@ def addSettings(UIHandler, loupe):
 def loadLoupe(UIHandler, loupe):
     addSettings(UIHandler, loupe)
 
-    loupe.addVisualElement(ColorBarVisual, "ColorBarVisual")
+    loupe.addVisualElement(ColorBarVisual, "ColorBarVisual", viewParent=True)

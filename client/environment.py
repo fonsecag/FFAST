@@ -747,7 +747,7 @@ class Environment(EventClass):
 
     def loadInfo(self, info):
         self.info.update(info)
-        
+
     def saveDataset(self, dataset, datasetType, form, path, taskID=None):
         self.eventPush(
             "TASK_PROGRESS",

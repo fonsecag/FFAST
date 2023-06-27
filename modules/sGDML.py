@@ -114,7 +114,7 @@ class sGDMLDatasetLoader(DatasetLoader):
         self.data = np.load(path, allow_pickle=True)
         self.chem = self.zToChemicalFormula(self.data["z"])
 
-        data = {key.lower():value for key,value in self.data.items()}
+        data = {key.lower(): value for key, value in self.data.items()}
 
         self.R = data["r"]
         self.E = data["e"]

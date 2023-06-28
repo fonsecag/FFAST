@@ -136,7 +136,9 @@ class DatasetLoader(EventClass):
         self.setName(name)
 
         z = self.getElements()
-        self.bondSizes = covalentBonds[z][:,z] * getConfig("loupeBondsLenience")
+        self.bondSizes = covalentBonds[z][:, z] * getConfig(
+            "loupeBondsLenience"
+        )
 
     def getPDist(self, indices=None):
         R = self.getCoordinates(indices=indices)
@@ -377,21 +379,19 @@ class AtomFilteredDataset(DatasetLoader):
 
         if indices is None:
             return None
-        
+
         self.indices = indices
         self.updatePath()
 
         self.z = parentDataset.getElements()[indices]
         self.chem = self.zToChemicalFormula(self.z)
 
-        self.bondSizes = parentDataset.bondSizes[self.indices][:,self.indices]
+        self.bondSizes = parentDataset.bondSizes[self.indices][:, self.indices]
 
     def updatePath(self):
-        self.path = (
-            f"{self.parent.getName()},atomFilter"
-        )
+        self.path = f"{self.parent.getName()},atomFilter"
 
-    def getFingerprint(self, parent = None, indices = None):
+    def getFingerprint(self, parent=None, indices=None):
         if indices is None:
             indices = self.indices
         if parent is None:
@@ -408,19 +408,19 @@ class AtomFilteredDataset(DatasetLoader):
             raise ValueError(
                 f"SubDataset for dataset {self.parent} has same fingerprint. Aborted."
             )
-        
+
         name = self.path
         self.setName(name)
-    
+
     def getN(self):
         return self.parent.getN()
-    
+
     ## PARENT DEPENDENT METHODS HERE
     ## MOSTLY DEFINED IN SPECIFIC (e.g. sGDML) LOADERS
     def getCoordinates(self, indices=None):
         a = self.parent.getCoordinates(indices=indices)
         if len(a.shape) == 3:
-            return a[:,self.indices]
+            return a[:, self.indices]
         else:
             return a[self.indices]
 
@@ -431,12 +431,12 @@ class AtomFilteredDataset(DatasetLoader):
     def getForces(self, indices=None):
         f = self.parent.getForces(indices=indices)
         if len(f.shape) == 3:
-            return f[:,self.indices]
+            return f[:, self.indices]
         else:
             return f[self.indices]
-        
+
     def getPDist(self, indices=None):
-        R = self.getCoordinates(indices = indices)
+        R = self.getCoordinates(indices=indices)
         return toDistance(R)
 
     def getNAtoms(self):
@@ -458,7 +458,7 @@ class AtomFilteredDataset(DatasetLoader):
         chems = ",".join(set(self.getElementsName()))
         return [
             ("Parent", self.parent.getDisplayName()),
-            ("Viewed Elements", chems)
+            ("Viewed Elements", chems),
         ]
 
     def isDependentOn(self, obj):
@@ -466,4 +466,3 @@ class AtomFilteredDataset(DatasetLoader):
             return False
 
         return self.parent is obj
-

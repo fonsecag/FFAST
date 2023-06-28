@@ -27,8 +27,12 @@ class DataWatcher(EventChildClass):
         self.dataTypeDependencies = []
         self.datasetDependencies = []
         self.modelDependencies = []
-        self.dependencyList = [] # list of datakeys (data__model__dataset) its needs
-        self.refreshList = [] # additional list of datakeys that refresh it (because of subdatasets)
+        self.dependencyList = (
+            []
+        )  # list of datakeys (data__model__dataset) its needs
+        self.refreshList = (
+            []
+        )  # additional list of datakeys that refresh it (because of subdatasets)
         self.currentlyMissingKeys = []
         self.refreshWidgets = []
         self.callbacks = []
@@ -178,19 +182,20 @@ class DataWatcher(EventChildClass):
 
                     if (dataset is None) and dataType.datasetDependent:
                         continue
-                    
-                    if (dataset.isSubDataset 
+
+                    if (
+                        dataset.isSubDataset
                         and dataset.isAtomFiltered
                         and (dataType.atomFilterable or dataType.atomConstant)
-                        ):
+                    ):
 
-                        key = dataType.getCacheKey(model=model, dataset=dataset.parent)
+                        key = dataType.getCacheKey(
+                            model=model, dataset=dataset.parent
+                        )
                         self.refreshList.append(key)
-                        
+
                     key = dataType.getCacheKey(model=model, dataset=dataset)
                     self.dependencyList.append(key)
-
-
 
         self.refresh()
 
@@ -214,7 +219,9 @@ class DataWatcher(EventChildClass):
         self.sendRefresh()
 
     def onDataUpdated(self, cacheKey):
-        if (cacheKey not in self.dependencyList) and (cacheKey not in self.refreshList):
+        if (cacheKey not in self.dependencyList) and (
+            cacheKey not in self.refreshList
+        ):
             return
 
         self.refresh()

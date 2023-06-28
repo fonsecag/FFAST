@@ -1,5 +1,9 @@
 from events import EventClass
-from loaders.datasetLoader import SubDataset, FrozenSubDataset, AtomFilteredDataset
+from loaders.datasetLoader import (
+    SubDataset,
+    FrozenSubDataset,
+    AtomFilteredDataset,
+)
 from loaders.modelGhost import GhostModelLoader
 from loaders.zeroModel import ZeroModelLoader
 from tasks import TaskManager
@@ -182,15 +186,13 @@ class Environment(EventClass):
         )
 
         # update info with the path etc
-        self.info.update({
-            "objects":{
-                modelKey:{
-                    "path": path,
-                    "name": os.path.basename(path)
+        self.info.update(
+            {
+                "objects": {
+                    modelKey: {"path": path, "name": os.path.basename(path)}
                 }
             }
-        })
-
+        )
 
         self.lookForGhosts()
 
@@ -307,12 +309,14 @@ class Environment(EventClass):
         self.setNewDataset(sub)
 
     def createAtomFilteredDataset(self, dataset, idxs):
-        fp = AtomFilteredDataset.getFingerprint(AtomFilteredDataset, dataset, idxs)
+        fp = AtomFilteredDataset.getFingerprint(
+            AtomFilteredDataset, dataset, idxs
+        )
         sub = self.getDataset(fp)
 
         if sub is not None:
             return
-        
+
         sub = AtomFilteredDataset(dataset, idxs)
         sub.initialise()
         self.setNewDataset(sub)
@@ -403,19 +407,31 @@ class Environment(EventClass):
         cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
 
         ## SUBDATSETS
-        if (dataset is not None) and (dataset.isSubDataset) and not self.hasCacheKey(cacheKey, subChecks=False):      
+        if (
+            (dataset is not None)
+            and (dataset.isSubDataset)
+            and not self.hasCacheKey(cacheKey, subChecks=False)
+        ):
             ## ATOM FILTERED
             if dataset.isAtomFiltered:
                 if dataType.atomFilterable:
-                    data = self.getData(dataTypeKey, model = model, dataset = dataset.parent)
+                    data = self.getData(
+                        dataTypeKey, model=model, dataset=dataset.parent
+                    )
                     if data is not None:
-                        return data.getAtomFilteredEntity(indices = dataset.indices)
-                
+                        return data.getAtomFilteredEntity(
+                            indices=dataset.indices
+                        )
+
                 if dataType.atomConstant:
-                    return self.getData(dataTypeKey, model = model, dataset = dataset.parent)
-                
+                    return self.getData(
+                        dataTypeKey, model=model, dataset=dataset.parent
+                    )
+
             elif dataType.iterable:
-                data = self.getData(dataTypeKey, model = model, dataset = dataset.parent)
+                data = self.getData(
+                    dataTypeKey, model=model, dataset=dataset.parent
+                )
                 if data is not None:
                     return data.getSubEntity(indices=dataset.indices)
 
@@ -473,12 +489,11 @@ class Environment(EventClass):
                     )
 
             elif dataType.iterable:
-                    return self.hasData(
-                        dataTypeKey, model=model, dataset=dataset.parent
-                    )
-                
-        return False
+                return self.hasData(
+                    dataTypeKey, model=model, dataset=dataset.parent
+                )
 
+        return False
 
     #############
     ## DATA GENERATION
@@ -677,8 +692,6 @@ class Environment(EventClass):
         #     self.getCacheKey(key, model=model, dataset=dataset)
         #     for key in compKeys
         # ]
-    
-
 
     def deleteCacheByDataset(self, datasetKey):
         toDelete = []
@@ -697,7 +710,7 @@ class Environment(EventClass):
         else:
             return self.cache.get(key, None)
 
-    def cacheKeyToComponents(self, key, dataTypeObject = False):
+    def cacheKeyToComponents(self, key, dataTypeObject=False):
         spl = key.split("__")
         dataTypeKey = spl[0]
         if dataTypeObject:

@@ -16,13 +16,16 @@ class AtomFilterSelect(AtomSelectionBase):
         indices = canvas.settings.get("atomFilterIndices")
         if indices is not None:
             self.selectedPoints = list.copy(indices)
-            canvas.visualRefresh(force = True)
+            canvas.visualRefresh(force=True)
 
     def selectCallback(self):
         loupe = self.canvas.loupe
         # sending a copy is important, otherwise the code block never
         # updates, since it thinks it hasnt changed
-        loupe.settings.setParameter("atomFilterIndices", list.copy(self.selectedPoints), refresh = True)
+        loupe.settings.setParameter(
+            "atomFilterIndices", list.copy(self.selectedPoints), refresh=True
+        )
+
 
 class AtomFilterPaneHiding(CanvasProperty):
 
@@ -35,7 +38,10 @@ class AtomFilterPaneHiding(CanvasProperty):
         loupe = self.canvas.loupe
         dataset = loupe.getSelectedDataset()
 
-        loupe.setSettingsPaneVisibility("ATOM FILTER", not dataset.isSubDataset)
+        loupe.setSettingsPaneVisibility(
+            "ATOM FILTER", not dataset.isSubDataset
+        )
+
 
 def cleanIndices(arr):
     try:
@@ -50,40 +56,45 @@ def cleanIndices(arr):
 
     return True, list(s)
 
-def addSetting(UIHandler, loupe):
 
+def addSetting(UIHandler, loupe):
     def updateSelection(loupe):
         canvas = loupe.canvas
         if not canvas.isActiveAtomSelectTool(AtomFilterSelect):
             return
-        
+
         tool = canvas.activeAtomSelectTool
         atoms = canvas.settings.get("atomFilterIndices")
         if atoms != tool.selectedPoints:
-            tool.selectedPoints= list.copy(atoms)
-            canvas.visualRefresh(force = True)
+            tool.selectedPoints = list.copy(atoms)
+            canvas.visualRefresh(force=True)
 
     # add dummy setting where the indices are saved
     settings = loupe.settings
     settings.addParameters(
         **{
-            "atomFilterIndices": [[], partial(updateSelection, loupe), "visualRefresh"],
+            "atomFilterIndices": [
+                [],
+                partial(updateSelection, loupe),
+                "visualRefresh",
+            ],
         }
     )
+
 
 def addSettingsPane(UIHandler, loupe):
     from UI.Templates import SettingsPane, PushButton
 
-    pane = SettingsPane(UIHandler, loupe.settings, parent = loupe)
+    pane = SettingsPane(UIHandler, loupe.settings, parent=loupe)
     loupe.addSidebarPane("ATOM FILTER", pane)
 
     pane.addSetting(
         "CodeBox",
         "Indices",
-        settingsKey = "atomFilterIndices",
-        validationFunc = cleanIndices,
-        labelDirection= "horizontal",
-        singleLine = False
+        settingsKey="atomFilterIndices",
+        validationFunc=cleanIndices,
+        labelDirection="horizontal",
+        singleLine=False,
     )
 
     ## ADD BONDS BUTTONS
@@ -109,20 +120,23 @@ def addSettingsPane(UIHandler, loupe):
 
         if dataset is None:
             return
-        
+
         if (idxs is None) or len(idxs) == 0:
-            return 
-        
+            return
+
         UIHandler.env.createAtomFilteredDataset(dataset, idxs)
 
     createButton = PushButton("Create")
-    createButton.setToolTip("Create an atom-filtered dataset with only the current atom indices")
+    createButton.setToolTip(
+        "Create an atom-filtered dataset with only the current atom indices"
+    )
     createButton.clicked.connect(createAtomFilteredDataset)
     container.layout.addWidget(createButton)
-    
+
     # ADD A PROPERTY TO CONTROL THE SHOWING/HIDING OF THE PANE
     # Pane should not be visible if the selected dataset is a subdataset/atomfitlered
     loupe.addCanvasProperty(AtomFilterPaneHiding)
+
 
 def loadLoupe(UIHandler, loupe):
     addSetting(UIHandler, loupe)

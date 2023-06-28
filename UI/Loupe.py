@@ -419,7 +419,9 @@ class InteractiveCanvas(Widget):
             self.activeAtomSelectTool = tool(self)
             self.canvas.mouseoverActive = True
             self.canvas.mouseClickActive = True
-            self.canvas.rectangleSelectActive = self.activeAtomSelectTool.rectangleSelect
+            self.canvas.rectangleSelectActive = (
+                self.activeAtomSelectTool.rectangleSelect
+            )
             self.atomSelectBar.show()
 
         self.onNewGeometry()
@@ -680,7 +682,7 @@ class Loupe(Widget, EventChildClass):
         self.setIndex(index)
 
     def visualRefresh(self):
-        self.canvas.visualRefresh(force = True)
+        self.canvas.visualRefresh(force=True)
 
     # SETTINGS PANE
     def addSidebarPane(self, name, pane):
@@ -700,7 +702,6 @@ class Loupe(Widget, EventChildClass):
 
     def setSettingsPaneVisibility(self, *args):
         return self.sideBar.setContentVisibility(*args)
-
 
     # PICKING
     def setActiveAtomSelectTool(self, *args):

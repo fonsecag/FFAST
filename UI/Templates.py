@@ -676,7 +676,7 @@ class ContentBar(Widget):
         widget = self.widgets.get(name)
         if widget is None:
             return
-        
+
         if vis:
             widget.show()
         else:

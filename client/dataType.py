@@ -57,6 +57,7 @@ class SubDataEntity(DataEntity):
     def get(self, key=None):
         return self.parent.get(key=key)[self.indices]
 
+
 class AtomFilteredEntity(DataEntity):
     def __init__(self, parent, indices):
         self.parent = parent
@@ -77,11 +78,11 @@ class DataType(EventClass):
     datasetDependent = False
     key = None
     data = None
-    dependencies = None 
+    dependencies = None
 
-    iterable = False # if True, results are per-config (e.g. forces, energies..., as opposed to distributions)
-    atomFilterable = False # if True, results are per-atom (e.g. forces)
-    atomConstant = False   # if True, results are independent of atom filter (e.g. energy, kind of)
+    iterable = False  # if True, results are per-config (e.g. forces, energies..., as opposed to distributions)
+    atomFilterable = False  # if True, results are per-atom (e.g. forces)
+    atomConstant = False  # if True, results are independent of atom filter (e.g. energy, kind of)
 
     def __init__(self, env):
         super().__init__()
@@ -141,7 +142,9 @@ class DataType(EventClass):
         data = None
         if dataset.isSubDataset and dataset.isAtomFiltered:
             if self.atomFilterable or self.atomConstant:
-                return self.generateData(dataset=dataset.parent, model = model, taskID=taskID)
+                return self.generateData(
+                    dataset=dataset.parent, model=model, taskID=taskID
+                )
 
         (deps, canGenerate) = self.checkDependencies(
             dataset=dataset, model=model
@@ -168,14 +171,16 @@ class DataType(EventClass):
             if env.hasData(dep, dataset=dataset, model=model):
                 continue
 
-            key = env.getCacheKey(dep, dataset = dataset, model = model)
+            key = env.getCacheKey(dep, dataset=dataset, model=model)
             deps.append(key)
 
         # IF ATOM-FILTERED, PARENT DATA CAN BE DEPENDENCY
         if dataset.isSubDataset and dataset.isAtomFiltered:
             if self.atomFilterable or self.atomConstant:
                 if not env.hasData(dep, dataset=dataset.parent, model=model):
-                    key = env.getCacheKey(dep, dataset = dataset.parent, model = model)
+                    key = env.getCacheKey(
+                        dep, dataset=dataset.parent, model=model
+                    )
                     deps.append(key)
 
         return (deps, len(deps) == 0)
@@ -187,22 +192,24 @@ class DataType(EventClass):
         env = self.env
         generatableComps = []
 
-        comps = [env.getCacheKey(self.key, model=model, dataset = dataset)]
+        comps = [env.getCacheKey(self.key, model=model, dataset=dataset)]
 
         for i in range(100):
-            # 100 instead of a while loop just to avoid crashing if infinite 
+            # 100 instead of a while loop just to avoid crashing if infinite
             # loops are created unvoluntarily. Still catching them to fix it
             if i == 99:
-                logger.exception(f"Infinite loop in lowest generatable components.")
+                logger.exception(
+                    f"Infinite loop in lowest generatable components."
+                )
 
             newComps = []
             for compKey in comps:
 
-                dt, m, d = env.cacheKeyToComponents(compKey, dataTypeObject = True)
-
-                (deps, canGenerate) = dt.checkDependencies(
-                    dataset=d, model=m
+                dt, m, d = env.cacheKeyToComponents(
+                    compKey, dataTypeObject=True
                 )
+
+                (deps, canGenerate) = dt.checkDependencies(dataset=d, model=m)
                 if canGenerate:
                     generatableComps.append((compKey))
                 else:

@@ -3,7 +3,7 @@ import numpy as np
 # http://jmol.sourceforge.net/jscolors/
 atomColors = 255 * np.array(
     [
-        [0, 0, 0],  # 0 index filler
+        [1, 0.8, 0.15],  # 0 is "All atoms"
         [1.000, 1.000, 1.000],  # H
         [0.851, 1.000, 1.000],  # He
         [0.800, 0.502, 1.000],  # Li

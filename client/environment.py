@@ -181,6 +181,17 @@ class Environment(EventClass):
             forcesDataEntity, "forces", model=modelKey, dataset=dataset
         )
 
+        # update info with the path etc
+        self.info.update({
+            "objects":{
+                modelKey:{
+                    "path": path,
+                    "name": os.path.basename(path)
+                }
+            }
+        })
+
+
         self.lookForGhosts()
 
     #############

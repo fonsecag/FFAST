@@ -22,6 +22,11 @@ class GhostModelLoader(ModelLoader):
 
     def initialise(self):
         # search for path and name in info
+        if "objects" not in self.env.info:
+            self.path = "?"
+            self.setName("?")
+            return
+
         info = self.env.info["objects"].get(self.fingerprint, None)
         if info is not None:
             self.path = info["path"]

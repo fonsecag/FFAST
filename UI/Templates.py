@@ -434,14 +434,27 @@ class ToolCheckButton(QtWidgets.QToolButton):
 
 
 class ToolButton(QtWidgets.QToolButton):
-    def __init__(self, func, icon="default", **kwargs):
+    padding = 4
+
+    def __init__(
+        self, func, icon="default", padding=None, width=25, height=25, **kwargs
+    ):
         super().__init__(**kwargs)
+        if padding is not None:
+            self.padding = padding
         self.clicked.connect(func)
         self.setIconByName(icon)
+        self.setButtonSize(width, height)
 
     def setIconByName(self, name):
         icon = getIcon(name)
         self.setIcon(QtGui.QIcon(icon))
+
+    def setButtonSize(self, w, h):
+        self.setFixedSize(w, h)
+        self.setIconSize(
+            QtCore.QSize(w - self.padding * 2, h - self.padding * 2)
+        )
 
 
 class ExpandingScrollArea(QtWidgets.QScrollArea):

@@ -20,6 +20,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
         background-color: @COLOR;
         border-radius: 20;
     """
+    iconSize = 25
 
     def __init__(self, *args, **kwargs):
         # self.handler is set automatically
@@ -93,7 +94,7 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
 
         self.renameButton = ToolButton(self.renameObject, icon="rename")
         self.renameButton.setToolTip("Rename")
-        self.renameButton.setFixedSize(25, 25)
+        self.renameButton.setButtonSize(self.iconSize, self.iconSize)
 
         # SET LINE EDIT PARAMETERS
         regExp = QtCore.QRegularExpression("^[^.\\\/]*$")
@@ -103,25 +104,43 @@ class DatasetModelItem(ObjectListItem, EventChildClass):
 
         layout.addWidget(self.renameButton)
 
-        if (self.getObject().isSubDataset) and not (self.getObject().frozen):
-            self.freezeButton = ToolButton(self.freezeObject, icon="freeze")
-            self.freezeButton.setFixedSize(25, 25)
-            self.freezeButton.setToolTip(
-                "Freeze current indices to keep subdataset as is"
-            )
-            layout.addWidget(self.freezeButton)
-        else:
-            self.deleteButton = ToolButton(self.deleteObject, icon="delete")
-            self.deleteButton.setFixedSize(25, 25)
-            self.deleteButton.setToolTip("Remove")
-            layout.addWidget(self.deleteButton)
+        obj = self.getObject()
+        ## DATASET
+        if obj.loadeeType == "dataset":
 
-        # save button
-        if self.getObject().loadeeType == "dataset":
-            self.saveButton = ToolButton(self.saveDataset)
-            self.saveButton.setFixedSize(25, 25)
+            # save button
+            self.saveButton = ToolButton(self.saveDataset, icon="save")
+            self.saveButton.setButtonSize(self.iconSize, self.iconSize)
             self.saveButton.setToolTip("Save dataset")
             layout.addWidget(self.saveButton)
+
+            if (
+                (obj.isSubDataset)
+                and not (obj.frozen)
+                and not obj.isAtomFiltered
+            ):
+                self.freezeButton = ToolButton(
+                    self.freezeObject, icon="freeze"
+                )
+                self.freezeButton.setButtonSize(self.iconSize, self.iconSize)
+                self.freezeButton.setToolTip(
+                    "Freeze current indices to keep subdataset as is"
+                )
+                layout.addWidget(self.freezeButton)
+
+            if (not obj.isSubDataset) or (obj.isAtomFiltered or obj.frozen):
+                self.deleteButton = ToolButton(
+                    self.deleteObject, icon="delete"
+                )
+                self.deleteButton.setButtonSize(self.iconSize, self.iconSize)
+                self.deleteButton.setToolTip("Remove")
+                layout.addWidget(self.deleteButton)
+
+        else:
+            self.deleteButton = ToolButton(self.deleteObject, icon="delete")
+            self.deleteButton.setButtonSize(self.iconSize, self.iconSize)
+            self.deleteButton.setToolTip("Remove")
+            layout.addWidget(self.deleteButton)
 
     def applyStyle(self):
         obj = self.getObject()

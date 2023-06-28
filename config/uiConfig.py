@@ -34,6 +34,8 @@ config = {
         "rightArrow": "collapsed.png",
         "start": "start.png",
         "pause": "pause.png",
+        "save": "save.png",
+        "freeze": "freeze.png",
     },
 }
 

@@ -44,6 +44,7 @@ class DatasetLoader(EventClass):
     """
 
     isSubDataset = False
+    isAtomFiltered = False
     isGhost = False
     frozen = False
 
@@ -135,7 +136,7 @@ class DatasetLoader(EventClass):
         self.setName(name)
 
         z = self.getElements()
-        self.bondSizes = covalentBonds[z, z] * getConfig("loupeBondsLenience")
+        self.bondSizes = covalentBonds[z][:,z] * getConfig("loupeBondsLenience")
 
     def getPDist(self, indices=None):
         R = self.getCoordinates(indices=indices)
@@ -355,3 +356,114 @@ class FrozenSubDataset(SubDataset):
             )
 
         return fp
+
+
+class AtomFilteredDataset(DatasetLoader):
+    loadeeType = "dataset"
+    isSubDataset = True
+    isAtomFiltered = True
+
+    datasetName = "Atom-Filtered Dataset"
+    datasetType = "AtomFilteredDataset"
+
+    indices = None
+    loaded = False
+    parent = None
+
+    def __init__(self, parentDataset, indices):
+        super().__init__("")
+        self.parent = parentDataset
+        self.loaded = parentDataset.loaded
+
+        if indices is None:
+            return None
+        
+        self.indices = indices
+        self.updatePath()
+
+        self.z = parentDataset.getElements()[indices]
+        self.chem = self.zToChemicalFormula(self.z)
+
+        self.bondSizes = parentDataset.bondSizes[self.indices][:,self.indices]
+
+    def updatePath(self):
+        self.path = (
+            f"{self.parent.getName()},atomFilter"
+        )
+
+    def getFingerprint(self, parent = None, indices = None):
+        if indices is None:
+            indices = self.indices
+        if parent is None:
+            parent = self.parent
+
+        fp = md5FromArraysAndStrings(parent.fingerprint, indices)
+
+        return fp
+
+    def initialise(self):
+        self.fingerprint = self.getFingerprint()
+
+        if self.fingerprint == self.parent.fingerprint:
+            raise ValueError(
+                f"SubDataset for dataset {self.parent} has same fingerprint. Aborted."
+            )
+        
+        name = self.path
+        self.setName(name)
+    
+    def getN(self):
+        return self.parent.getN()
+    
+    ## PARENT DEPENDENT METHODS HERE
+    ## MOSTLY DEFINED IN SPECIFIC (e.g. sGDML) LOADERS
+    def getCoordinates(self, indices=None):
+        a = self.parent.getCoordinates(indices=indices)
+        if len(a.shape) == 3:
+            return a[:,self.indices]
+        else:
+            return a[self.indices]
+
+    def getEnergies(self, indices=None):
+        e = self.parent.getEnergies(indices=indices)
+        return e
+
+    def getForces(self, indices=None):
+        f = self.parent.getForces(indices=indices)
+        if len(f.shape) == 3:
+            return f[:,self.indices]
+        else:
+            return f[self.indices]
+        
+    def getPDist(self, indices=None):
+        R = self.getCoordinates(indices = indices)
+        return toDistance(R)
+
+    def getNAtoms(self):
+        return len(self.indices)
+
+    def getChemicalFormula(self):
+        return self.chem
+
+    def getElements(self):
+        return self.z
+
+    def getLattice(self):
+        return self.parent.getLattice()
+
+    def getElementsName(self):
+        return [zIntToZStr[x] for x in self.getElements()]
+
+    def getInfo(self):
+        chems = ",".join(set(self.getElementsName()))
+        return [
+            ("Parent", self.parent.getDisplayName()),
+            ("Viewed Elements", chems)
+        ]
+
+    def isDependentOn(self, obj):
+        if obj is None:
+            return False
+
+        return self.parent is obj
+

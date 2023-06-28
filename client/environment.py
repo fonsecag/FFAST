@@ -1,5 +1,5 @@
 from events import EventClass
-from loaders.datasetLoader import SubDataset, FrozenSubDataset
+from loaders.datasetLoader import SubDataset, FrozenSubDataset, AtomFilteredDataset
 from loaders.modelGhost import GhostModelLoader
 from loaders.zeroModel import ZeroModelLoader
 from tasks import TaskManager
@@ -295,6 +295,17 @@ class Environment(EventClass):
         sub.initialise()
         self.setNewDataset(sub)
 
+    def createAtomFilteredDataset(self, dataset, idxs):
+        fp = AtomFilteredDataset.getFingerprint(AtomFilteredDataset, dataset, idxs)
+        sub = self.getDataset(fp)
+
+        if sub is not None:
+            return
+        
+        sub = AtomFilteredDataset(dataset, idxs)
+        sub.initialise()
+        self.setNewDataset(sub)
+
     #############
     ## OBJECTS (MODELS & DATASETS)
     #############
@@ -379,22 +390,25 @@ class Environment(EventClass):
             return None
 
         cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
-        if (
-            (dataset is not None)
-            and (dataset.isSubDataset)
-            and dataType.iterable
-            and not self.hasCacheKey(cacheKey, subChecks=False)
-        ):
-            cacheKey = dataType.getCacheKey(
-                model=model, dataset=dataset.parent
-            )
-            data = self.cache.get(cacheKey, None)
-            if data is not None:
-                data = data.getSubEntity(indices=dataset.indices)
-        else:
-            data = self.cache.get(cacheKey, None)
 
-        return data
+        ## SUBDATSETS
+        if (dataset is not None) and (dataset.isSubDataset) and not self.hasCacheKey(cacheKey, subChecks=False):      
+            ## ATOM FILTERED
+            if dataset.isAtomFiltered:
+                if dataType.atomFilterable:
+                    data = self.getData(dataTypeKey, model = model, dataset = dataset.parent)
+                    if data is not None:
+                        return data.getAtomFilteredEntity(indices = dataset.indices)
+                
+                if dataType.atomConstant:
+                    return self.getData(dataTypeKey, model = model, dataset = dataset.parent)
+                
+            elif dataType.iterable:
+                data = self.getData(dataTypeKey, model = model, dataset = dataset.parent)
+                if data is not None:
+                    return data.getSubEntity(indices=dataset.indices)
+
+        return self.cache.get(cacheKey, None)
 
     def setData(self, dataEntity, dataTypeKey, model=None, dataset=None):
         dataType = self.getRegisteredDataType(dataTypeKey)
@@ -420,6 +434,40 @@ class Environment(EventClass):
         cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
 
         return cacheKey
+
+    def hasCacheKey(self, key, subChecks=True):
+        if key is None:
+            logger.error("Called env.hasCacheKey(key) but key was None!")
+            return False
+        if subChecks:
+            (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
+            return self.hasData(dataTypeKey, model=model, dataset=dataset)
+        else:
+            return key in self.cache
+
+    def hasData(self, dataTypeKey, model=None, dataset=None):
+        cacheKey = self.getCacheKey(dataTypeKey, model=model, dataset=dataset)
+        hasKey = self.hasCacheKey(cacheKey, subChecks=False)
+
+        if hasKey:
+            return True
+
+        if (dataset is not None) and (dataset.isSubDataset):
+            dataType = self.getDataType(dataTypeKey)
+
+            if dataset.isAtomFiltered:
+                if dataType.atomFilterable or dataType.atomConstant:
+                    return self.hasData(
+                        dataTypeKey, model=model, dataset=dataset.parent
+                    )
+
+            elif dataType.iterable:
+                    return self.hasData(
+                        dataTypeKey, model=model, dataset=dataset.parent
+                    )
+                
+        return False
+
 
     #############
     ## DATA GENERATION
@@ -613,10 +661,13 @@ class Environment(EventClass):
             model=model, dataset=dataset
         )
 
-        return [
-            self.getCacheKey(key, model=model, dataset=dataset)
-            for key in compKeys
-        ]
+        return compKeys
+        # return [
+        #     self.getCacheKey(key, model=model, dataset=dataset)
+        #     for key in compKeys
+        # ]
+    
+
 
     def deleteCacheByDataset(self, datasetKey):
         toDelete = []
@@ -628,24 +679,6 @@ class Environment(EventClass):
             del self.cache[key]
             self.eventPush("DATA_UPDATED", key)
 
-    def hasCacheKey(self, key, subChecks=True):
-        if subChecks:
-            (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
-            return self.hasData(dataTypeKey, model=model, dataset=dataset)
-        else:
-            return key in self.cache
-
-    def hasData(self, dataTypeKey, model=None, dataset=None):
-        cacheKey = self.getCacheKey(dataTypeKey, model=model, dataset=dataset)
-        hasKey = self.hasCacheKey(cacheKey, subChecks=False)
-        if (dataset is not None) and (dataset.isSubDataset):
-            dataType = self.getDataType(dataTypeKey)
-            if (not hasKey) and dataType.iterable:
-                return self.hasData(
-                    dataTypeKey, model=model, dataset=dataset.parent
-                )
-        return hasKey
-
     def getCacheByKey(self, key, subChecks=True):
         if subChecks:
             (dataTypeKey, model, dataset) = self.cacheKeyToComponents(key)
@@ -653,9 +686,13 @@ class Environment(EventClass):
         else:
             return self.cache.get(key, None)
 
-    def cacheKeyToComponents(self, key):
+    def cacheKeyToComponents(self, key, dataTypeObject = False):
         spl = key.split("__")
         dataTypeKey = spl[0]
+        if dataTypeObject:
+            dataType = self.getDataType(dataTypeKey)
+        else:
+            dataType = dataTypeKey
 
         if spl[1] == "nil":
             model = None
@@ -667,7 +704,7 @@ class Environment(EventClass):
         else:
             dataset = self.getDataset(spl[2])
 
-        return (dataTypeKey, model, dataset)
+        return (dataType, model, dataset)
 
     #############
     ## SAVE/LOAD

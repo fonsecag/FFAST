@@ -46,6 +46,7 @@ class CanvasProperty:
 class AtomSelectionBase:
     multiselect = 1
     cycle = False
+    rectangleSelect = False
     label = "N/A"
 
     def __init__(self, canvas):
@@ -87,7 +88,7 @@ class AtomSelectionBase:
 
     def selectAtoms(self, idxs):
         for idx in idxs:
-            self.selectAtom(idx)
+            self.selectAtom(idx, suppressCallback=True)
 
         self.selectCallback()
 

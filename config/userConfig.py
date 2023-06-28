@@ -46,7 +46,7 @@ class Settings(dict):
             if self[key] == value:
                 return
         except ValueError:
-            # means the value cannot be compared, usually if the parameter is a list or numpy array
+            # means the value cannot be compared, usually if the parameter is an object, list or array
             pass
 
         self[key] = value

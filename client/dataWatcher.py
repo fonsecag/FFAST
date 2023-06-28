@@ -27,7 +27,8 @@ class DataWatcher(EventChildClass):
         self.dataTypeDependencies = []
         self.datasetDependencies = []
         self.modelDependencies = []
-        self.dependencyList = []
+        self.dependencyList = [] # list of datakeys (data__model__dataset) its needs
+        self.refreshList = [] # additional list of datakeys that refresh it (because of subdatasets)
         self.currentlyMissingKeys = []
         self.refreshWidgets = []
         self.callbacks = []
@@ -121,8 +122,6 @@ class DataWatcher(EventChildClass):
             dataset = self.env.getDataset(key)
             if (dataset is None) or (not dataset.active):
                 continue
-            if dataset.isSubDataset and dataset.subName == self.parentName:
-                continue
             self.datasetDependencies.append(key)
 
         if not quiet:
@@ -138,6 +137,7 @@ class DataWatcher(EventChildClass):
         # args because event
 
         self.dependencyList = []
+        self.refreshList = []
         env = self.env
 
         if len(self.dataTypeDependencies) < 1 or (
@@ -178,9 +178,19 @@ class DataWatcher(EventChildClass):
 
                     if (dataset is None) and dataType.datasetDependent:
                         continue
+                    
+                    if (dataset.isSubDataset 
+                        and dataset.isAtomFiltered
+                        and (dataType.atomFilterable or dataType.atomConstant)
+                        ):
 
+                        key = dataType.getCacheKey(model=model, dataset=dataset.parent)
+                        self.refreshList.append(key)
+                        
                     key = dataType.getCacheKey(model=model, dataset=dataset)
                     self.dependencyList.append(key)
+
+
 
         self.refresh()
 
@@ -204,10 +214,8 @@ class DataWatcher(EventChildClass):
         self.sendRefresh()
 
     def onDataUpdated(self, cacheKey):
-        if cacheKey not in self.dependencyList:
+        if (cacheKey not in self.dependencyList) and (cacheKey not in self.refreshList):
             return
-
-        (dataTypeKey, model, dataset) = self.env.cacheKeyToComponents(cacheKey)
 
         self.refresh()
 

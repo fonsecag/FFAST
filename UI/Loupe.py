@@ -55,6 +55,7 @@ class SceneCanvas(scene.SceneCanvas):
 
     mouseoverActive = False
     mouseClickActive = False
+    rectangleSelectActive = False
     widget = None
     pickingColors = None
     isCtrlDragging = False
@@ -130,7 +131,7 @@ class SceneCanvas(scene.SceneCanvas):
         if self.widget.loupe.selectedDatasetKey is None:
             return
 
-        if keys.CONTROL in event.modifiers:
+        if keys.CONTROL in event.modifiers and self.rectangleSelectActive:
             self.isCtrlDragging = True
             self.draggingStart = event.pos
         else:
@@ -153,7 +154,7 @@ class SceneCanvas(scene.SceneCanvas):
         if self.widget.loupe.selectedDatasetKey is None:
             return
 
-        if wasCtrlDragging:
+        if wasCtrlDragging and self.rectangleSelectActive:
             pos0, pos1 = self.draggingStart, event.pos
             self.draggingStart = np.array([0, 0])
 
@@ -172,7 +173,7 @@ class SceneCanvas(scene.SceneCanvas):
             point = self.getAtomIndexAtPosition(event.pos, refresh=False)
             self.widget.setHoveredPoint(point, refresh=True)
 
-        if self.isCtrlDragging:
+        if self.rectangleSelectActive and self.isCtrlDragging:
             self.widget.setSelectionRectanglePos(self.draggingStart, event.pos)
 
     def on_resize(self, *args):
@@ -412,11 +413,13 @@ class InteractiveCanvas(Widget):
             self.activeAtomSelectTool = None
             self.canvas.mouseoverActive = False
             self.canvas.mouseClickActive = False
+            self.canvas.rectangleSelectActive = False
             self.atomSelectBar.hide()
         else:
             self.activeAtomSelectTool = tool(self)
             self.canvas.mouseoverActive = True
             self.canvas.mouseClickActive = True
+            self.canvas.rectangleSelectActive = self.activeAtomSelectTool.rectangleSelect
             self.atomSelectBar.show()
 
         self.onNewGeometry()
@@ -485,6 +488,7 @@ class Loupe(Widget, EventChildClass):
         super().__init__(color="green", layout="horizontal")
         EventChildClass.__init__(self)
 
+        # SETTINGS
         self.initialiseSettings()
 
         self.resize(1100, 800)
@@ -530,6 +534,7 @@ class Loupe(Widget, EventChildClass):
         self.settings.addAction("cameraChange", self.onCameraChange)
         self.settings.addAction("pause", self.onPause)
         self.settings.addAction("datasetSelected", self.onDatasetSelected)
+        self.settings.addAction("visualRefresh", self.visualRefresh)
 
         self.settings.addParameters(
             **{"videoFPS": [30], "videoSkipFrames": [0]}
@@ -674,6 +679,9 @@ class Loupe(Widget, EventChildClass):
 
         self.setIndex(index)
 
+    def visualRefresh(self):
+        self.canvas.visualRefresh(force = True)
+
     # SETTINGS PANE
     def addSidebarPane(self, name, pane):
         if name in self.panes:
@@ -689,6 +697,10 @@ class Loupe(Widget, EventChildClass):
 
     def getSettingsPane(self, name):
         return self.panes.get(name, None)
+
+    def setSettingsPaneVisibility(self, *args):
+        return self.sideBar.setContentVisibility(*args)
+
 
     # PICKING
     def setActiveAtomSelectTool(self, *args):

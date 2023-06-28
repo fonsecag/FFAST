@@ -37,6 +37,11 @@ class DataEntity:
             return self
         return SubDataEntity(self, indices)
 
+    def getAtomFilteredEntity(self, indices):
+        if indices is None:
+            return self
+        return AtomFilteredEntity(self, indices)
+
 
 class SubDataEntity(DataEntity):
     def __init__(self, parent, indices):
@@ -52,14 +57,31 @@ class SubDataEntity(DataEntity):
     def get(self, key=None):
         return self.parent.get(key=key)[self.indices]
 
+class AtomFilteredEntity(DataEntity):
+    def __init__(self, parent, indices):
+        self.parent = parent
+        self.indices = indices
+
+        self.unitType = parent.unitType
+        self.unit = parent.unit
+        self.timestamp = parent.timestamp
+        self.dataType = parent.dataType
+        self.data = parent.data
+
+    def get(self, key=None):
+        return self.parent.get(key=key)[:, self.indices]
+
 
 class DataType(EventClass):
     modelDependent = False
     datasetDependent = False
     key = None
     data = None
-    dependencies = None
-    iterable = False
+    dependencies = None 
+
+    iterable = False # if True, results are per-config (e.g. forces, energies..., as opposed to distributions)
+    atomFilterable = False # if True, results are per-atom (e.g. forces)
+    atomConstant = False   # if True, results are independent of atom filter (e.g. energy, kind of)
 
     def __init__(self, env):
         super().__init__()
@@ -117,6 +139,9 @@ class DataType(EventClass):
             return None
 
         data = None
+        if dataset.isSubDataset and dataset.isAtomFiltered:
+            if self.atomFilterable or self.atomConstant:
+                return self.generateData(dataset=dataset.parent, model = model, taskID=taskID)
 
         (deps, canGenerate) = self.checkDependencies(
             dataset=dataset, model=model
@@ -138,40 +163,51 @@ class DataType(EventClass):
             return [], True
 
         env = self.env
-        deps, canGenerate = ([], True)
+        deps = []
         for dep in self.dependencies:
             if env.hasData(dep, dataset=dataset, model=model):
                 continue
 
-            canGenerate = False
-            deps.append(dep)
+            key = env.getCacheKey(dep, dataset = dataset, model = model)
+            deps.append(key)
 
-        return (deps, canGenerate)
+        # IF ATOM-FILTERED, PARENT DATA CAN BE DEPENDENCY
+        if dataset.isSubDataset and dataset.isAtomFiltered:
+            if self.atomFilterable or self.atomConstant:
+                if not env.hasData(dep, dataset=dataset.parent, model=model):
+                    key = env.getCacheKey(dep, dataset = dataset.parent, model = model)
+                    deps.append(key)
+
+        return (deps, len(deps) == 0)
 
     def getGeneratableComponent(self, dataset=None, model=None):
         if self.dependencies is None:
             return [], True
 
         env = self.env
-        (generatableComps, canGenerate) = ([], True)
-        comps = [self]
+        generatableComps = []
+
+        comps = [env.getCacheKey(self.key, model=model, dataset = dataset)]
 
         for i in range(100):
-            # 100 instead of a while loop just to avoid crashing if loops are
-            # created unvoluntarily. Still catching loops so we can fix it
-            if i == 98:
-                logger.exception(f"Loop in lowest generatable components.")
+            # 100 instead of a while loop just to avoid crashing if infinite 
+            # loops are created unvoluntarily. Still catching them to fix it
+            if i == 99:
+                logger.exception(f"Infinite loop in lowest generatable components.")
 
             newComps = []
-            for comp in comps:
-                (deps, canGenerate) = comp.checkDependencies(
-                    dataset=dataset, model=model
+            for compKey in comps:
+
+                dt, m, d = env.cacheKeyToComponents(compKey, dataTypeObject = True)
+
+                (deps, canGenerate) = dt.checkDependencies(
+                    dataset=d, model=m
                 )
                 if canGenerate:
-                    generatableComps.append(comp.key)
+                    generatableComps.append((compKey))
                 else:
                     for dep in deps:
-                        newComps.append(env.getDataType(dep))
+                        newComps.append(dep)
 
             if len(newComps) == 0:
                 break
@@ -190,6 +226,7 @@ class EnergyPredictionData(DataType):
     datasetDependent = True
     key = "energy"
     iterable = True
+    atomConstant = True
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -216,6 +253,7 @@ class ForcesPredictionData(DataType):
     datasetDependent = True
     key = "forces"
     iterable = True
+    atomFilterable = True
 
     def __init__(self, *args):
         super().__init__(*args)

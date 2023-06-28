@@ -247,7 +247,6 @@ covalentRadii = np.array(
 
 covalentBonds = covalentRadii.reshape((-1, 1)) + covalentRadii.reshape((1, -1))
 
-
 zStrToZInt = {
     "All": 0,
     "H": 1,

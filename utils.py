@@ -128,8 +128,9 @@ def md5FromArraysAndStrings(*args):
             d = arg.encode("utf8")
         elif isinstance(arg, np.ndarray):
             d = arg.ravel()
-        else:
-            continue
+        elif isinstance(arg, list):
+            d = np.array(arg).ravel()
+        
         fp.update(hashlib.md5(d).digest())
 
     return fp.hexdigest()

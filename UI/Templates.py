@@ -672,6 +672,16 @@ class ContentBar(Widget):
     def setExpanded(self, name):
         self.widgets[name].setExpanded()
 
+    def setContentVisibility(self, name, vis):
+        widget = self.widgets.get(name)
+        if widget is None:
+            return
+        
+        if vis:
+            widget.show()
+        else:
+            widget.hide()
+
 
 class ObjectListItem(Widget):
     def __init__(self, handler, id, color=None, layout="vertical", **kwargs):
@@ -1004,7 +1014,7 @@ class ObjectComboBox(ComboBox, EventChildClass):
             self.eventSubscribe("MODEL_LOADED", self.updateList)
             self.eventSubscribe("MODEL_DELETED", self.updateList)
 
-        self.eventSubscribe("OBJECT_NAME_CHANGED", self.updateComboBox)
+        self.eventSubscribe("OBJECT_NAME_CHANGED", self.updateList)
 
         self.currentKeyList = []
         self.updateList()
@@ -1022,7 +1032,6 @@ class ObjectComboBox(ComboBox, EventChildClass):
 
         self.currentKeyList = l
         self.updateComboBox()
-        self.currentlyUpdatingList = False
 
         # RESELECT PREVIOUS ONE
         if self.selectedKey in self.currentKeyList:
@@ -1031,6 +1040,8 @@ class ObjectComboBox(ComboBox, EventChildClass):
         elif len(self.currentKeyList) > 0:
             self.setCurrentIndex(0)
             self.forceUpdate()
+
+        self.currentlyUpdatingList = False
 
     def updateComboBox(self, *args):
         self.clear()

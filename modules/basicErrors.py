@@ -16,6 +16,7 @@ def loadData(env):
         key = "energyError"
         dependencies = ["energy"]
         iterable = True
+        atomConstant = True
 
         def __init__(self, *args):
             super().__init__(*args)
@@ -38,6 +39,7 @@ def loadData(env):
         key = "forcesError"
         dependencies = ["forces"]
         iterable = True
+        atomFilterable = True
 
         def __init__(self, *args):
             super().__init__(*args)

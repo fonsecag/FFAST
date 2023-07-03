@@ -43,6 +43,7 @@ class ModelLoader(EventClass):
     singlePredict = False
     modelName = "N/A"
     modelFileExtension = "*"
+    name = "?"
 
     def setName(self, name):
         if name == "":

@@ -68,7 +68,7 @@ class DatasetLoader(EventClass):
     datasetFileExtension = "*"
     saveFormats = [None]
 
-    name = "N/A"
+    name = "?"
     loaded = False
     active = True
 

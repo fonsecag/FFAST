@@ -77,7 +77,7 @@ def addSetting(UIHandler, loupe):
                 [],
                 partial(updateSelection, loupe),
                 "visualRefresh",
-            ],
+            ]
         }
     )
 
@@ -108,7 +108,7 @@ def addSettingsPane(UIHandler, loupe):
 
     selectButton = PushButton("Select")
     selectButton.setToolTip(
-        "Click to manually add/remove indices in the atom filter. Hold CTRL to create selection rectangle."
+        "Click to manually add/remove indices in the atom filter. Hold CMD/CTRL to create selection rectangle."
     )
     selectButton.clicked.connect(selectAtoms)
     container.layout.addWidget(selectButton)

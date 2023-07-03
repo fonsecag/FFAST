@@ -16,7 +16,7 @@ m = env.getModelFromPath(mpath)
 env.addToGenerationQueue("forces", model=m, dataset=d)
 env.waitForTasks(verbose=True)
 
-de = env.getData("forcesError", model=m, dataset=d)
+de = env.getData("forces", model=m, dataset=d)
 print(de.get().shape)
 
 env.save("ethData")

@@ -84,6 +84,9 @@ class DataloaderButton(PushButton, EventChildClass):
         if self is not widget:
             return
 
+        self.refresh()
+
+    def refresh(self):
         missing = self.dataWatcher.currentlyMissingKeys
         if len(missing) == 0:
             self.setEnabled(False)

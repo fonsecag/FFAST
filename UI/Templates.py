@@ -1030,9 +1030,9 @@ class ObjectComboBox(ComboBox, EventChildClass):
         self.eventSubscribe("OBJECT_NAME_CHANGED", self.updateList)
 
         self.currentKeyList = []
-        self.updateList()
 
         self.currentIndexChanged.connect(self.onIndexChanged)
+        self.updateList()
 
     def updateList(self, *args):
         self.currentlyUpdatingList = True
@@ -1050,11 +1050,12 @@ class ObjectComboBox(ComboBox, EventChildClass):
         if self.selectedKey in self.currentKeyList:
             index = self.currentKeyList.index(self.selectedKey)
             self.setCurrentIndex(index)
+            self.currentlyUpdatingList = False
+
         elif len(self.currentKeyList) > 0:
             self.setCurrentIndex(0)
+            self.currentlyUpdatingList = False
             self.forceUpdate()
-
-        self.currentlyUpdatingList = False
 
     def updateComboBox(self, *args):
         self.clear()
@@ -1122,6 +1123,7 @@ class TableView(Widget):
     headerLeft = True
     headerTop = True
     spacing = 10
+    nHeaderChars = 20
 
     borderQSS = "1px inset @BGColor5"
 
@@ -1284,10 +1286,10 @@ class TableView(Widget):
         label.setText(s)
 
     def setLeftHeader(self, row, s):
-        self.headerLeftLabels[row].setText(s)
+        self.headerLeftLabels[row].setText(s[: self.nHeaderChars])
 
     def setTopHeader(self, col, s):
-        self.headerTopLabels[col].setText(s)
+        self.headerTopLabels[col].setText(s[: self.nHeaderChars])
 
 
 #############

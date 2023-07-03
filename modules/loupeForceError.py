@@ -25,23 +25,26 @@ class ColorBarVisual(VisualElement):
 
         setting = self.canvas.settings.get("atomColorType")
         prop = self.canvas.props["forceErrorColor"]
+        zeroModel = prop.get("isZeroModel")
 
         if prop.get("atomicMAE") is None:
             hasData = False
 
         if hasData and (setting == "Mean Force Error"):
+            label = "Mean avg. abs. force" if zeroModel else "Mean Force MAE"
             self.setParameters(
                 visible=True,
                 cmap=prop.colorMap,
                 clim=(prop.get("meanMin"), prop.get("meanMax")),
-                label="Mean Force MAE",
+                label=label,
             )
         elif hasData and (setting == "Force Error"):
+            label = "Avg. abs. force" if zeroModel else "Force MAE"
             self.setParameters(
                 visible=True,
                 cmap=prop.colorMap,
                 clim=(prop.get("min"), prop.get("max")),
-                label="Force MAE",
+                label=label,
             )
         else:
             self.setParameters(visible=False)
@@ -129,10 +132,12 @@ class ForceErrorColorProperty(CanvasProperty):
 
     def generate(self):
         dw = self.canvas.loupe.forceErrorDataWatcher
-        data = dw.getWatchedData(dataOnly=True)
+        data = dw.getWatchedData()
         if len(data) < 1:
             return
-        de = data[0]  # just one dataset-model combination is watched
+        de = data[0][
+            "dataEntry"
+        ]  # just one dataset-model combination is watched
         atomicMAE = de.get("atomicMAE")
         if atomicMAE is None:
             return
@@ -146,6 +151,7 @@ class ForceErrorColorProperty(CanvasProperty):
             max=np.percentile(atomicMAE, perc),
             meanMin=np.min(meanAtomicMAE),
             meanMax=np.max(meanAtomicMAE),
+            isZeroModel=data[0]["model"].fingerprint == "zeroModel",
         )
 
     def manualUpdate(self):
@@ -225,18 +231,9 @@ def addSettings(UIHandler, loupe):
     from UI.Templates import ObjectComboBox
 
     ## ADDING DATAWATCHER
-    def updateForceErrorColor():
-        prop = loupe.canvas.props["forceErrorColor"]
-        prop.manualUpdate()
-
     dw = DataWatcher(loupe.env)
     loupe.forceErrorDataWatcher = dw
     dw.setDataDependencies("forcesErrorMetrics")
-    dw.addCallback(updateForceErrorColor)
-
-    settings = loupe.settings
-    # make sure to update the colorbar etc when we change color type
-    settings.addParameterActions("atomColorType", updateForceErrorColor)
 
     pane = loupe.getSettingsPane("ATOMS")
     comboBox = pane.settingsWidgets.get("Coloring")
@@ -273,6 +270,15 @@ def addSettings(UIHandler, loupe):
     btn = DataloaderButton(UIHandler, dw)
     container.layout.addWidget(btn)
     btn.setFixedWidth(80)
+
+    # ADD CALLBACKS
+    def updateForceErrorColor():
+        prop = loupe.canvas.props["forceErrorColor"]
+        prop.manualUpdate()
+
+    settings = loupe.settings
+    settings.addParameterActions("atomColorType", updateForceErrorColor)
+    dw.addCallback(updateForceErrorColor)
 
 
 def loadLoupe(UIHandler, loupe):

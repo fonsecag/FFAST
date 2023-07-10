@@ -289,7 +289,7 @@ class SubDataset(DatasetLoader):
         return self.parent.getPDist(indices=idx)
 
     def getNAtoms(self):
-        return self.parent.nAtoms
+        return self.parent.getNAtoms()
 
     def getChemicalFormula(self):
         return self.parent.chem

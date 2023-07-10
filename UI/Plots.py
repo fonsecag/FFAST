@@ -299,7 +299,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
             dataset = env.getDataset(datasetKey)
 
             # dont do subdatasets of subdatasets
-            if dataset.isSubDataset:
+            if dataset.isSubDataset and not dataset.isAtomFiltered:
                 continue
 
             for modelKey in modelKeys:

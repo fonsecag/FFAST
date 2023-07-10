@@ -102,6 +102,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         border-radius:10px;
     }
     """
+    frozenAutoRange = False # prevents auto range when refreshing plots
 
     def __init__(
         self,
@@ -356,11 +357,11 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
     def refresh(self):
         self.visualRefresh()
 
-    def addPlots(self):
+    def addPlots(self, **kwargs):
         # placeholder, should be implemented by user
         return NotImplementedError
 
-    def visualRefresh(self, force=False):
+    def visualRefresh(self, force=False, noAutoRange = False):
         # when many refresh events happen in a single loop, no need to
         # refresh every time since information won't change
         if (not force) and self.eventStamp <= self.lastUpdatedStamp:
@@ -369,10 +370,12 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.lastUpdatedStamp = self.eventStamp
 
         self.clear()
-
+        
+        self.frozenAutoRange = noAutoRange
         self.addPlots()
         if self.hasLegend:
             self.updateLegend()
+        self.frozenAutoRange = False
 
     def refreshLegend(self):
         dw = self.dataWatcher
@@ -441,7 +444,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
         self.plotItem.addItem(plotItem)
         self.plotItems.append(plotItem)
-        if not self.isSubbing():
+        if (not self.isSubbing()) and not (self.frozenAutoRange):
             self.plotItem.autoRange()
 
     def stepPlot(self, x, y, width=1, **kwargs):

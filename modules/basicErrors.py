@@ -293,7 +293,7 @@ def loadUI(UIHandler, env):
 
         def updateSmoothing(self, value):
             self.smoothing = value
-            self.visualRefresh(force=True)
+            self.visualRefresh(force=True, noAutoRange=True)
 
         def addPlots(self):
             smoothing = self.smoothing
@@ -336,7 +336,7 @@ def loadUI(UIHandler, env):
 
         def updateSmoothing(self, value):
             self.smoothing = value
-            self.visualRefresh(force=True)
+            self.visualRefresh(force=True, noAutoRange=True)
 
         def addPlots(self):
             smoothing = self.smoothing

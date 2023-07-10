@@ -51,9 +51,9 @@ def loadData(env):
             fData = dataset.getForces()
 
             diff = fPred.get("forces") - fData
-            atomicMAE = np.mean(np.abs(diff), axis=2)
-            mae = np.mean(np.abs(diff))
-            rmse = np.sqrt(np.mean(diff ** 2))
+            # atomicMAE = np.mean(np.abs(diff), axis=2)
+            # mae = np.mean(np.abs(diff))
+            # rmse = np.sqrt(np.mean(diff ** 2))
 
             de = self.newDataEntity(
                 diff=diff  # atomicMAE=atomicMAE, mae=mae, rmse=rmse
@@ -80,12 +80,16 @@ def loadData(env):
 
             kde = gaussian_kde(diff)
 
+            delta = np.max(diff) - np.min(diff)
+
             distX = np.linspace(
-                np.min(diff) * 0.95,
-                np.max(diff) * 1.05,
+                np.min(diff) - 0.05 * delta,
+                np.max(diff) + 0.05 * delta,
                 getConfig("plotDistNum"),
             )
+            print(distX)
             distY = kde(distX)
+            print("ENERGY DIST", distY)
 
             de = self.newDataEntity(distY=distY, distX=distX)
             env.setData(de, self.key, model=model, dataset=dataset)
@@ -112,9 +116,11 @@ def loadData(env):
 
             kde = gaussian_kde(np.abs(mae))
 
+            delta = np.max(mae) - np.min(mae)
+
             distX = np.linspace(
-                np.min(mae) * 0.95,
-                np.max(mae) * 1.05,
+                np.min(mae) - delta * 0.05,
+                np.max(mae) + delta * 0.05,
                 getConfig("plotDistNum"),
             )
             distY = kde(distX)

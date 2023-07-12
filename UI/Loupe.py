@@ -229,7 +229,7 @@ class InteractiveCanvas(Widget):
         self.view.camera = Camera(self)
         self.camera = self.view.camera
 
-        self.grid = self.canvas.central_widget.add_grid(margin=4)
+        self.grid = self.newGrid()
 
         self.scene = self.view.scene
         self.loupe = loupe
@@ -243,6 +243,9 @@ class InteractiveCanvas(Widget):
         self.freeze()
 
     ## VISUAL ELEMENTS & PROPERTIES
+
+    def newGrid(self):
+        return self.canvas.central_widget.add_grid(margin = 4)
 
     def addVisualElement(self, Element, name, viewParent=False):
         if viewParent:

@@ -142,6 +142,14 @@ class PushButton(QtWidgets.QPushButton):
         Widget.applyDefaultStyleSheet(self, color=color, styleSheet=styleSheet)
 
 
+class Label(QtWidgets.QLabel):
+    def __init__(self, text, parent=None, color=None, styleSheet=""):
+        super().__init__(text, parent=parent)
+
+        Widget.applyDefaultName(self)
+        Widget.applyDefaultStyleSheet(self, color=color, styleSheet=styleSheet)
+
+
 class WidgetButton(Widget):
 
     checked = False

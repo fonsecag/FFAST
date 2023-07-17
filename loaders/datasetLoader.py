@@ -217,9 +217,10 @@ class SubDataset(DatasetLoader):
         self.bondSizes = parentDataset.bondSizes
 
     def updatePath(self):
-        self.path = (
-            f"{self.subName},{self.parent.getName()},{self.modelDep.getName()}"
-        )
+        if self.modelDep is None:
+            self.path = f"{self.subName},{self.parent.getName()}"
+        else:
+            self.path = f"{self.subName},{self.parent.getName()},{self.modelDep.getName()}"
 
     def setIndices(self, indices):
         if indices is None:

@@ -187,13 +187,12 @@ def loadData(env):
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab
     from UI.Plots import BasicPlotWidget, Table
-    from UI.Templates import Slider, Widget, HorizontalContainerScrollArea
+    from UI.Templates import Slider, HorizontalContainerScrollArea
 
     ct = ContentTab(UIHandler)
     UIHandler.addContentTab(ct, "Basic Errors")
 
     # PLOTS
-
     class EnergyErrorDistPlot(BasicPlotWidget):
         def __init__(self, handler, **kwargs):
             super().__init__(

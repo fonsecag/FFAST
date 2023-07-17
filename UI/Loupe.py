@@ -245,7 +245,7 @@ class InteractiveCanvas(Widget):
     ## VISUAL ELEMENTS & PROPERTIES
 
     def newGrid(self):
-        return self.canvas.central_widget.add_grid(margin = 4)
+        return self.canvas.central_widget.add_grid(margin=4)
 
     def addVisualElement(self, Element, name, viewParent=False):
         if viewParent:

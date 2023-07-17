@@ -102,7 +102,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         border-radius:10px;
     }
     """
-    frozenAutoRange = False # prevents auto range when refreshing plots
+    frozenAutoRange = False  # prevents auto range when refreshing plots
 
     def __init__(
         self,
@@ -129,6 +129,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         DataDependentObject.__init__(self)
 
         self.plotItems = []
+        self.labelsList = []
         self.hasLegend = hasLegend
 
         self.colorString = color
@@ -292,30 +293,31 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         subs = []
         env = self.env
 
-        datasetKeys = self.dataWatcher.getDatasetDependencies()
-        modelKeys = self.dataWatcher.getModelDependencies()
+        # datasetKeys = self.dataWatcher.getDatasetDependencies()
+        # modelKeys = self.dataWatcher.getModelDependencies()
 
-        for datasetKey in datasetKeys:
-            dataset = env.getDataset(datasetKey)
+        # for datasetKey in datasetKeys:
+        #     dataset = env.getDataset(datasetKey)
 
-            # dont do subdatasets of subdatasets
-            if dataset.isSubDataset and not dataset.isAtomFiltered:
-                continue
+        #     # dont do subdatasets of subdatasets
+        #     if dataset.isSubDataset and not dataset.isAtomFiltered:
+        #         continue
 
-            for modelKey in modelKeys:
-                model = env.getModel(modelKey)
+        #     for modelKey in modelKeys:
+        #         model = env.getModel(modelKey)
+        for de in self.getWatchedData():
+            dataset, model = de["dataset"], de["model"]
+            idx = self.getDatasetSubIndices(dataset, model)
+            if (idx is None) or (len(idx) == 0):
+                idx = None
 
-                idx = self.getDatasetSubIndices(dataset, model)
-                if (idx is None) or (len(idx) == 0):
-                    idx = None
-
-                if asFingerprint:
-                    fp = SubDataset.getFingerprint(
-                        SubDataset, dataset, model, self.name
-                    )
-                    subs.append(fp)
-                else:
-                    subs.append((dataset, model, idx))
+            if asFingerprint:
+                fp = SubDataset.getFingerprint(
+                    SubDataset, dataset, model, self.name
+                )
+                subs.append(fp)
+            else:
+                subs.append((dataset, model, idx))
 
         return subs
 
@@ -357,11 +359,15 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
     def refresh(self):
         self.visualRefresh()
 
+    def _addPlots(self, **kwargs):
+        self.labelsList.clear()
+        self.addPlots()
+
     def addPlots(self, **kwargs):
         # placeholder, should be implemented by user
         return NotImplementedError
 
-    def visualRefresh(self, force=False, noAutoRange = False):
+    def visualRefresh(self, force=False, noAutoRange=False):
         # when many refresh events happen in a single loop, no need to
         # refresh every time since information won't change
         if (not force) and self.eventStamp <= self.lastUpdatedStamp:
@@ -370,7 +376,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.lastUpdatedStamp = self.eventStamp
 
         self.clear()
-        
+
         self.frozenAutoRange = noAutoRange
         self.addPlots()
         if self.hasLegend:
@@ -379,8 +385,8 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
     def refreshLegend(self):
         dw = self.dataWatcher
-        hasDataset = len(dw.getDatasetDependencies()) > 1
-        hasModel = len(dw.getModelDependencies()) > 1
+        hasDataset = len(dw.getDatasetDependencies()) >= 1
+        hasModel = len(dw.getModelDependencies()) >= 1
 
         self.legend.clear()
 
@@ -404,7 +410,12 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
         for i in range(len(self.plotItems)):
             item = self.plotItems[i]
-            self.legend.addItem(item, names[i])
+            label = self.labelsList[i]
+            if label is None:
+                label = names[i]
+            else:
+                label = label.replace("__NAME__", names[i])
+            self.legend.addItem(item, label)
 
     def clear(self):
         for item in self.plotItems:
@@ -420,10 +431,12 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         scatter=False,
         color=(255, 255, 255),
         autoColor=None,
+        label=None,
         **kwargs,
     ):
         self.plotItem.disableAutoRange()
 
+        self.labelsList.append(label)
         if "pen" in kwargs:
             pen = kwargs["pen"]
             del kwargs["pen"]

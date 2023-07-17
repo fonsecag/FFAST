@@ -182,13 +182,11 @@ class DataWatcher(EventChildClass):
 
                     if (dataset is None) and dataType.datasetDependent:
                         continue
-
                     if (
                         dataset.isSubDataset
                         and dataset.isAtomFiltered
                         and (dataType.atomFilterable or dataType.atomConstant)
                     ):
-
                         key = dataType.getCacheKey(
                             model=model, dataset=dataset.parent
                         )

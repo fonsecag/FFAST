@@ -177,8 +177,10 @@ class ForceErrorColorProperty(CanvasProperty):
         else:
             cp = atomsElement.colorProperty
             # remove cp if it's one of the force ones
-            if (cp is self.canvas.props["meanForceError"]
-                or cp is self.canvas.props["forceError"]):
+            if (
+                cp is self.canvas.props["meanForceError"]
+                or cp is self.canvas.props["forceError"]
+            ):
                 atomsElement.colorProperty = None
 
         self.canvas.onNewGeometry()
@@ -190,6 +192,7 @@ class MeanForceErrorProperty(CanvasProperty):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
     def onDatasetInit(self):
         self.clear()
 

@@ -40,7 +40,13 @@ class DatasetModelLabel(ListCheckButton, EventChildClass):
 
 class ContentTab(ExpandingScrollArea):
     def __init__(
-        self, handler, hasDataSelector=True, color="@BGColor2", **kwargs
+        self,
+        handler,
+        hasDataSelector=True,
+        hasModels=True,
+        hasDatasets=True,
+        color="@BGColor2",
+        **kwargs
     ):
         self.handler = handler
         super().__init__(**kwargs)
@@ -61,7 +67,7 @@ class ContentTab(ExpandingScrollArea):
         self.widget.layout.setContentsMargins(40, 40, 40, 40)
         self.widget.layout.setSpacing(40)
         if hasDataSelector:
-            self.addDataSelector()
+            self.addDataSelector(hasModels=hasModels, hasDatasets=hasDatasets)
 
     def addWidget(self, *args, **kwargs):
         self.bottomLayout.addWidget(*args, **kwargs)
@@ -74,8 +80,8 @@ class ContentTab(ExpandingScrollArea):
         self.dataSelector = dataselector
         self.topLayout.addWidget(self.dataSelector)
 
-    def addDataSelector(self):
-        ds = DatasetModelSelector(self.handler, parent=self)
+    def addDataSelector(self, **kwargs):
+        ds = DatasetModelSelector(self.handler, parent=self, **kwargs)
         self.setDataSelector(ds)
 
 
@@ -83,7 +89,7 @@ class DatasetModelSelector(Widget, EventChildClass):
 
     quiet = False
 
-    def __init__(self, handler, **kwargs):
+    def __init__(self, handler, hasModels=True, hasDatasets=True, **kwargs):
         self.handler = handler
         self.env = handler.env
         super().__init__(layout="vertical", **kwargs)
@@ -93,26 +99,36 @@ class DatasetModelSelector(Widget, EventChildClass):
         self.env = handler.env
         self.layout.setSpacing(5)
 
-        # CREATE LISTS AND ADD THEM TO THE LAYOUTS
-        self.modelsList = FlexibleListSelector(
-            label="Selected models", parent=self
-        )
-        self.datasetsList = FlexibleListSelector(
-            label="Selected datasets", parent=self
-        )
-        self.modelsList.setOnUpdate(self.update)
-        self.datasetsList.setOnUpdate(self.update)
-        self.layout.addWidget(self.modelsList)
-        self.layout.addWidget(self.datasetsList)
+        self.hasModels = hasModels
+        self.hasDatasets = hasDatasets
 
-        self.eventSubscribe("DATASET_LOADED", self.updateDatasetsList)
-        self.eventSubscribe("DATASET_DELETED", self.updateDatasetsList)
-        self.eventSubscribe("DATASET_STATE_CHANGED", self.updateDatasetsList)
+        if hasModels:
+            # CREATE LISTS AND ADD THEM TO THE LAYOUTS
+            self.modelsList = FlexibleListSelector(
+                label="Selected models", parent=self
+            )
+            self.modelsList.setOnUpdate(self.update)
+            self.layout.addWidget(self.modelsList)
 
-        self.eventSubscribe("MODEL_LOADED", self.updateModelsList)
-        self.eventSubscribe("MODEL_DELETED", self.updateModelsList)
+            self.eventSubscribe("MODEL_LOADED", self.updateModelsList)
+            self.eventSubscribe("MODEL_DELETED", self.updateModelsList)
+
+        if hasDatasets:
+            self.datasetsList = FlexibleListSelector(
+                label="Selected datasets", parent=self
+            )
+            self.datasetsList.setOnUpdate(self.update)
+            self.layout.addWidget(self.datasetsList)
+
+            self.eventSubscribe("DATASET_LOADED", self.updateDatasetsList)
+            self.eventSubscribe("DATASET_DELETED", self.updateDatasetsList)
+            self.eventSubscribe(
+                "DATASET_STATE_CHANGED", self.updateDatasetsList
+            )
 
     def updateModelsList(self, key):
+        if not self.hasModels:
+            return
         self.quiet = True
         modelKeys, _ = self.getSelectedKeys()
 
@@ -132,7 +148,8 @@ class DatasetModelSelector(Widget, EventChildClass):
         self.update()
 
     def updateDatasetsList(self, key):
-
+        if not self.hasDatasets:
+            return
         self.quiet = True
         _, datasetKeys = self.getSelectedKeys()
 
@@ -156,12 +173,14 @@ class DatasetModelSelector(Widget, EventChildClass):
 
     def getSelectedKeys(self):
         modelKeys = []
-        for w in self.modelsList.getSelectedWidgets():
-            modelKeys.append(w.key)
+        if self.hasModels:
+            for w in self.modelsList.getSelectedWidgets():
+                modelKeys.append(w.key)
 
         datasetKeys = []
-        for w in self.datasetsList.getSelectedWidgets():
-            datasetKeys.append(w.key)
+        if self.hasDatasets:
+            for w in self.datasetsList.getSelectedWidgets():
+                datasetKeys.append(w.key)
 
         return modelKeys, datasetKeys
 

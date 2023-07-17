@@ -1,6 +1,7 @@
 import logging
 from UI.loupeProperties import AtomSelectionBase, CanvasProperty
 from functools import partial
+import numpy as np
 
 logger = logging.getLogger("FFAST")
 
@@ -43,20 +44,6 @@ class AtomFilterPaneHiding(CanvasProperty):
         )
 
 
-def cleanIndices(arr):
-    try:
-        s = set([int(x) for x in arr])
-        t = tuple(s)
-
-    except Exception as e:
-        logger.exception(
-            f"Tried to clean indices arr, but failed for: {e}. Array/List needs contain dinstinct integers"
-        )
-        return False, None
-
-    return True, list(s)
-
-
 def addSetting(UIHandler, loupe):
     def updateSelection(loupe):
         canvas = loupe.canvas
@@ -83,10 +70,46 @@ def addSetting(UIHandler, loupe):
 
 
 def addSettingsPane(UIHandler, loupe):
-    from UI.Templates import SettingsPane, PushButton
+    from UI.Templates import SettingsPane, PushButton, Label
 
     pane = SettingsPane(UIHandler, loupe.settings, parent=loupe)
     loupe.addSidebarPane("ATOM FILTER", pane)
+
+    def cleanIndices(arr):
+        dataset = loupe.getSelectedDataset()
+        if dataset is None:
+            return True, []
+        try:
+            nA = dataset.getNAtoms()
+            zStr = dataset.getElementsName()
+            lst = []
+            removes = []
+
+            for x in arr:
+                if isinstance(x, str):
+                    isNeg = x.startswith("-")
+                    if isNeg:
+                        x = x.replace("-", "")
+                    x = x.strip()
+                    idxs = [i for i in range(len(zStr)) if zStr[i] == x]
+                    if isNeg:
+                        removes += idxs
+                    else:
+                        lst += idxs
+
+                else:
+                    lst.append(int(x))
+
+            # check if it contains any strings
+            s = set(lst) - set(removes)
+
+        except Exception as e:
+            logger.exception(
+                f"Tried to clean indices arr, but failed for: {e}. Array/List needs contain dinstinct integers"
+            )
+            return False, None
+
+        return True, list(s)
 
     pane.addSetting(
         "CodeBox",
@@ -95,6 +118,7 @@ def addSettingsPane(UIHandler, loupe):
         validationFunc=cleanIndices,
         labelDirection="horizontal",
         singleLine=False,
+        toolTip='Python list of indices. "Z" to include all elements Z. "-Z" to remove them',
     )
 
     ## ADD BONDS BUTTONS

@@ -215,6 +215,7 @@ class InteractiveCanvas(Widget):
     hasBeenInited = False
     _currentR = None
     currentTransformations = []
+    dataset = None
 
     def __init__(self, loupe, **kwargs):
         super().__init__(layout="vertical", **kwargs)
@@ -339,6 +340,8 @@ class InteractiveCanvas(Widget):
             return self._currentR
 
     def setIndex(self, index):
+        if self.dataset is None:
+            return
         index = min(index, self.dataset.getN() - 1)
         self.index = index
         self.onNewGeometry()

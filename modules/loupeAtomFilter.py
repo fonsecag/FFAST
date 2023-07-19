@@ -119,6 +119,7 @@ def addSettingsPane(UIHandler, loupe):
         labelDirection="horizontal",
         singleLine=False,
         toolTip='Python list of indices. "Z" to include all elements Z. "-Z" to remove them',
+        labelWidth = 50,
     )
 
     ## ADD BONDS BUTTONS

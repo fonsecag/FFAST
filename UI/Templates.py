@@ -214,7 +214,7 @@ class Slider(Widget):
 
         if hasEditBox:
             self.lineEdit = LineEdit()
-            self.lineEdit.setFixedWidth(70)
+            self.lineEdit.setFixedWidth(50)
             self.layout.addWidget(self.lineEdit)
             self.lineEdit.setOnEdit(self.onUpdateLineEdit)
 
@@ -226,6 +226,9 @@ class Slider(Widget):
         self.setMinMax(nMin, nMax, interval)
 
     def setMinMax(self, nMin, nMax, interval=1):
+
+        self.quiet = True
+
         self.nMin = nMin
         self.nMax = nMax
 
@@ -235,6 +238,8 @@ class Slider(Widget):
 
         val = QtGui.QIntValidator(nMin, nMax)
         self.lineEdit.setValidator(val)
+
+        self.quiet = False
 
     def onUpdateSlider(self, value):
         self.lineEdit.setText(str(value))
@@ -1321,6 +1326,7 @@ class SettingsWidgetBase(Widget, EventChildClass):
         layout="horizontal",
         fixedHeight=True,
         parent=None,
+        labelWidth=  140,
         **kwargs,
     ):
         super().__init__(layout=layout, parent=parent, **kwargs)
@@ -1347,7 +1353,8 @@ class SettingsWidgetBase(Widget, EventChildClass):
         if hasLabel:
             self.label = QtWidgets.QLabel(str(name))
             self.layout.addWidget(self.label)
-            # self.layout.addStretch()
+            self.label.setFixedWidth(labelWidth)
+            self.layout.addStretch()
 
         # update the widget if parameter changes
         if self.hasSettingsKey:
@@ -1556,6 +1563,39 @@ class SettingsContainer(SettingsWidgetBase):
         )
 
 
+class SettingsSlider(SettingsWidgetBase):
+    def __init__(
+        self,
+        *args,
+        settings=None,
+        settingsKey=None,
+        nMin=0,
+        nMax=99999,
+        **kwargs,
+    ):
+        super().__init__(
+            *args, settings=settings, settingsKey=settingsKey, **kwargs
+        )
+
+        self.slider = Slider(parent=self)
+        self.slider.setCallbackFunc(self.onSlide)
+        # self.lineEdit.setMaxLength(10)
+
+        self.slider.setMinMax(nMin, nMax)
+
+        self.setDefault()
+        self.layout.addWidget(self.slider)
+
+    def _getValue(self):
+        return self.slider.getValue()
+
+    def _setValue(self, value):
+        return self.slider.setValue(value, quiet = True)
+    
+    def onSlide(self, *args):
+        self.callback()
+
+
 class SettingsPane(Widget, EventChildClass):
     def __init__(self, UIHandler, settings, **kwargs):
         self.handler = UIHandler
@@ -1630,6 +1670,16 @@ class SettingsPane(Widget, EventChildClass):
 
         elif typ == "Container":
             el = SettingsContainer(self.handler, name, parent=self, **kwargs)
+
+        elif typ == "Slider":
+            el = SettingsSlider(
+                self.handler, 
+                name,
+                settingsKey=settingsKey,
+                settings = self.settings,
+                parent = self,
+                **kwargs
+            )
 
         else:
             logger.error(

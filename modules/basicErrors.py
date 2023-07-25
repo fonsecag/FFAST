@@ -87,9 +87,7 @@ def loadData(env):
                 np.max(diff) + 0.05 * delta,
                 getConfig("plotDistNum"),
             )
-            print(distX)
             distY = kde(distX)
-            print("ENERGY DIST", distY)
 
             de = self.newDataEntity(distY=distY, distX=distX)
             env.setData(de, self.key, model=model, dataset=dataset)
@@ -210,7 +208,7 @@ def loadUI(UIHandler, env):
             for data in self.getWatchedData():
                 de = data["dataEntry"]
                 x, y = de.get("distX"), de.get("distY")
-                self.plot(x, y, autoColor=data)
+                self.plot(x, y, autoColor=data, autoLabel=data)
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()
@@ -251,7 +249,7 @@ def loadUI(UIHandler, env):
             for data in self.getWatchedData():
                 de = data["dataEntry"]
                 x, y = de.get("distX"), de.get("distY")
-                self.plot(x, y, autoColor=data)
+                self.plot(x, y, autoColor=data, autoLabel=data)
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()
@@ -301,7 +299,12 @@ def loadUI(UIHandler, env):
                 err = np.convolve(
                     err, np.ones(smoothing) / smoothing, mode="valid"
                 )
-                self.plot(np.arange(err.shape[0]), np.abs(err), autoColor=data)
+                self.plot(
+                    np.arange(err.shape[0]),
+                    np.abs(err),
+                    autoColor=data,
+                    autoLabel=data,
+                )
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()
@@ -346,7 +349,12 @@ def loadUI(UIHandler, env):
                 mae = np.convolve(
                     mae, np.ones(smoothing) / smoothing, mode="valid"
                 )
-                self.plot(np.arange(mae.shape[0]), mae, autoColor=data)
+                self.plot(
+                    np.arange(mae.shape[0]),
+                    mae,
+                    autoColor=data,
+                    autoLabel=data,
+                )
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()

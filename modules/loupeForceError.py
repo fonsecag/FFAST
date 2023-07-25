@@ -238,6 +238,7 @@ def addSettings(UIHandler, loupe):
     from UI.Templates import ObjectComboBox
 
     ## ADDING DATAWATCHER
+    ## Dataset dependency set by ForceErrorColorProperty
     dw = DataWatcher(loupe.env)
     loupe.forceErrorDataWatcher = dw
     dw.setDataDependencies("forcesErrorMetrics")

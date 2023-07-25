@@ -131,6 +131,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.plotItems = []
         self.labelsList = []
         self.hasLegend = hasLegend
+        self.colorCount = 0
 
         self.colorString = color
         self.layout.setContentsMargins(13, 13, 13, 13)
@@ -361,6 +362,7 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
     def _addPlots(self, **kwargs):
         self.labelsList.clear()
+        self.colorCount = 0
         self.addPlots()
 
     def addPlots(self, **kwargs):
@@ -378,10 +380,21 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         self.clear()
 
         self.frozenAutoRange = noAutoRange
-        self.addPlots()
+        self._addPlots()
         if self.hasLegend:
             self.updateLegend()
         self.frozenAutoRange = False
+
+    def getLabelFromData(self, data):
+        s = ""
+        if data["dataset"] is not None:
+            s = data["dataset"].getDisplayName()
+
+        if data["model"] is not None:
+            s += " & "
+            s += data["model"].getDisplayName()
+
+        return s
 
     def refreshLegend(self):
         dw = self.dataWatcher
@@ -390,31 +403,25 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
 
         self.legend.clear()
 
-        if hasDataset or hasModel:
-            names = []
-
-            for x in self.getWatchedData():
-                s = ""
-                if hasDataset and (x["dataset"] is not None):
-                    s = x["dataset"].getDisplayName()
-
-                if hasModel and (x["model"] is not None):
-                    if hasDataset:
-                        s += " & "
-                    s += x["model"].getName()
-
-                names.append(s)
-
-        else:
+        if not (hasDataset or hasModel):
             return
 
         for i in range(len(self.plotItems)):
             item = self.plotItems[i]
-            label = self.labelsList[i]
+            label, autoLabel = self.labelsList[i]
+
             if label is None:
-                label = names[i]
+                if autoLabel is not None:
+                    label = self.getLabelFromData(autoLabel)
+
             else:
-                label = label.replace("__NAME__", names[i])
+                if autoLabel is not None:
+                    label = label.replace(
+                        "__NAME__", self.getLabelFromData(autoLabel)
+                    )
+
+            if label is None:
+                continue
             self.legend.addItem(item, label)
 
     def clear(self):
@@ -429,14 +436,15 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
         x,
         y,
         scatter=False,
-        color=(255, 255, 255),
+        color=None,
         autoColor=None,
+        autoLabel=None,
         label=None,
         **kwargs,
     ):
         self.plotItem.disableAutoRange()
+        self.labelsList.append((label, autoLabel))
 
-        self.labelsList.append(label)
         if "pen" in kwargs:
             pen = kwargs["pen"]
             del kwargs["pen"]
@@ -445,6 +453,10 @@ class BasicPlotWidget(Widget, EventChildClass, DataDependentObject):
                 color = self.env.getColorMix(
                     dataset=autoColor["dataset"], model=autoColor["model"]
                 )
+            elif color is None:
+                color = getConfig("modelColors")[self.colorCount]
+                self.colorCount += 1
+
             width = float(getConfig("plotPenWidth"))
             pen = pyqtgraph.mkPen(color, width=width)
 

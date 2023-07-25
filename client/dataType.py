@@ -70,7 +70,11 @@ class AtomFilteredEntity(DataEntity):
         self.data = parent.data
 
     def get(self, key=None):
-        return self.parent.get(key=key)[:, self.indices]
+        d = self.parent.get(key=key)
+        if len(d.shape) == 1:
+            return d[self.indices]
+        else:
+            return self.parent.get(key=key)[:, self.indices]
 
 
 class DataType(EventClass):

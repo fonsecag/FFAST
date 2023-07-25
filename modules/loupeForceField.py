@@ -7,24 +7,26 @@ from UI.loupeProperties import VisualElement, CanvasProperty, AtomSelectionBase
 logger = logging.getLogger("FFAST")
 DEPENDENCIES = ["loupeAtoms"]
 
+
 class ForceVectorsElement(VisualElement):
     # largely taken from loupeBonds
     pos = None
+
     def __init__(self, *args, parent=None, width=50, **kwargs):
         from vispy import scene
 
         self.lines = scene.visuals.Arrow(
             pos=None,
             parent=parent,
-            color='white',
+            color="white",
             width=width,
             connect="segments",
-            arrow_size = 1,
-            arrows = None,
+            arrow_size=1,
+            arrows=None,
             # arrow_type = "triangle_30",
-            arrow_color='white',
+            arrow_color="white",
             # antialias=True,
-            method = 'gl'
+            method="gl",
         )
         super().__init__(*args, **kwargs, singleElement=self.lines)
         self.width = width
@@ -50,20 +52,20 @@ class ForceVectorsElement(VisualElement):
         if window > 0:
             indices = np.arange(-window, window + 1) + self.canvas.index
             indices = indices[(indices >= 0) & (indices < dataset.getN())]
-            F = self.canvas.dataset.getForces(indices = indices)
-            F = np.mean(F, axis = 0)
+            F = self.canvas.dataset.getForces(indices=indices)
+            F = np.mean(F, axis=0)
         else:
-            F = self.canvas.dataset.getForces(indices = self.canvas.index)
-        
+            F = self.canvas.dataset.getForces(indices=self.canvas.index)
+
         if normalised:
-            normF = F / np.max(np.linalg.norm(F, axis = 1)) * lengthFactor / 5
+            normF = F / np.max(np.linalg.norm(F, axis=1)) * lengthFactor / 5
         else:
             normF = F * lengthFactor / 500
 
-        pos = np.empty((R.shape[0]*2, 3))
-        pos[0::2,:] = R
-        pos[1::2,:] = R + normF 
-        self.pos = pos 
+        pos = np.empty((R.shape[0] * 2, 3))
+        pos[0::2, :] = R
+        pos[1::2, :] = R + normF
+        self.pos = pos
 
         self.queueVisualRefresh()
 
@@ -87,8 +89,10 @@ class ForceVectorsElement(VisualElement):
         else:
             self.show()
             self.lines.set_data(
-                 pos=self.pos, width=self.width / width, arrows = self.pos.reshape(-1, 6)
-                )
+                pos=self.pos,
+                width=self.width / width,
+                arrows=self.pos.reshape(-1, 6),
+            )
 
 
 def loadLoupe(UIHandler, loupe):
@@ -97,15 +101,17 @@ def loadLoupe(UIHandler, loupe):
     loupe.addVisualElement(ForceVectorsElement, "ForceVectorsElement")
 
     settings = loupe.settings
-    settings.addParameters(**{
-        "showForceVectors": [False, "updateGeometry"],
-        "forceVectorsLength": [5, "updateGeometry"],
-        "forceVectorsAvgWindow": [0, "updateGeometry"],
-        "forceVectorsNormalised": [False, "updateGeometry"]
-    })
+    settings.addParameters(
+        **{
+            "showForceVectors": [False, "updateGeometry"],
+            "forceVectorsLength": [5, "updateGeometry"],
+            "forceVectorsAvgWindow": [0, "updateGeometry"],
+            "forceVectorsNormalised": [False, "updateGeometry"],
+        }
+    )
 
     # SETTINGS PANE
-    pane = SettingsPane(UIHandler, loupe.settings, parent = loupe)
+    pane = SettingsPane(UIHandler, loupe.settings, parent=loupe)
     loupe.addSidebarPane("FORCE VECTORS", pane)
 
     pane.addSetting(
@@ -117,18 +123,18 @@ def loadLoupe(UIHandler, loupe):
     pane.addSetting(
         "Slider",
         "Length",
-        settingsKey = "forceVectorsLength",
-        toolTip = "Change the length of the force vectors",
-        nMin = 1,
-        nMax = 50,
+        settingsKey="forceVectorsLength",
+        toolTip="Change the length of the force vectors",
+        nMin=1,
+        nMax=50,
     )
     pane.addSetting(
         "Slider",
         "Avg. window",
-        settingsKey = "forceVectorsAvgWindow",
-        toolTip = "Set the number of points to average around for a smoother result.",
-        nMin = 0,
-        nMax = 10000,
+        settingsKey="forceVectorsAvgWindow",
+        toolTip="Set the number of points to average around for a smoother result.",
+        nMin=0,
+        nMax=10000,
     )
     pane.addSetting(
         "CheckBox",
@@ -136,4 +142,3 @@ def loadLoupe(UIHandler, loupe):
         settingsKey="forceVectorsNormalised",
         toolTip="If enabled, set the longest vector for every frame to the same length",
     )
-    

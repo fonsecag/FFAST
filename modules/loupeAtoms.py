@@ -183,8 +183,8 @@ def addSettingsPane(UIHandler, loupe):
         f"Coloring",
         settingsKey=f"atomColorType",
         items=["Elements"],
+        labelWidth=60,
     )
-
     loupe.addSidebarPane("ATOMS", pane)
 
 

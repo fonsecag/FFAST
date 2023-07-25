@@ -3,7 +3,7 @@ from client.dataWatcher import DataWatcher
 import numpy as np
 from config.userConfig import getConfig
 
-DEPENDENCIES = ["loupeForceError"]
+DEPENDENCIES = ["loupeAtoms", "loupeForceError"]
 
 
 class ColorBarVisual(VisualElement):
@@ -120,8 +120,6 @@ class MeanDisplacementColorProperty(CanvasProperty):
     def generate(self):
         prop = self.canvas.props["displacementColor"]
         colors = prop.getMeanColors()
-        print("GENERATING")
-        print(colors)
         self.set(colors=colors)
 
 
@@ -216,6 +214,7 @@ class DisplacementColorProperty(CanvasProperty):
 
 
 def loadLoupe(UIHandler, loupe):
+
     pane = loupe.getSettingsPane("ATOMS")
     comboBox = pane.settingsWidgets.get("Coloring")
     comboBox.addItems(["Total Displacement", "Mean Displacement"])

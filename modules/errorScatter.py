@@ -52,7 +52,9 @@ def loadUI(UIHandler, env):
                 else:
                     self.indices[key] = None
 
-                self.plot(trueE, predE, autoColor=data, scatter=True)
+                self.plot(
+                    trueE, predE, autoColor=data, scatter=True, autoLabel=data
+                )
 
         def getKey(self, dataset, model):
             # Creates a unique key based on the dataset/model combination
@@ -124,7 +126,9 @@ def loadUI(UIHandler, env):
                 else:
                     self.indices[key] = None
 
-                self.plot(trueE, predE, autoColor=data, scatter=True)
+                self.plot(
+                    trueE, predE, autoColor=data, scatter=True, autoLabel=data
+                )
 
         def getDatasetSubIndices(self, dataset, model):
             (xRange, yRange) = self.getRanges()

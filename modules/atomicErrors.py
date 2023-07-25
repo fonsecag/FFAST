@@ -215,9 +215,9 @@ def loadUI(UIHandler, env):
 
                     x, y = de.get("distX"), de.get("distY")
                     if atomMode:
-                        self.plot(x, y, color=atomColors[0])
+                        self.plot(x, y, color=atomColors[0], autoLabel=data)
                     else:
-                        self.plot(x, y, autoColor=data)
+                        self.plot(x, y, autoColor=data, autoLabel=data)
 
                 else:
                     for atom, info in atomTypes.items():
@@ -229,9 +229,11 @@ def loadUI(UIHandler, env):
                         x, y = atomDE.get("distX"), atomDE.get("distY")
 
                         if atomMode:
-                            self.plot(x, y, color=info["color"])
+                            self.plot(
+                                x, y, color=info["color"], autoLabel=data
+                            )
                         else:
-                            self.plot(x, y, autoColor=data)
+                            self.plot(x, y, autoColor=data, autoLabel=data)
 
     plt = ForcesErrorDistPlot(UIHandler, parent=ct)
     ct.addWidget(plt, 0, 0)

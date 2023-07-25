@@ -1326,7 +1326,7 @@ class SettingsWidgetBase(Widget, EventChildClass):
         layout="horizontal",
         fixedHeight=True,
         parent=None,
-        labelWidth=  140,
+        labelWidth=140,
         **kwargs,
     ):
         super().__init__(layout=layout, parent=parent, **kwargs)
@@ -1437,7 +1437,12 @@ class SettingsComboBox(SettingsWidgetBase):
         )
         self.isNumber = isNumber
         self.comboBox = ComboBox(parent=self)
-        self.comboBox.setFixedWidth(150 - 8)
+        self.comboBox.setMinimumWidth(150 - 8)
+
+        # doesnt work as Id want it to
+        self.comboBox.setSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding
+        )
 
         self.setItems(items)
         self.setDefault()
@@ -1590,8 +1595,8 @@ class SettingsSlider(SettingsWidgetBase):
         return self.slider.getValue()
 
     def _setValue(self, value):
-        return self.slider.setValue(value, quiet = True)
-    
+        return self.slider.setValue(value, quiet=True)
+
     def onSlide(self, *args):
         self.callback()
 
@@ -1673,12 +1678,12 @@ class SettingsPane(Widget, EventChildClass):
 
         elif typ == "Slider":
             el = SettingsSlider(
-                self.handler, 
+                self.handler,
                 name,
                 settingsKey=settingsKey,
-                settings = self.settings,
-                parent = self,
-                **kwargs
+                settings=self.settings,
+                parent=self,
+                **kwargs,
             )
 
         else:

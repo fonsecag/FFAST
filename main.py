@@ -81,7 +81,7 @@ async def eventLoop(UI, env):
         # env.taskLoadDataset("private/grid.npz", "sGDML")
         # env.taskLoadDataset("private/DHA_1000.xyz", "ase")
         # env.taskLoadDataset("private/md22_DHA.npz", "sGDML")
-        env.taskLoadDataset("private/stach_2000.npz", "sGDML")
+        env.taskLoadDataset("private/Anton/Graphene_D-proline_perm_test.npz", "sGDML")
         # env.taskLoad("private/saves/MACE")/
         # env.taskLoadDataset("private/unfolding_100.npz", "sGDML")
         # env.taskLoadDataset("private/unfolding.npz", "sGDML")

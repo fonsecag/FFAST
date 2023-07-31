@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 logger = logging.getLogger("FFAST")
 
@@ -78,9 +79,10 @@ config = Settings()
 with open("config/default.json") as f:
     d = json.load(f)
     default.update(d)
-with open("config/user.json") as f:
-    c = json.load(f)
-    config.update(c)
+if os.path.exists("config/user.json"):
+    with open("config/user.json") as f:
+        c = json.load(f)
+        config.update(c)
 
 
 def getConfig(key, fallback=None):

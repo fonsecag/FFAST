@@ -21,6 +21,7 @@
     "loupeBondsColor":  "#404040",
     "loupeHoverColor":  "#FF0000",
     "loupeSelectColor":  "#00FF00",
+    "loupeBGColor": "#000000",
     "loupeAtomColorDimming": 0.93,
     "loupeBondsLenience": 1.1,
     "loupeForceErrorPercentile":0.995,

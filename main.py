@@ -80,8 +80,9 @@ async def eventLoop(UI, env):
         # env.taskLoadDataset("private/ethanol_spl_100.npz", "sGDML")
         # env.taskLoadDataset("private/grid.npz", "sGDML")
         # env.taskLoadDataset("private/DHA_1000.xyz", "ase")
-        env.taskLoadDataset("private/md22_DHA.npz", "sGDML")
-        env.taskLoad("private/saves/MACE")
+        # env.taskLoadDataset("private/md22_DHA.npz", "sGDML")
+        env.taskLoadDataset("private/Anton/Graphene_D-proline_perm_test.npz", "sGDML")
+        # env.taskLoad("private/saves/MACE")/
         # env.taskLoadDataset("private/unfolding_100.npz", "sGDML")
         # env.taskLoadDataset("private/unfolding.npz", "sGDML")
         # env.taskLoad("private/saves/unfolding")
@@ -91,7 +92,7 @@ async def eventLoop(UI, env):
         # env.taskLoadModel("private/ethanol_def_1000.npz", "sGDML")
         # env.taskLoadModel("private/eth_il_1000.npz", "sGDML")
         # env.taskLoadModel("private/eth_schnet", "SchNet")
-        env.loadZeroModel()
+        # env.loadZeroModel()
         pass
 
     # env.newTask(nh.countingTask, name="TaskWatchDog", visual=True)

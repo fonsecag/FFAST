@@ -220,7 +220,7 @@ class InteractiveCanvas(Widget):
     def __init__(self, loupe, **kwargs):
         super().__init__(layout="vertical", **kwargs)
 
-        self.canvas = SceneCanvas(self, bgcolor="black", create_native=False)
+        self.canvas = SceneCanvas(self, bgcolor=getConfig("loupeBGColor"), create_native=False)
 
         self.elements = {}
         self.props = {}
@@ -493,7 +493,7 @@ class Loupe(Widget, EventChildClass):
     def __init__(self, handler, N, **kwargs):
         self.handler = handler
         self.env = handler.env
-        super().__init__(color="green", layout="horizontal")
+        super().__init__(layout="horizontal")
         EventChildClass.__init__(self)
 
         # SETTINGS

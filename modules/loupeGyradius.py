@@ -227,7 +227,7 @@ def loadUI(UIHandler, env):
                     y = de.get("gyradius")
                 else:
                     label = "Energy MAE __NAME__"
-                    y = np.abs(de.get("diff"))
+                    y = np.abs(de.get("diff").reshape(-1))
 
                 y = np.convolve(
                     y, np.ones(smoothing) / smoothing, mode="valid"

@@ -609,7 +609,7 @@ class Environment(EventClass):
             self.eventPush("GENERATION_QUEUE_CHANGED")
 
     def keyIsHaunted(self, dataTypeKey, model=None, dataset=None):
-        if not model.isGhost:
+        if (model is not None) and (not model.isGhost):
             return False
 
         compKeys = self.getLowestComponents(

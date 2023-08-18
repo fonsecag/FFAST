@@ -37,3 +37,11 @@ An example of a simple headless script to compute the force prediction for a dat
 A new 3D visualiser ("loupe") can be opened through the menu (Loupe -> New). From there, any loaded dataset can be selected and visualised. 
 
 Sub-datasets, e.g. zoomed-in plots, can also be displayed in a loupe by toggling the "Sub" toggle icon on compatible plots. This will create a new dataset (dynamically updated when changing the plot's zoom/selection) that can also be opened in a loupe window.
+
+## Example
+
+Four example models with pre-computed forces and energies are provided to immediately experiment with the tools. First, the datasets have to be loaded from the original source (http://www.sgdml.org/#datasets). The two datasets we focus on are the MD22 Docosahexaenoic acid and MD22 Stachyose and are available to be downloaded as npz files. 
+
+Open the software by running `python main.py`, then load one or both datasets of interest (File -> Load Dataset or `CMD-D`). Then load the pre-predicted model folders (File -> Load or `CMD-L`), namely `examples/MACE` and `examples/Nequip`. Assuming the original datasets are unchanged, the program will automatically realise the pre-predictions belong to the respective datasets that were just loaded.
+
+Pre-release reference: https://arxiv.org/abs/2308.06871 

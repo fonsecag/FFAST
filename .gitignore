@@ -1,9 +1,7 @@
 private/
-*.npz
 test.py
 .vscode/
 *.log
-*.npz
 save/
 .qt_for_python/
 .VSCodeCounter/

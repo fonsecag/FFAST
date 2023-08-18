@@ -27,6 +27,6 @@
     "loupeForceErrorPercentile":0.995,
     "energyUnit": null,
     "forceUnit": null,
-    "plotPenWidth": 5,
+    "plotPenWidth": 3,
     "plotDistNum":500
 }

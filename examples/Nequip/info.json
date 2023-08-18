@@ -1,0 +1,20 @@
+{
+    "objects": {
+        "2a9979e59031b7cb6ed53c599d0ca1a3": {
+            "name": "md22_stachyose",
+            "path": "private/md22_stachyose.npz"
+        },
+        "f8602068eebb29ea98f5866243c09cfd": {
+            "name": "md22_DHA",
+            "path": "private/md22_DHA.npz"
+        },
+        "c9f8bf566ae9284016a8b5577cc49124": {
+            "name": "Nequip Stachyose",
+            "path": "N/A"
+        },
+        "ab0be8eab85cd944880d2d490b5e1c3a": {
+            "name": "Nequip DHA",
+            "path": "N/A"
+        }
+    }
+}

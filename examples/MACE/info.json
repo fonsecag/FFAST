@@ -1,0 +1,20 @@
+{
+    "objects": {
+        "2a9979e59031b7cb6ed53c599d0ca1a3": {
+            "name": "stachyose",
+            "path": "../datasplitter/stachyose.npz"
+        },
+        "f8602068eebb29ea98f5866243c09cfd": {
+            "name": "DHA",
+            "path": "../datasplitter/DHA.npz"
+        },
+        "d16b2fec95f3a7f3df607b62745424f9": {
+            "name": "mace_stachyose_1000",
+            "path": "private/mace_stachyose_1000.model"
+        },
+        "eda803927fe366496f9740047da2f899": {
+            "name": "mace_DHA_1000",
+            "path": "private/mace_DHA_1000.model"
+        }
+    }
+}

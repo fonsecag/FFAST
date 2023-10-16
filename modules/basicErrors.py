@@ -391,7 +391,6 @@ def loadUI(UIHandler, env):
             ct.addDataSelectionCallback(self.setModelDatasetDependencies)
 
         def getSize(self):
-            # placeholder, should be implemented by user
             nCols = len(self.getDatasetDependencies())
             nRows = len(self.getModelDependencies())
             return (nRows, nCols)

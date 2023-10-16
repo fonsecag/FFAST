@@ -76,12 +76,12 @@ async def eventLoop(UI, env):
     if True and os.path.exists("private"):
         # env.taskLoadDataset("private/big.npz", "sGDML")
         # env.taskLoadDataset("private/myoglobin_1000.npz")
-        # env.taskLoadDataset("private/ethanol_spl_200.npz", "sGDML")
-        # env.taskLoadDataset("private/ethanol_spl_100.npz", "sGDML")
+        env.taskLoadDataset("private/ethanol_spl_200.npz", "sGDML")
+        env.taskLoadDataset("private/ethanol_spl_100.npz", "sGDML")
         # env.taskLoadDataset("private/grid.npz", "sGDML")
         # env.taskLoadDataset("private/DHA_1000.xyz", "ase")
         # env.taskLoadDataset("private/md22_DHA.npz", "sGDML")
-        env.taskLoadDataset("private/Anton/Graphene_D-proline_perm_test.npz", "sGDML")
+        # env.taskLoadDataset("private/Anton/Graphene_D-proline_perm_test.npz", "sGDML")
         # env.taskLoad("private/saves/MACE")/
         # env.taskLoadDataset("private/unfolding_100.npz", "sGDML")
         # env.taskLoadDataset("private/unfolding.npz", "sGDML")
@@ -89,8 +89,8 @@ async def eventLoop(UI, env):
         # env.taskLoadDataset("private/md22_stachyose.npz", "sGDML")
         # env.taskLoadModel("private/neq_DHA_1000.pth", "Nequip")
         # env.taskLoadModel("private/neq_sal_1000.pth")
-        # env.taskLoadModel("private/ethanol_def_1000.npz", "sGDML")
-        # env.taskLoadModel("private/eth_il_1000.npz", "sGDML")
+        env.taskLoadModel("private/ethanol_def_1000.npz", "sGDML")
+        env.taskLoadModel("private/eth_il_1000.npz", "sGDML")
         # env.taskLoadModel("private/eth_schnet", "SchNet")
         # env.loadZeroModel()
         pass

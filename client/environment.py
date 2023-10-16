@@ -406,6 +406,19 @@ class Environment(EventClass):
 
         cacheKey = dataType.getCacheKey(model=model, dataset=dataset)
 
+        if type(model) == str:
+            obj = self.getObject(model)
+            if obj is None:
+                logger.error(f'In env.getData, tried to get model for key {model} but no model found')
+            model = obj
+
+        if type(dataset) == str:
+            obj = self.getObject(dataset)
+            if obj is None:
+                logger.error(f'In env.getData, tried to get dataset for key {dataset} but no dataset found')
+            dataset = obj
+
+
         ## SUBDATSETS
         if (
             (dataset is not None)

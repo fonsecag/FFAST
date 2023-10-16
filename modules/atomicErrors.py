@@ -95,7 +95,7 @@ def loadData(env):
 
 def loadUI(UIHandler, env):
     from UI.ContentTab import ContentTab, DatasetModelSelector, ListCheckButton
-    from UI.Plots import BasicPlotWidget
+    from UI.Plots import BasicPlotWidget, Table
     from UI.Templates import FlexibleListSelector
     from config.atoms import atomColors, zIntToZStr
 
@@ -238,3 +238,84 @@ def loadUI(UIHandler, env):
     plt = ForcesErrorDistPlot(UIHandler, parent=ct)
     ct.addWidget(plt, 0, 0)
     ct.addDataSelectionCallback(plt.setModelDatasetDependencies)
+
+    class AtomicErrorTable(Table):
+        def __init__(self, **kwargs):
+            super().__init__(UIHandler, parent=ct, title="Atomic Errors", **kwargs)
+            ct.addDataSelectionCallback(self.setModelDatasetDependencies)
+            self.setDataDependencies("atomicForcesError", "forcesErrorMetrics")
+        
+        def getSize(self):
+            atomTypes = dataselector.getSelectedAtomInfo()
+            nCols = 2
+            if len(atomTypes) == 0:
+                nRows = 0
+            elif len(atomTypes) > 1:
+                nRows = len(atomTypes)
+            else:
+                nRows = max(len(self.getModelDependencies()), len(self.getDatasetDependencies()))
+            return (nRows, nCols)
+
+        def getLeftHeader(self, i):
+            atomTypes = dataselector.getSelectedAtomInfo()
+            if len(self.getDatasetDependencies()) > 1:
+                datasets = self.getDatasetDependencies()
+                dataset = self.handler.env.getDataset(datasets[i])
+                return f"{dataset.getDisplayName()}"
+            elif len(self.getModelDependencies()) > 1:
+                models = self.getModelDependencies()
+                model = self.handler.env.getModel(models[i])
+                return f"{model.getDisplayName()}"
+            else:
+                return f"{list(atomTypes.keys())[i]}"
+
+        def getTopHeader(self, i):
+            if i == 0:
+                return "MAE"
+            elif i == 1:
+                return "RMSE"
+            else:
+                return "/"
+
+        def getValue(self, i, j):
+            atomTypes = list(dataselector.getSelectedAtomInfo().keys())
+            atomMode = len(atomTypes) > 1
+
+            models = self.getModelDependencies()
+            dataset = self.getDatasetDependencies()[0]
+            value = None
+
+            if atomMode:
+                model = models[0]
+                atomType = atomTypes[i]
+            else:
+                model = models[i]
+                atomType = atomTypes[0]
+
+            if atomType == 'All':
+                de = self.handler.env.getData("forcesErrorMetrics", dataset = dataset, model = model)
+                if de is None:
+                    return
+                if j == 0:
+                    value = de.get("mae")
+                else:
+                    value = de.get("rmse")
+
+            else:
+                de = self.handler.env.getData("atomicForcesError", dataset=dataset, model = model)
+                if de is None:
+                    return
+            
+                if j == 0:
+                    value = de.get(atomType)['mae']
+                else:
+                    value = de.get(atomType)['rmse']
+
+            if value is not None:
+                return f'{value:.2f}'
+            
+    table = AtomicErrorTable()
+    ct.addWidget(table, 1, 0)        
+
+
+

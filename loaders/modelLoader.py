@@ -89,14 +89,18 @@ class ModelLoaderACE(ModelLoader):
             R = dataset.getCoordinates()
         else:
             R = dataset.getCoordinates(indices=indices)
+
         z = dataset.getElements()
         lattice = dataset.getLattice()
-        pbc = lattice is not None
 
         E, F = [], []
         for i in range(len(R)):
             r = R[i]
-            atoms = Atoms(numbers=z, positions=r)
+            if lattice is not None:
+                atoms = Atoms(numbers=z, positions=r, cell=lattice, pbc=True)
+            else:
+                atoms = Atoms(numbers = z, positions=r)
+
             atoms.calc = self.calculator
             F.append(atoms.get_forces())
             E.append(atoms.get_potential_energy())
@@ -110,8 +114,6 @@ class ModelLoaderACE(ModelLoader):
                     message=f"{self.modelName} batch predictions",
                     quiet=True,
                     percent=True,
-                    cell=lattice,
-                    pbc=pbc,
                 )
 
                 if not self.env.tm.isTaskRunning(taskID):

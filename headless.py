@@ -13,11 +13,10 @@ env.waitForTasks(verbose=True)
 d = env.getDatasetFromPath(dpath)
 m = env.getModelFromPath(mpath)
 
-env.addToGenerationQueue("forces", model=m, dataset=d)
+env.addToGenerationQueue("atomicForcesError", model=m, dataset=d)
 env.waitForTasks(verbose=True)
 
-de = env.getData("forces", model=m, dataset=d)
-print(de.get().shape)
+de = env.getData("atomicForcesError", model=m, dataset=d)
 
 env.save("ethData")
 

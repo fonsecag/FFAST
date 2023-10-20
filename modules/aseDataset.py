@@ -18,6 +18,12 @@ class aseDatasetLoader(DatasetLoader):
 
         self.nAtoms = len(exAtoms)
         self.z = exAtoms.get_atomic_numbers()
+
+        if hasattr(exAtoms, 'cell'):
+            self.lattice = exAtoms.cell
+        else:
+            self.lattice = None
+            
         self.chem = self.zToChemicalFormula(self.z)
 
     def getN(self):

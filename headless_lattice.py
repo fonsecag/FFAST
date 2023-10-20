@@ -3,7 +3,7 @@ import numpy as np
 
 env = startHeadlessEnvironment()
 
-dpath = "private/maceIgor/train.npz"
+dpath = "private/maceIgor/train2.npz"
 mpath = "private/maceIgor/MACE_tea_graphene_200_final_run-3_swa.model"
 
 env.taskLoadDataset(dpath, "sGDML")
@@ -24,6 +24,6 @@ env.waitForTasks(verbose=True)
 
 de = env.getData("forces", model=m, dataset=d)
 
-env.save("maceGraphene")
+env.save("maceGrapheneLattice")
 
 env.headlessQuit()

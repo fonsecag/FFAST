@@ -1,23 +1,24 @@
 from client.environment import startHeadlessEnvironment
+import numpy as np
 
 env = startHeadlessEnvironment()
 
-dpath = "private/ethanol_spl_100.npz"
-mpath = "private/ethanol_def_1000.npz"
+dpath = "private/maceIgor/train2.npz"
+mpath = "private/maceIgor/MACE_tea_graphene_200_final_run-3_swa.model"
 
 env.taskLoadDataset(dpath, "sGDML")
-env.taskLoadModel(mpath, "sGDML")
+env.taskLoadModel(mpath, "MACE")
 
 env.waitForTasks(verbose=True)
 
 d = env.getDatasetFromPath(dpath)
 m = env.getModelFromPath(mpath)
 
-env.addToGenerationQueue("atomicForcesError", model=m, dataset=d)
+env.addToGenerationQueue("forces", model=m, dataset=d)
 env.waitForTasks(verbose=True)
 
-de = env.getData("atomicForcesError", model=m, dataset=d)
+de = env.getData("forces", model=m, dataset=d)
 
-env.save("ethData")
+env.save("maceGraphene")
 
 env.headlessQuit()

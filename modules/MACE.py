@@ -32,6 +32,7 @@ class MACEModelLoader(ModelLoaderACE):
 
         dtype = None
         model = self.calculator.model
+
         for x in model.named_buffers():
             if x[0].startswith("interactions"):
                 dtype = x[1].dtype

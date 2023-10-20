@@ -82,7 +82,7 @@ class ModelLoaderACE(ModelLoader):
     def __init__(self, env, path):
         super().__init__(env, path)
 
-    def predict(self, dataset, indices=None, batchSize=50, taskID=None):
+    def predict(self, dataset, indices=None, batchSize=1, taskID=None):
         from ase import Atoms
 
         if indices is None:
@@ -97,9 +97,11 @@ class ModelLoaderACE(ModelLoader):
         for i in range(len(R)):
             r = R[i]
             if lattice is not None:
-                atoms = Atoms(numbers=z, positions=r, cell=lattice, pbc=True)
+                atoms = Atoms(
+                    numbers=z, positions=r, cell=[10] * 3, pbc=[True] * 3
+                )
             else:
-                atoms = Atoms(numbers = z, positions=r)
+                atoms = Atoms(numbers=z, positions=r)
 
             atoms.calc = self.calculator
             F.append(atoms.get_forces())

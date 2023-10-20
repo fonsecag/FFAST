@@ -3,8 +3,8 @@ import numpy as np
 
 env = startHeadlessEnvironment()
 
-dpath = "private/maceIgor/train2.npz"
-mpath = "private/maceIgor/MACE_tea_graphene_200_final_run-3_swa.model"
+dpath = "private/train.npz"
+mpath = "private/MACE_tea_graphene_200_final_run-3_swa.model"
 
 env.taskLoadDataset(dpath, "sGDML")
 env.taskLoadModel(mpath, "MACE")

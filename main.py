@@ -94,10 +94,11 @@ async def eventLoop(UI, env):
         # env.taskLoadModel("private/eth_schnet", "SchNet")
         # env.loadZeroModel()
 
-        # dpath = "private/maceIgor/train.npz"
+        dpath = "private/train.npz"
         # mpath = "private/maceIgor/MACE_tea_graphene_200_final_run-3_swa.model"
-        # env.taskLoadDataset(dpath, "sGDML")
+        env.taskLoadDataset(dpath, "sGDML")
         # env.taskLoadModel(mpath, "MACE")
+        env.taskLoad("maceGraphene")
         pass
 
     # env.newTask(nh.countingTask, name="TaskWatchDog", visual=True)

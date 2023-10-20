@@ -250,7 +250,7 @@ def loadLoupe(UIHandler, loupe):
     ## ADD BUTTONS AND SHIT
     # CONTAINER
     container = pane.addSetting(
-        "Container", "Work Container", layout="horizontal", insertIndex=1,
+        "Container", "Work Container", layout="horizontal", insertIndex=1
     )
     container.setHideCondition(
         lambda: not (

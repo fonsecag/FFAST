@@ -220,7 +220,9 @@ class InteractiveCanvas(Widget):
     def __init__(self, loupe, **kwargs):
         super().__init__(layout="vertical", **kwargs)
 
-        self.canvas = SceneCanvas(self, bgcolor=getConfig("loupeBGColor"), create_native=False)
+        self.canvas = SceneCanvas(
+            self, bgcolor=getConfig("loupeBGColor"), create_native=False
+        )
 
         self.elements = {}
         self.props = {}

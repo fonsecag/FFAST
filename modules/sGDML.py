@@ -126,7 +126,7 @@ class sGDMLDatasetLoader(DatasetLoader):
         if "lattice" in data:
             self.lattice = data["lattice"]
         else:
-            self.lattice = np.eye(3)
+            self.lattice = None
 
     def getN(self):
         return self.N

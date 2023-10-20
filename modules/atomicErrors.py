@@ -241,10 +241,12 @@ def loadUI(UIHandler, env):
 
     class AtomicErrorTable(Table):
         def __init__(self, **kwargs):
-            super().__init__(UIHandler, parent=ct, title="Atomic Errors", **kwargs)
+            super().__init__(
+                UIHandler, parent=ct, title="Atomic Errors", **kwargs
+            )
             ct.addDataSelectionCallback(self.setModelDatasetDependencies)
             self.setDataDependencies("atomicForcesError", "forcesErrorMetrics")
-        
+
         def getSize(self):
             atomTypes = dataselector.getSelectedAtomInfo()
             nCols = 2
@@ -253,7 +255,10 @@ def loadUI(UIHandler, env):
             elif len(atomTypes) > 1:
                 nRows = len(atomTypes)
             else:
-                nRows = max(len(self.getModelDependencies()), len(self.getDatasetDependencies()))
+                nRows = max(
+                    len(self.getModelDependencies()),
+                    len(self.getDatasetDependencies()),
+                )
             return (nRows, nCols)
 
         def getLeftHeader(self, i):
@@ -292,8 +297,10 @@ def loadUI(UIHandler, env):
                 model = models[i]
                 atomType = atomTypes[0]
 
-            if atomType == 'All':
-                de = self.handler.env.getData("forcesErrorMetrics", dataset = dataset, model = model)
+            if atomType == "All":
+                de = self.handler.env.getData(
+                    "forcesErrorMetrics", dataset=dataset, model=model
+                )
                 if de is None:
                     return
                 if j == 0:
@@ -302,20 +309,19 @@ def loadUI(UIHandler, env):
                     value = de.get("rmse")
 
             else:
-                de = self.handler.env.getData("atomicForcesError", dataset=dataset, model = model)
+                de = self.handler.env.getData(
+                    "atomicForcesError", dataset=dataset, model=model
+                )
                 if de is None:
                     return
-            
+
                 if j == 0:
-                    value = de.get(atomType)['mae']
+                    value = de.get(atomType)["mae"]
                 else:
-                    value = de.get(atomType)['rmse']
+                    value = de.get(atomType)["rmse"]
 
             if value is not None:
-                return f'{value:.2f}'
-            
+                return f"{value:.2f}"
+
     table = AtomicErrorTable()
-    ct.addWidget(table, 1, 0)        
-
-
-
+    ct.addWidget(table, 1, 0)

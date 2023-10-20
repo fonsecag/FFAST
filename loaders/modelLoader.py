@@ -90,6 +90,8 @@ class ModelLoaderACE(ModelLoader):
         else:
             R = dataset.getCoordinates(indices=indices)
         z = dataset.getElements()
+        lattice = dataset.getLattice()
+        pbc = lattice is not None
 
         E, F = [], []
         for i in range(len(R)):
@@ -108,6 +110,8 @@ class ModelLoaderACE(ModelLoader):
                     message=f"{self.modelName} batch predictions",
                     quiet=True,
                     percent=True,
+                    cell=lattice,
+                    pbc=pbc,
                 )
 
                 if not self.env.tm.isTaskRunning(taskID):

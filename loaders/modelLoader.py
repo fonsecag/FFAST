@@ -98,7 +98,7 @@ class ModelLoaderACE(ModelLoader):
             r = R[i]
             if lattice is not None:
                 atoms = Atoms(
-                    numbers=z, positions=r, cell=[10] * 3, pbc=[True] * 3
+                    numbers=z, positions=r, cell=lattice, pbc=[True] * 3
                 )
             else:
                 atoms = Atoms(numbers=z, positions=r)

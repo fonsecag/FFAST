@@ -175,12 +175,14 @@ class DatasetLoader(EventClass):
         self.color = [r, g, b]
         self.eventPush("OBJECT_COLOR_CHANGED", self.fingerprint)
 
-    def getBondIndices(self, index):
-
+    def getBondMatrix(self, index):
         r = self.getCoordinates(index)
         d = distance_matrix(r, r)
 
-        idxs = np.argwhere(d < self.bondSizes)
+        return d < self.bondSizes
+
+    def getBondIndices(self, index):
+        idxs = np.argwhere(self.getBondMatrix(index))
         _, idxs = cleanBondIdxsArray(idxs)
 
         return idxs

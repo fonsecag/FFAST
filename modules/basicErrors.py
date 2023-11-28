@@ -77,13 +77,14 @@ def loadData(env):
             eErr = env.getData("energyError", model=model, dataset=dataset)
 
             diff = np.abs(eErr.get("diff"))
+            diff = np.concatenate([diff, -diff])
 
             kde = gaussian_kde(diff)
 
-            delta = np.max(diff) - np.min(diff)
+            delta = np.max(diff) - 0
 
             distX = np.linspace(
-                np.min(diff) - 0.05 * delta,
+                0,
                 np.max(diff) + 0.05 * delta,
                 getConfig("plotDistNum"),
             )

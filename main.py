@@ -80,14 +80,14 @@ async def eventLoop(UI, env):
         # env.taskLoadDataset("private/ethanol_spl_100.npz", "sGDML")
         # env.taskLoadDataset("private/grid.npz", "sGDML")
         # env.taskLoadDataset("private/DHA_1000.xyz", "ase")
-        # env.taskLoadDataset("private/md22_DHA.npz", "sGDML")
+        env.taskLoadDataset("private/md22_DHA.npz", "sGDML")
         # env.taskLoadDataset("private/Anton/Graphene_D-proline_perm_test.npz", "sGDML")
-        # env.taskLoad("private/saves/MACE")/
+        env.taskLoad("private/saves/MACE")
         # env.taskLoadDataset("private/unfolding_100.npz", "sGDML")
         # env.taskLoadDataset("private/unfolding.npz", "sGDML")
         # env.taskLoad("private/saves/unfolding")
-        env.taskLoadDataset("private/md22_stachyose.npz", "sGDML")
-        env.taskLoad("private/saves/MACE")
+        # env.taskLoadDataset("private/md22_stachyose.npz", "sGDML")
+        # env.taskLoad("private/saves/MACE")
         # env.taskLoadModel("private/neq_DHA_1000.pth", "Nequip")
         # env.taskLoadModel("private/neq_sal_1000.pth")
         # env.taskLoadModel("private/ethanol_def_1000.npz", "sGDML")
@@ -95,11 +95,11 @@ async def eventLoop(UI, env):
         # env.taskLoadModel("private/eth_schnet", "SchNet")
         # env.loadZeroModel()
 
-        dpath = "private/train.npz"
-        # mpath = "private/maceIgor/MACE_tea_graphene_200_final_run-3_swa.model"
-        env.taskLoadDataset(dpath, "sGDML")
-        # env.taskLoadModel(mpath, "MACE")
-        env.taskLoad("maceGraphene")
+        # dpath = "private/train.npz"
+        # # mpath = "private/maceIgor/MACE_tea_graphene_200_final_run-3_swa.model"
+        # env.taskLoadDataset(dpath, "sGDML")
+        # # env.taskLoadModel(mpath, "MACE")
+        # env.taskLoad("maceGraphene")
         pass
 
     # env.newTask(nh.countingTask, name="TaskWatchDog", visual=True)

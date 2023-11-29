@@ -112,13 +112,14 @@ def loadData(env):
             diff = np.abs(err.get("diff"))
             diff = diff.reshape(diff.shape[0], -1)
             mae = np.mean(np.abs(diff), axis=1)
+            mae = np.concatenate([-np.abs(mae), np.abs(mae)])
 
-            kde = gaussian_kde(np.abs(mae))
+            kde = gaussian_kde(mae)
 
-            delta = np.max(mae) - np.min(mae)
+            delta = np.max(mae) - 0
 
             distX = np.linspace(
-                np.min(mae) - delta * 0.05,
+                0,
                 np.max(mae) + delta * 0.05,
                 getConfig("plotDistNum"),
             )

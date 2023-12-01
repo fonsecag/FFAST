@@ -78,14 +78,17 @@ class UIHandler(EventClass):
 
         # TODO
         if True:
-            app.setStyle("Fusion")
+            if "Fusion" in QtWidgets.QStyleFactory.keys():
+                app.setStyle("Fusion")
+
             # Load styles
-            with open("style.qss", "r") as file:
-                styleSheet = file.read()
+            with open("style.qss", "r") as styleFile:
+                styleSheet = styleFile.read()
 
             # set variables
             styleSheet = configStyleSheet(styleSheet)
-            app.setStyleSheet(styleSheet)
+            if app is not None:
+                app.setStyleSheet(styleSheet)
 
         window = MainWindow(self)
         window.show()

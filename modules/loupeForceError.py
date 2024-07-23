@@ -31,7 +31,7 @@ class ColorBarVisual(VisualElement):
             hasData = False
 
         if hasData and (setting == "Mean Force Error"):
-            label = "Mean avg. abs. force" if zeroModel else "Mean Force MAE"
+            label = "Mean avg. abs. force" if zeroModel else "Force MAE" #"Mean Force MAE"
             self.setParameters(
                 visible=True,
                 cmap=prop.colorMap,
@@ -39,7 +39,7 @@ class ColorBarVisual(VisualElement):
                 label=label,
             )
         elif hasData and (setting == "Force Error"):
-            label = "Avg. abs. force" if zeroModel else "Force MAE"
+            label = "Avg. abs. force" if zeroModel else "Force Absolute Error" #"Force MAE"
             self.setParameters(
                 visible=True,
                 cmap=prop.colorMap,

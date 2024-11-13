@@ -1,14 +1,14 @@
-import logging
-from client.environment import Environment
-import qasync
 import asyncio
-import sys
 import logging
-from events import EventClass
-from client.dataWatcher import DataWatcher
-from utils import loadModules
 import os
-from utils import setupLogger
+import sys
+
+from PySide6.QtWidgets import QApplication
+from qasync import QEventLoop
+
+from client.environment import Environment
+from events import EventClass
+from utils import loadModules, setupLogger
 
 
 class NathHorthath(EventClass):
@@ -118,18 +118,25 @@ async def eventLoop(UI, env):
     await taskManager.quit()
 
 
-async def main():
+def main():
     from UI.UIHandler import UIHandler
 
+    app = QApplication(sys.argv)
+
+    event_loop = QEventLoop(app)
+    asyncio.set_event_loop(event_loop)
+
     UI = UIHandler()
-    UI.launch()
+    UI.launch(app)
 
     env = Environment(headless=False)
     UI.setEnvironment(env)
 
     loadModules(UI, env)
 
-    await eventLoop(UI, env)
+    # await eventLoop(UI, env)
+    event_loop.run_until_complete(eventLoop(UI, env))
+    event_loop.close()
 
 
 if __name__ == "__main__":
@@ -149,7 +156,7 @@ if __name__ == "__main__":
     logger = logging.getLogger("FFAST")
 
     try:
-        qasync.run(main())
+        main()
     except RuntimeError as e:
         if str(e) == "Event loop stopped before Future completed.":
             sys.exit()

@@ -1,11 +1,12 @@
-from events import EventClass
 import os
+
+import pyqtgraph
 from PySide6 import QtWidgets
 from PySide6.QtCore import QDir
-import pyqtgraph
-from UI.MainWindow import MainWindow
-import os
+
+from events import EventClass
 from UI.Loupe import Loupe
+from UI.MainWindow import MainWindow
 
 
 class UIHandler(EventClass):
@@ -58,7 +59,7 @@ class UIHandler(EventClass):
     def setEnvironment(self, env):
         self.env = env
 
-    def launch(self):
+    def launch(self, app):
         from config.uiConfig import config, configStyleSheet
 
         self.config = config
@@ -66,7 +67,7 @@ class UIHandler(EventClass):
         # qasync creates its own QApplication instance, and as such you don't
         # need to create a new one, just access the created instance.
         # Also, we don't need app.exec() at the end, that's also handled
-        app = QtWidgets.QApplication.instance()  # (sys.argv)
+        # app = QtWidgets.QApplication.instance()  # (sys.argv)
         app.setApplicationDisplayName("FFAST")
         app.setQuitOnLastWindowClosed(False)
 

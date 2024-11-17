@@ -17,6 +17,7 @@ import asyncio
 from utils import loadModules, mixColors
 import json
 import threading, time
+from modules.aseDataset import aseDatasetLoader
 
 logger = logging.getLogger("FFAST")
 
@@ -161,8 +162,13 @@ class Environment(EventClass):
         logging.info(f"Model `{path}` successfully loaded")
 
     def loadPrepredictedDataset(self, path, datasetKey):
-        d = np.load(path, allow_pickle=True)
-        E, F = d["E"], d["F"]
+        if "npz" in path:
+            d = np.load(path, allow_pickle=True)
+            E, F = d["E"], d["F"]
+        else:
+            aseObject = aseDatasetLoader(path)
+            E = aseObject.getEnergies()
+            F = aseObject.getForces()
 
         dataset = self.getDataset(datasetKey)
         eDataset = dataset.getEnergies()

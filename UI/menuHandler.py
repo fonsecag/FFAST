@@ -91,6 +91,8 @@ class MenuHandler(EventClass):
         names = [x.getName() for x in env.getAllDatasets(excludeSubs=True)]
         keys = [x.fingerprint for x in env.getAllDatasets(excludeSubs=True)]
         extensions = ["*.npz"] * len(names)
+        extensions += ["*"] * len(names)
+        names += names
 
         path, typ = customFileDialog(
             self.handler.window, fileTypes=names, extensions=extensions

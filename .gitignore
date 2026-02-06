@@ -163,3 +163,5 @@ cython_debug/
 #.idea/
 test2.py
 config/user.json
+.DS_Store
+**/.DS_Store

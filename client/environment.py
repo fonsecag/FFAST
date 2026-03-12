@@ -420,8 +420,9 @@ class Environment(EventClass):
             return ds
 
     def taskLoadDataset(self, path, datasetType, selected_energy_key=None,
-                        selected_force_key=None, prediction_keys=None, slice_num=0):
+                       selected_force_key=None, prediction_keys=None, slice_num=0):
         """Load dataset and optionally load predictions from same file.
+
         Args:
             path: Path to dataset file
             datasetType: Type of dataset loader to use
@@ -445,9 +446,9 @@ class Environment(EventClass):
         )
 
     def loadDataset(self, path, datasetType, taskID=None, selected_energy_key=None,
-                    selected_force_key=None, prediction_keys=None, slice_num=0):
+                   selected_force_key=None, prediction_keys=None, slice_num=0):
         """Load dataset and create ghost models for prediction keys."""
-        # logger.info(f"self.datasetTypes:\n{self.datasetTypes}\narg datasetType:\n{datasetType}")
+        #logger.info(f"self.datasetTypes:\n{self.datasetTypes}\narg datasetType:\n{datasetType}")
         if not os.path.exists(path):
             logger.error(f"Tried to load dataset, but path `{path}` not found")
             return None

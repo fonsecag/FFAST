@@ -235,7 +235,7 @@ async def connect_to_cluster(
 
     # ── 4. SSH port-forward ───────────────────────────────────────────────
     local_port = _find_free_port()
-    ssh_target = (
+    login_target = (
         f"{profile.username}@{profile.host}"
         if profile.username
         else profile.host
@@ -243,6 +243,9 @@ async def connect_to_cluster(
     identity_file = os.path.expanduser(
         getattr(profile, "identity_file", "") or ""
     )
+    # Forward local_port → compute_node:remote_port through the login node.
+    # The login node TCP-connects to the compute node (no SSH auth to compute
+    # node required; only the login node needs key auth).
     ssh_cmd = [
         "ssh",
         "-N",                             # no remote command
@@ -255,7 +258,7 @@ async def connect_to_cluster(
         ssh_cmd += ["-i", identity_file]
     ssh_cmd += [
         "-L", f"{local_port}:{node}:{remote_port}",
-        ssh_target,
+        login_target,
     ]
     _progress(
         f"Opening SSH tunnel: localhost:{local_port}"

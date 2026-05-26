@@ -34,6 +34,8 @@ include = [
     "UI.*",
     "client",
     "client.*",
+    "cluster",
+    "cluster.*",
     "config",
     "config.*",
     "datasetLoaders",

@@ -64,6 +64,12 @@ class Environment(EventClass):
         self.eventSubscribe(
             "SUBDATASET_INDICES_CHANGED", self.deleteCacheByDataset
         )
+        self.eventSubscribe(
+            "QUIT_EVENT", self._disconnectRemoteSession, asynchronous=True
+        )
+
+        # Active remote cluster session (set by menuHandler after connect_to_cluster)
+        self.remoteSession = None
 
         self.maxDatasetSize = 0  # To handle the smoothing maximum value in plots
 
@@ -1407,6 +1413,14 @@ class Environment(EventClass):
         import code
 
         code.interact(local=kwargs)
+
+    async def _disconnectRemoteSession(self):
+        """Disconnect any active remote session on QUIT_EVENT."""
+        session = self.remoteSession
+        if session is not None:
+            logger.info("Cleaning up remote session on quit…")
+            await session.disconnect()
+            self.remoteSession = None
 
 
 class HeadlessEnvironment(Environment, threading.Thread):

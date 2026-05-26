@@ -23,6 +23,10 @@ class ClusterProfile:
     name: str
     host: str = ""
     username: str = ""
+    # SSH auth
+    identity_file: str = ""          # path to private key, e.g. ~/.ssh/id_meluxina
+    # server command run inside the SLURM job
+    ffast_server_cmd: str = "ffast-server"  # override if venv activation needed
     # scheduler
     partition: str = ""
     account: str = ""

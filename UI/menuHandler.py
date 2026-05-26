@@ -465,16 +465,82 @@ class MenuHandler(EventClass):
             loupe.canvas.canvas.update()
 
     def onConnectToCluster(self):
-        """Open the cluster connection dialog."""
+        """Open the cluster connection dialog and start the connect flow."""
+        import logging
+        logger = logging.getLogger("FFAST")
         from UI.ClusterProfileDialog import ClusterConnectDialog
 
         dialog = ClusterConnectDialog(parent=self.handler.window)
-        if dialog.exec() == ClusterConnectDialog.Accepted:
-            profile = dialog.get_profile()
-            logger.info(
-                "Connect requested: host=%s user=%s partition=%s",
-                profile.host,
-                profile.username,
-                profile.partition,
+        if dialog.exec() != ClusterConnectDialog.Accepted:
+            return
+
+        profile = dialog.get_profile()
+        if not profile.host:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self.handler.window,
+                "Connect to Cluster",
+                "No host specified in the profile.",
             )
-            # TODO: initiate SSH tunnel + job submission using profile
+            return
+
+        logger.info(
+            "Connect requested: host=%s user=%s partition=%s",
+            profile.host,
+            profile.username,
+            profile.partition,
+        )
+
+        env = self.handler.env
+
+        async def _connectTask(taskID=None):
+            from cluster.session import connect_to_cluster
+            from cluster.backend import ClusterError
+
+            def _progress(msg: str):
+                env.eventPush(
+                    "TASK_PROGRESS",
+                    taskID,
+                    message=msg,
+                )
+
+            try:
+                session = await connect_to_cluster(
+                    profile,
+                    progress_cb=_progress,
+                )
+                # Store session on env so other components can reach it
+                env.remoteSession = session
+                env.eventPush(
+                    "TASK_PROGRESS",
+                    taskID,
+                    message=(
+                        f"Connected! Job {session.job_id} on "
+                        f"localhost:{session.local_port}"
+                    ),
+                )
+                logger.info(
+                    "Remote session ready: job=%s local_port=%d",
+                    session.job_id,
+                    session.local_port,
+                )
+            except ClusterError as exc:
+                logger.error("Cluster connection failed: %s", exc)
+                env.eventPush(
+                    "TASK_PROGRESS",
+                    taskID,
+                    message=f"Connection failed: {exc}",
+                )
+            except OSError as exc:
+                logger.error("SSH/WebSocket error: %s", exc)
+                env.eventPush(
+                    "TASK_PROGRESS",
+                    taskID,
+                    message=f"Connection failed: {exc}",
+                )
+
+        env.tm.newTask(
+            _connectTask,
+            visual=True,
+            name=f"Connecting to {profile.host}…",
+        )

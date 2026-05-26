@@ -60,6 +60,13 @@ class MenuHandler(EventClass):
             File.addAction("Load Zero Model", self.onZeroModelLoad, "Ctrl+0")
             File.addAction("Load Prediction", self.onPrepredictedModelLoad, "Ctrl+p")
 
+            File.addSeparator()
+            File.addAction(
+                "Connect to Cluster…",
+                self.onConnectToCluster,
+                "Ctrl+Shift+C",
+            )
+
             # File.addAction("Preferences", self.onPreferences)
             # File.addAction("Exit", self.onExit)
 
@@ -456,3 +463,18 @@ class MenuHandler(EventClass):
             # Update canvas background directly
             loupe.canvas.canvas.bgcolor = color.getRgbF()[:3]
             loupe.canvas.canvas.update()
+
+    def onConnectToCluster(self):
+        """Open the cluster connection dialog."""
+        from UI.ClusterProfileDialog import ClusterConnectDialog
+
+        dialog = ClusterConnectDialog(parent=self.handler.window)
+        if dialog.exec() == ClusterConnectDialog.Accepted:
+            profile = dialog.get_profile()
+            logger.info(
+                "Connect requested: host=%s user=%s partition=%s",
+                profile.host,
+                profile.username,
+                profile.partition,
+            )
+            # TODO: initiate SSH tunnel + job submission using profile

@@ -110,15 +110,27 @@ class SlurmBackend(ClusterBackend):
         await proc.communicate()
 
     def _build_script(self, spec: JobSpec) -> str:
-        lines = ["#!/bin/bash"]
+        lines = ["#!/bin/bash -l"]  # -l = login shell, loads modules
         lines.append("#SBATCH --nodes=1")
         lines.append(f"#SBATCH --ntasks={spec.cores}")
         lines.append(f"#SBATCH --mem={spec.memory_mb}M")
         lines.append(f"#SBATCH --time={spec.time_limit}")
-        if spec.gpu_count > 0:
+        if spec.cpus_per_task > 0:
+            lines.append(f"#SBATCH --cpus-per-task={spec.cpus_per_task}")
+        if spec.ntasks_per_node > 0:
+            lines.append(f"#SBATCH --ntasks-per-node={spec.ntasks_per_node}")
+        if spec.gpus_per_task > 0:
+            lines.append(f"#SBATCH --gpus-per-task={spec.gpus_per_task}")
+        elif spec.gpu_count > 0:
             lines.append(f"#SBATCH --gres=gpu:{spec.gpu_count}")
         if spec.partition:
             lines.append(f"#SBATCH --partition={spec.partition}")
+        if spec.account:
+            lines.append(f"#SBATCH --account={spec.account}")
+        if spec.qos:
+            lines.append(f"#SBATCH --qos={spec.qos}")
+        if spec.job_name:
+            lines.append(f"#SBATCH --job-name={spec.job_name}")
         lines.append("")
         lines.append(spec.command)
         return "\n".join(lines)

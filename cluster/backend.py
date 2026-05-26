@@ -12,12 +12,19 @@ class JobStatus(Enum):
 
 @dataclass
 class JobSpec:
-    cores: int
+    cores: int          # --ntasks
     memory_mb: int
-    time_limit: str
+    time_limit: str     # HH:MM:SS
     command: str
-    gpu_count: int = 0
+    # optional resource fields
+    cpus_per_task: int = 0      # --cpus-per-task
+    ntasks_per_node: int = 0    # --ntasks-per-node
+    gpus_per_task: int = 0      # --gpus-per-task
+    gpu_count: int = 0          # --gres=gpu:N (legacy, use gpus_per_task)
     partition: str = ""
+    account: str = ""
+    qos: str = ""
+    job_name: str = ""
 
 
 class ClusterError(Exception):

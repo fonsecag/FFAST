@@ -2,7 +2,6 @@ import numpy as np
 import logging
 import os
 from functools import partial
-from PySide6.QtWidgets import QFileDialog
 
 logger = logging.getLogger("FFAST")
 DEPENDENCIES = ["loupeCamera"]
@@ -34,6 +33,8 @@ def exportImagePIL(loupe, transparent=False, format="png"):
     workdir = loupe.handler.workdir
     dataset_name = loupe.canvas.dataset.getName()
     default_filename = os.path.join(workdir, f"{dataset_name}_frame_{loupe.index}{default_ext}")
+
+    from PySide6.QtWidgets import QFileDialog
 
     file_path, _ = QFileDialog.getSaveFileName(
         loupe,

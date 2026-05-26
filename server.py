@@ -1,9 +1,23 @@
 """
-ffast-server — headless FFAST environment wrapped in a WebSocket server.
+ffast-server — headless FFAST environment wrapped in a WebSocket RPC server.
 
-Runs on a cluster compute node after SLURM allocates resources.
-Connect with: websocat ws://localhost:<port>
-Send "ping", receive "pong" to confirm the server is alive.
+Start with: ffast-server --port <port>
+
+Control messages are msgpack-encoded dicts:
+    {"event": str, "args": list, "kwargs": dict}
+
+Client → server events:
+    LOAD_DATASET  args=[path, datasetType]
+                  kwargs={selected_energy_key, selected_force_key,
+                          prediction_keys, slice_num}
+    LOAD_MODEL    args=[path, modelType]
+
+Server → client events (auto-forwarded):
+    TASK_CREATED, TASK_PROGRESS, TASK_DONE, TASK_FAILED,
+    DATA_UPDATED, DATASET_LOADED, MODEL_LOADED,
+    DATASET_DELETED, MODEL_DELETED
+
+Text "ping" → text "pong" still supported for liveness checks.
 
 Log file: server.log (same directory as this file).
 """
@@ -31,42 +45,135 @@ def _setupServerLogger():
     )
 
 
-async def _handler(websocket):
-    """Handle a single WebSocket connection."""
+def _dispatch_client_event(env, event, args, kwargs):
+    """Route an incoming client event to the appropriate env method."""
+    if event == "LOAD_DATASET":
+        if len(args) < 2:
+            logger.warning("LOAD_DATASET: missing args %r", args)
+            return
+        path, datasetType = args[0], args[1]
+        # msgpack deserializes tuples as lists; restore for prediction_keys
+        if kwargs.get("prediction_keys"):
+            kwargs["prediction_keys"] = [
+                tuple(k) for k in kwargs["prediction_keys"]
+            ]
+        env.taskLoadDataset(path, datasetType, **kwargs)
+
+    elif event == "LOAD_MODEL":
+        if len(args) < 2:
+            logger.warning("LOAD_MODEL: missing args %r", args)
+            return
+        env.taskLoadModel(args[0], args[1])
+
+    else:
+        logger.warning("Unknown client event: %s", event)
+
+
+async def _handler(websocket, env, outbound):
+    """Handle one WebSocket connection."""
+    from cluster.rpc import unpack
+
     addr = websocket.remote_address
-    logger.info("Connection from %s", addr)
-    try:
+    logger.info("Client connected: %s", addr)
+
+    async def receive_loop():
         async for message in websocket:
-            logger.info("Received from %s: %r", addr, message)
-            if message == "ping":
+            if isinstance(message, bytes):
+                try:
+                    event, args, kwargs = unpack(message)
+                    _dispatch_client_event(env, event, args, kwargs)
+                except Exception as exc:
+                    logger.warning("RPC decode error: %s", exc)
+            elif message == "ping":
                 await websocket.send("pong")
-                logger.info("Sent pong to %s", addr)
+                logger.debug("Pong sent to %s", addr)
             else:
-                logger.info("Unknown message from %s: %r", addr, message)
+                logger.debug(
+                    "Unknown text message from %s: %r", addr, message
+                )
+
+    async def send_loop():
+        while True:
+            data = await outbound.get()
+            try:
+                await websocket.send(data)
+            except Exception as exc:
+                logger.warning(
+                    "Send error to %s: %s", addr, exc
+                )
+
+    receive_task = asyncio.create_task(receive_loop())
+    send_task = asyncio.create_task(send_loop())
+
+    try:
+        await receive_task
     except Exception as exc:
         logger.warning("Connection error from %s: %s", addr, exc)
     finally:
-        logger.info("Connection closed: %s", addr)
+        send_task.cancel()
+        try:
+            await send_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Client disconnected: %s", addr)
 
 
-async def _serve(env, port: int):
-    """Start the WebSocket server and run until interrupted."""
+async def _serve(env, outbound, port: int):
+    """Run the WebSocket server until the environment signals quit."""
     import websockets
 
+    async def handler(websocket):
+        await _handler(websocket, env, outbound)
+
     logger.info("Starting ffast-server on port %d", port)
-    async with websockets.serve(_handler, "0.0.0.0", port):
+    async with websockets.serve(handler, "0.0.0.0", port):
         logger.info("ffast-server listening on ws://0.0.0.0:%d", port)
-        # Keep serving until the environment signals quit or process exits
         while not env.quitReady:
             await asyncio.sleep(1)
     logger.info("ffast-server shut down")
+
+
+async def _main(port: int):
+    """Bootstrap env, wire RPC subscriptions, run server + event loop."""
+    from client.environment import HeadlessEnvironment
+    from cluster.rpc import SERVER_TO_CLIENT, pack
+    from utils import loadModules
+
+    env = HeadlessEnvironment()
+    loadModules(None, env, headless=True)
+
+    # Queue for server→client events (events dropped when full / no client)
+    outbound: asyncio.Queue = asyncio.Queue(maxsize=200)
+
+    for evt in SERVER_TO_CLIENT:
+
+        def make_sender(e: str):
+            def handler(*args, **kwargs):
+                try:
+                    data = pack(e, args, kwargs)
+                    outbound.put_nowait(data)
+                except asyncio.QueueFull:
+                    logger.debug(
+                        "Outbound queue full, dropping %s event", e
+                    )
+
+            return handler
+
+        env.eventSubscribe(evt, make_sender(evt))
+
+    logger.info("Environment ready")
+
+    await asyncio.gather(
+        env.headlessEventLoop(),
+        _serve(env, outbound, port),
+    )
 
 
 def cli():
     _setupServerLogger()
 
     parser = argparse.ArgumentParser(
-        description="ffast-server — headless FFAST WebSocket server"
+        description="ffast-server — headless FFAST WebSocket RPC server"
     )
     parser.add_argument(
         "--port",
@@ -76,18 +183,13 @@ def cli():
     )
     args = parser.parse_args()
 
-    from client.environment import startHeadlessEnvironment
-
-    logger.info("Starting headless FFAST environment...")
-    env = startHeadlessEnvironment()
-    logger.info("Environment ready")
-
     try:
-        asyncio.run(_serve(env, args.port))
+        asyncio.run(_main(args.port))
     except KeyboardInterrupt:
         logger.info("Interrupted — shutting down")
-    finally:
-        env.headlessQuit()
+    except Exception:
+        logger.exception("ffast-server crashed during startup")
+        raise
 
 
 if __name__ == "__main__":

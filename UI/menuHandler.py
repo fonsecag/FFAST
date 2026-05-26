@@ -511,6 +511,10 @@ class MenuHandler(EventClass):
                 )
                 # Store session on env so other components can reach it
                 env.remoteSession = session
+                # Forward server→client events into the local event system
+                env.remoteSession._listener = (
+                    await session.start_listener(env)
+                )
                 env.eventPush(
                     "TASK_PROGRESS",
                     taskID,

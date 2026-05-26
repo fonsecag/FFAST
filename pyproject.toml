@@ -17,6 +17,7 @@ dependencies = [
     "scipy>=1.13.1",
     "torch>=2.8.0",
     "vispy>=0.16.1",
+    "msgpack>=1.0.0",
     "websockets>=12.0",
 ]
 

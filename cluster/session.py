@@ -63,6 +63,61 @@ class RemoteSession:
             logger.warning("Ping failed: %s", exc)
             return False
 
+    async def push_event(
+        self, event: str, *args, **kwargs
+    ) -> None:
+        """Serialize and send an event to the remote ffast-server.
+
+        Args must be msgpack-serializable primitives (str, int, float,
+        list, dict, None).  Qt objects and numpy arrays must not be passed.
+
+        Example::
+
+            await session.push_event(
+                "LOAD_DATASET",
+                "/cluster/data/mol.xyz",
+                "ase (auto)",
+                slice_num=0,
+            )
+        """
+        from cluster.rpc import pack
+
+        data = pack(event, args, kwargs)
+        await self.websocket.send(data)
+
+    async def start_listener(self, local_env) -> asyncio.Task:
+        """Start a background task that forwards server events to local_env.
+
+        Receives msgpack messages from the server and re-injects them into
+        *local_env*'s event system via ``eventPush``.  This drives the local
+        UI (progress bars, plot refreshes) from remote task activity.
+
+        Returns the ``asyncio.Task`` — cancel it to stop listening.
+
+        Note: do not call ``ping()`` while the listener is running; both
+        compete for the same websocket receive stream.
+        """
+        from cluster.rpc import unpack
+
+        async def _listen():
+            try:
+                async for message in self.websocket:
+                    if not isinstance(message, bytes):
+                        continue  # skip text messages (pong etc.)
+                    try:
+                        event, args, kwargs = unpack(message)
+                        local_env.eventPush(event, *args, **kwargs)
+                    except Exception as exc:
+                        logger.warning(
+                            "Listener decode error: %s", exc
+                        )
+            except asyncio.CancelledError:
+                pass
+            except Exception as exc:
+                logger.warning("Listener terminated: %s", exc)
+
+        return asyncio.create_task(_listen())
+
     async def disconnect(self) -> None:
         """
         Close WebSocket and kill SSH tunnel.

@@ -317,6 +317,25 @@ class RemoteSession:
                                 " fp=%r kwargs=%r", args[0], kwargs
                             )
 
+                        # ── remote task ID namespacing ────────────────────
+                        # Both the server and the local env use incrementing
+                        # integer task IDs starting from 1, so they collide:
+                        # the local connect task is typically ID 1, and the
+                        # first remote task (dataset load) is also ID 1.
+                        # Without namespacing, _inject_phantom_task overwrites
+                        # the connect task entry, and TASK_DONE [1] from the
+                        # server removes the connect bar from the sidebar.
+                        # Prefix remote IDs so they occupy a distinct namespace.
+                        if (
+                            event in (
+                                "TASK_CREATED", "TASK_PROGRESS",
+                                "TASK_DONE", "TASK_FAILED",
+                            )
+                            and args
+                        ):
+                            args = list(args)
+                            args[0] = f"remote_{args[0]}"
+
                         # Phantom task: TASK_CREATED from server carries only
                         # taskID.  The local TaskManager has no record of it,
                         # so TasksList.onTaskCreated would silently skip it.

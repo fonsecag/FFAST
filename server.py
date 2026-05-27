@@ -347,7 +347,7 @@ async def _send_prediction_arrays(env, dataset_fp, model_fp, outbound):
             model_fp[:8], dataset_fp[:8],
         )
 
-    data = pack_prediction_arrays(dataset_fp, model_fp, arrays)
+    data = await asyncio.to_thread(pack_prediction_arrays, dataset_fp, model_fp, arrays)
     try:
         outbound.put_nowait(data)
     except asyncio.QueueFull:
@@ -379,12 +379,18 @@ async def _send_subdataset_arrays(env, fingerprint, outbound):
         fingerprint, dataset.getN(), is_variable,
     )
 
-    arrays = dataset.to_transfer_arrays()
+    # Offload to a thread: to_transfer_arrays() + pack_arrays() call
+    # np.ascontiguousarray / .tobytes() / msgpack.packb() — all synchronous
+    # CPU/memory operations that can take seconds for large datasets.  Keeping
+    # them on the event loop blocks WebSocket ping handling and causes the
+    # websockets library to close the connection after ping_timeout (20 s).
+    arrays = await asyncio.to_thread(dataset.to_transfer_arrays)
 
     # ── Include cached prediction data for this dataset ──────────────────
     # Pack prediction arrays as "pred__<dtype>__<model_fp>" entries so the
     # client can reconstruct DataEntity objects and show ghost models in the
     # sidebar without a separate round-trip.
+    # (Dict iteration and np.concatenate are fast; keep on event loop.)
     model_names: dict = {}
     pred_count = 0
     for cache_key in list(env.cache.keys()):
@@ -431,7 +437,7 @@ async def _send_subdataset_arrays(env, fingerprint, outbound):
             fingerprint,
         )
 
-    data = pack_arrays(fingerprint, arrays, model_names=model_names)
+    data = await asyncio.to_thread(pack_arrays, fingerprint, arrays, model_names=model_names)
     try:
         outbound.put_nowait(data)
     except asyncio.QueueFull:
@@ -511,7 +517,12 @@ async def _serve(env, outbound, port: int):
 
     logger.info("Starting ffast-server on port %d", port)
     # Bind to "" so the OS picks the right family (IPv4 + IPv6 on most systems).
-    async with websockets.serve(handler, "", port, max_size=None):
+    async with websockets.serve(
+        handler, "", port,
+        max_size=None,
+        ping_interval=30,   # send keepalive every 30 s
+        ping_timeout=60,    # allow 60 s for pong (headroom for slow I/O)
+    ):
         logger.info("ffast-server listening on ws://0.0.0.0:%d", port)
         while not env.quitReady:
             await asyncio.sleep(1)

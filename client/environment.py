@@ -68,8 +68,11 @@ class Environment(EventClass):
             "QUIT_EVENT", self._disconnectRemoteSession, asynchronous=True
         )
 
-        # Active remote cluster session (set by menuHandler after connect_to_cluster)
+        # Active remote cluster session (set by connectToCluster)
         self.remoteSession = None
+        # Set to True by _disconnectRemoteSession so connectToCluster's
+        # CancelledError handler knows not to scancel or delete the record.
+        self._session_quitting = False
 
         # Subscribe to remote dataset metadata so we can create local proxies
         self.eventSubscribe("REMOTE_DATASET_META", self._onRemoteDatasetMeta)
@@ -1428,6 +1431,12 @@ class Environment(EventClass):
         """Disconnect any active remote session on QUIT_EVENT."""
         session = self.remoteSession
         if session is not None:
+            # Set flag BEFORE disconnecting so that when TaskManager
+            # subsequently cancels the connectToCluster task the CancelledError
+            # handler knows this is a quit, not a user-initiated disconnect.
+            # Without this the handler would scancel the job and delete the
+            # session record, preventing reconnect on next launch.
+            self._session_quitting = True
             logger.info("Cleaning up remote session on quit…")
             await session.disconnect()
             self.remoteSession = None
@@ -1542,6 +1551,12 @@ class Environment(EventClass):
                 )
                 self.remoteSession = None
             except asyncio.CancelledError:
+                if self._session_quitting:
+                    # App is quitting — _disconnectRemoteSession already
+                    # closed the tunnel.  Job is still alive on the cluster;
+                    # keep the session record so the user can reconnect on the
+                    # next launch.  Do NOT scancel.
+                    raise
                 # ✕ clicked — disconnect cleanly.
                 logger.info(
                     "Disconnecting from cluster (user request, job %s)",
@@ -1560,7 +1575,7 @@ class Environment(EventClass):
 
         except asyncio.CancelledError:
             # Cancelled before connection was established.
-            if _job_id is not None and reconnect_job_id is None:
+            if _job_id is not None and reconnect_job_id is None and not self._session_quitting:
                 logger.info(
                     "Task cancelled — sending scancel for job %s",
                     _job_id,
@@ -1582,6 +1597,12 @@ class Environment(EventClass):
             )
         except OSError as exc:
             logger.error("SSH/WebSocket error: %s", exc)
+            # If we submitted a new job but the tunnel/WebSocket failed,
+            # cancel it on the cluster so it doesn't run to its time limit.
+            # For reconnect jobs we leave the job alone (tunnel failure is
+            # transient; the job is still running and the record is kept).
+            if reconnect_job_id is None and _job_id is not None:
+                asyncio.create_task(_scancel(_job_id))
             self.eventPush(
                 "TASK_PROGRESS",
                 taskID,

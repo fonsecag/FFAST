@@ -30,8 +30,8 @@ logger = logging.getLogger("FFAST")
 
 _DEFAULT_REMOTE_PORT = 8765
 _POLL_INTERVAL = 5        # seconds between squeue polls
-_POLL_TIMEOUT = 300       # seconds to wait for RUNNING state
-_TUNNEL_RETRIES = 12      # WebSocket connect attempts after tunnel spawn
+_POLL_TIMEOUT = 600       # seconds to wait for RUNNING state
+_TUNNEL_RETRIES = 100      # WebSocket connect attempts after tunnel spawn
 _TUNNEL_RETRY_DELAY = 3   # seconds between WebSocket connect retries
 
 
@@ -40,6 +40,30 @@ def _find_free_port() -> int:
     with socket.socket() as s:
         s.bind(("", 0))
         return s.getsockname()[1]
+
+
+def _inject_phantom_task(env, task_id) -> None:
+    """Insert a minimal task entry so the local UI shows remote task progress.
+
+    The server's TASK_CREATED event carries only a taskID.  The local
+    TaskManager has no record of it, so TasksList.onTaskCreated would call
+    env.getTask() → None and silently skip rendering a progress bar.
+    This function creates a completed dummy Future as the ``task`` field so
+    that cancelTask() can safely await it without crashing.
+    """
+    dummy: asyncio.Future = asyncio.get_event_loop().create_future()
+    dummy.set_result(None)
+    env.tm.runningTasks[task_id] = {
+        "visual": True,
+        "process": False,
+        "name": "Remote task",
+        "threaded": False,
+        "progress": None,
+        "progressMessage": "N/A",
+        "task": dummy,
+        "componentParent": None,
+        "taskID": task_id,
+    }
 
 
 @dataclass
@@ -99,6 +123,15 @@ class RemoteSession:
         """
         from cluster.rpc import unpack
 
+        # Only task-lifecycle events are safe to forward to the local env.
+        # Data-lifecycle events (DATASET_LOADED, MODEL_LOADED, DATA_UPDATED,
+        # DATASET_DELETED, MODEL_DELETED) require the actual data objects to
+        # exist locally — forwarding them causes AttributeError in SideBar
+        # because env.getDataset/getModel returns None.
+        _LOCAL_SAFE = frozenset(
+            {"TASK_CREATED", "TASK_PROGRESS", "TASK_DONE", "TASK_FAILED"}
+        )
+
         async def _listen():
             try:
                 async for message in self.websocket:
@@ -106,7 +139,38 @@ class RemoteSession:
                         continue  # skip text messages (pong etc.)
                     try:
                         event, args, kwargs = unpack(message)
+                        logger.info(
+                            "Listener received: %s args=%r kwargs=%r",
+                            event, args, kwargs,
+                        )
+                        if event not in _LOCAL_SAFE:
+                            logger.info(
+                                "Listener: skipping non-local-safe event %s",
+                                event,
+                            )
+                            continue
+                        # Phantom task: TASK_CREATED from server carries only
+                        # taskID.  The local TaskManager has no record of it,
+                        # so TasksList.onTaskCreated would silently skip it.
+                        # Insert a minimal entry so progress bars appear.
+                        if event == "TASK_CREATED" and args:
+                            logger.info(
+                                "Listener: injecting phantom task %r",
+                                args[0],
+                            )
+                            _inject_phantom_task(local_env, args[0])
+                        if event == "TASK_DONE":
+                            # Delay TASK_DONE so Qt can paint the progress
+                            # bar before it disappears.  Without this, fast
+                            # remote tasks (TASK_CREATED + TASK_DONE arrive
+                            # buffered together) vanish before the first
+                            # paint cycle.
+                            await asyncio.sleep(2.0)
                         local_env.eventPush(event, *args, **kwargs)
+                        # Yield to the Qt/asyncio event loop so that widget
+                        # changes from this event are painted before the next
+                        # event is processed.
+                        await asyncio.sleep(0)
                     except Exception as exc:
                         logger.warning(
                             "Listener decode error: %s", exc

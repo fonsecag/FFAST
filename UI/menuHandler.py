@@ -66,6 +66,11 @@ class MenuHandler(EventClass):
                 self.onConnectToCluster,
                 "Ctrl+Shift+C",
             )
+            File.addAction(
+                "Load Remote Dataset…",
+                self.onRemoteDatasetLoad,
+                "Ctrl+Shift+D",
+            )
 
             # File.addAction("Preferences", self.onPreferences)
             # File.addAction("Exit", self.onExit)
@@ -547,4 +552,51 @@ class MenuHandler(EventClass):
             _connectTask,
             visual=True,
             name=f"Connecting to {profile.host}…",
+        )
+
+    def onRemoteDatasetLoad(self):
+        """Load a dataset on the remote cluster via the active RPC session."""
+        import asyncio
+        import logging
+        from PySide6.QtWidgets import QInputDialog, QMessageBox
+
+        logger = logging.getLogger("FFAST")
+        env = self.handler.env
+        session = getattr(env, "remoteSession", None)
+
+        if session is None:
+            QMessageBox.warning(
+                self.handler.window,
+                "No Cluster Connection",
+                "Not connected to a cluster.\n"
+                "Use File → Connect to Cluster… first.",
+            )
+            return
+
+        path, ok = QInputDialog.getText(
+            self.handler.window,
+            "Load Remote Dataset",
+            "Cluster path to dataset file:",
+        )
+        if not ok or not path.strip():
+            return
+        path = path.strip()
+
+        types = sorted(list(env.datasetTypes.keys()))
+        typ, ok2 = QInputDialog.getItem(
+            self.handler.window,
+            "Dataset Type",
+            "Format:",
+            types,
+            0,
+            False,
+        )
+        if not ok2:
+            return
+
+        logger.info(
+            "Requesting remote load: path=%s type=%s", path, typ
+        )
+        asyncio.create_task(
+            session.push_event("LOAD_DATASET", path, typ)
         )

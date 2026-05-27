@@ -103,28 +103,6 @@ def _find_free_port() -> int:
         return s.getsockname()[1]
 
 
-def _inject_phantom_task(env, task_id) -> None:
-    """Insert a minimal task entry so the local UI shows remote task progress.
-
-    The server's TASK_CREATED event carries only a taskID.  The local
-    TaskManager has no record of it, so TasksList.onTaskCreated would call
-    env.getTask() → None and silently skip rendering a progress bar.
-    This function creates a completed dummy Future as the ``task`` field so
-    that cancelTask() can safely await it without crashing.
-    """
-    dummy: asyncio.Future = asyncio.get_event_loop().create_future()
-    dummy.set_result(None)
-    env.tm.runningTasks[task_id] = {
-        "visual": True,
-        "process": False,
-        "name": "Remote task",
-        "threaded": False,
-        "progress": None,
-        "progressMessage": "N/A",
-        "task": dummy,
-        "componentParent": None,
-        "taskID": task_id,
-    }
 
 
 @dataclass
@@ -363,10 +341,10 @@ class RemoteSession:
                         # Insert a minimal entry so progress bars appear.
                         if event == "TASK_CREATED" and args:
                             logger.info(
-                                "Listener: injecting phantom task %r",
+                                "Listener: registering phantom task %r",
                                 args[0],
                             )
-                            _inject_phantom_task(local_env, args[0])
+                            local_env.tm.registerPhantomTask(args[0])
                         if event == "TASK_DONE":
                             # Delay TASK_DONE so Qt can paint the progress
                             # bar before it disappears.  Without this, fast

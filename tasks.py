@@ -177,6 +177,41 @@ class TaskManager(EventClass):
                 self.eventPush("TASK_DONE", task.taskID)
                 self.eventPush("TASK_FAILED", task.taskID)
 
+    def registerPhantomTask(self, task_id, name: str = "Remote task") -> None:
+        """Register a phantom task entry for a remote task.
+
+        The remote server creates tasks with its own IDs.  The local
+        TaskManager has no record of them, so UI widgets that call
+        ``getTask()`` on a ``TASK_CREATED`` event would silently skip
+        rendering a progress bar.  This method inserts a minimal entry
+        so progress bars appear and ``cancelTask`` can safely await the
+        task future without crashing.
+
+        The task future is pre-resolved (set_result(None)) so that
+        ``cancelTask`` returns immediately — cancelling a remote task
+        is handled at the protocol level, not here.
+
+        Args:
+            task_id: Task ID matching the one in the incoming
+                ``TASK_CREATED`` event (typically ``"remote_<n>"``).
+            name: Human-readable label shown in the Tasks panel.
+        """
+        if task_id in self.runningTasks:
+            return  # already registered (e.g. duplicate TASK_CREATED)
+        dummy: asyncio.Future = asyncio.get_event_loop().create_future()
+        dummy.set_result(None)
+        self.runningTasks[task_id] = {
+            "visual": True,
+            "process": False,
+            "name": name,
+            "threaded": False,
+            "progress": None,
+            "progressMessage": "N/A",
+            "task": dummy,
+            "componentParent": None,
+            "taskID": task_id,
+        }
+
     def queueTask(self, *args, taskKey=None, **kwargs):
         if (taskKey is not None) and (taskKey in self.runningTasks):
             logger.debug(

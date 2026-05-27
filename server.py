@@ -92,18 +92,10 @@ def _replay_state_to_client(env, outbound) -> None:
         if fingerprint is None:
             continue
         try:
-            n = dataset.getN()
-            name = dataset.getName()
-            is_sub = bool(getattr(dataset, "isSubDataset", False))
-            try:
-                dataset.getForces()
-                has_forces = True
-            except Exception:
-                has_forces = False
             data = pack(
                 "REMOTE_DATASET_META",
                 (fingerprint,),
-                {"name": name, "n": n, "has_forces": has_forces, "is_sub": is_sub},
+                dataset.toMetaDict(),
             )
             try:
                 outbound.put_nowait(data)
@@ -381,45 +373,13 @@ async def _send_subdataset_arrays(env, fingerprint, outbound):
         )
         return
 
-    n = dataset.getN()
     is_variable = bool(getattr(dataset, "isVariable", False))
     logger.info(
         "Sending arrays for dataset %r (n=%d, variable=%s) to client",
-        fingerprint, n, is_variable,
+        fingerprint, dataset.getN(), is_variable,
     )
 
-    arrays = {"n": np.array([n]), "variable": np.array([int(is_variable)])}
-
-    if is_variable:
-        # Flat format: R_flat (total_atoms, 3), molecule_offsets (N+1,)
-        arrays["R_flat"] = dataset.R_flat
-        arrays["offsets"] = dataset.molecule_offsets
-        try:
-            arrays["F_flat"] = dataset.F_flat
-        except Exception:
-            arrays["F_flat"] = None
-        try:
-            arrays["z_flat"] = dataset.z_flat
-        except Exception:
-            arrays["z_flat"] = None
-    else:
-        # Uniform format: R (N, natoms, 3)
-        arrays["R"] = dataset.getCoordinates()
-        try:
-            arrays["F"] = dataset.getForces()
-        except Exception:
-            arrays["F"] = None
-        try:
-            arrays["z"] = dataset.getElements()
-        except Exception:
-            arrays["z"] = None
-
-    # Energies — same shape (N,) for both uniform and variable datasets
-    try:
-        E = dataset.getEnergies()
-        arrays["E"] = np.asarray(E, dtype=np.float64).reshape(-1)
-    except Exception:
-        arrays["E"] = None
+    arrays = dataset.to_transfer_arrays()
 
     # ── Include cached prediction data for this dataset ──────────────────
     # Pack prediction arrays as "pred__<dtype>__<model_fp>" entries so the
@@ -594,23 +554,10 @@ async def _main(port: int, snapshot_interval: int = 5, job_id: str = "local"):
         if dataset is None:
             return
         try:
-            n = dataset.getN()
-            name = dataset.getName()
-            is_sub = bool(getattr(dataset, "isSubDataset", False))
-            try:
-                dataset.getForces()
-                has_forces = True
-            except Exception:
-                has_forces = False
             data = pack(
                 "REMOTE_DATASET_META",
                 (fingerprint,),
-                {
-                    "name": name,
-                    "n": n,
-                    "has_forces": has_forces,
-                    "is_sub": is_sub,
-                },
+                dataset.toMetaDict(),
             )
             outbound.put_nowait(data)
             logger.debug("REMOTE_DATASET_META sent for %r", fingerprint)

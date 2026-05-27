@@ -1432,6 +1432,220 @@ class Environment(EventClass):
             await session.disconnect()
             self.remoteSession = None
 
+    async def connectToCluster(
+        self, profile, reconnect_job_id=None, taskID=None
+    ):
+        """Connect to (or reconnect to) a remote cluster session.
+
+        Owns the full session lifecycle: SLURM job dispatch, SSH tunnel,
+        WebSocket, listener startup, and clean teardown.  The UI layer
+        (menuHandler) is responsible only for the dialog and profile
+        selection; all session state lives here.
+        """
+        from cluster.backend import ClusterError
+
+        _job_id = reconnect_job_id
+
+        def _on_job_submitted(job_id: str):
+            nonlocal _job_id
+            _job_id = job_id
+
+        def _progress(msg: str):
+            prefix = f"[Job {_job_id}] " if _job_id else ""
+            self.eventPush(
+                "TASK_PROGRESS",
+                taskID,
+                message=f"{prefix}{msg}",
+            )
+
+        async def _scancel(job_id: str):
+            """Best-effort SLURM job cancellation (new jobs only)."""
+            from cluster.slurm import RemoteSlurmBackend
+            try:
+                backend = RemoteSlurmBackend(
+                    host=profile.host,
+                    username=profile.username,
+                    identity_file=profile.identity_file,
+                )
+                await backend.cancel_job(job_id)
+                logger.info("scancel %s succeeded", job_id)
+            except Exception as exc:
+                logger.warning("scancel %s failed: %s", job_id, exc)
+
+        try:
+            if reconnect_job_id is not None:
+                from cluster.session import reconnect_to_cluster
+                session = await reconnect_to_cluster(
+                    profile,
+                    reconnect_job_id,
+                    progress_cb=_progress,
+                )
+            else:
+                from cluster.session import connect_to_cluster
+                session = await connect_to_cluster(
+                    profile,
+                    progress_cb=_progress,
+                    on_job_submitted=_on_job_submitted,
+                )
+
+            self.remoteSession = session
+            # Forward server→client events into the local event system.
+            # For reconnect sessions the server replays REMOTE_DATASET_META
+            # and REMOTE_MODEL_META automatically on connection, so the
+            # listener will receive and forward them as normal.
+            self.remoteSession._listener = (
+                await session.start_listener(self)
+            )
+            logger.info(
+                "Remote session ready: job=%s local_port=%d",
+                session.job_id,
+                session.local_port,
+            )
+
+            self.eventPush(
+                "TASK_PROGRESS",
+                taskID,
+                title=f"Cluster: {profile.host} [{session.job_id}]",
+                message="Connected — ✕ to disconnect",
+            )
+
+            # Keep task alive so the sidebar item stays as a
+            # disconnect handle.
+            #
+            # Use a Future (not `await session._listener`) so that
+            # CancelledError always lands here regardless of whether
+            # the listener has already exited.  Awaiting a completed
+            # Task returns immediately without raising CancelledError,
+            # which caused scancel to be skipped in a race condition.
+            _alive = asyncio.get_event_loop().create_future()
+
+            def _on_listener_done(t):
+                if not _alive.done():
+                    _alive.set_result("listener_exited")
+
+            session._listener.add_done_callback(_on_listener_done)
+
+            try:
+                await _alive
+                # Natural exit — listener died (server dropped).
+                # Keep session record: user can still reconnect if the
+                # job is still alive (e.g. transient tunnel failure).
+                logger.warning(
+                    "Cluster listener exited unexpectedly (job %s)",
+                    session.job_id,
+                )
+                self.eventPush(
+                    "TASK_PROGRESS",
+                    taskID,
+                    message="Connection lost (server dropped)",
+                    error=True,
+                )
+                self.remoteSession = None
+            except asyncio.CancelledError:
+                # ✕ clicked — disconnect cleanly.
+                logger.info(
+                    "Disconnecting from cluster (user request, job %s)",
+                    session.job_id,
+                )
+                session._listener.cancel()
+                await session.disconnect()
+                self.remoteSession = None
+                if reconnect_job_id is None:
+                    # New job submitted by us — cancel it on the cluster.
+                    asyncio.create_task(_scancel(session.job_id))
+                # Delete local record: user explicitly disconnected.
+                from cluster.session import delete_session_record
+                delete_session_record(session.job_id)
+                raise
+
+        except asyncio.CancelledError:
+            # Cancelled before connection was established.
+            if _job_id is not None and reconnect_job_id is None:
+                logger.info(
+                    "Task cancelled — sending scancel for job %s",
+                    _job_id,
+                )
+                asyncio.create_task(_scancel(_job_id))
+            raise
+        except ClusterError as exc:
+            logger.error("Cluster connection failed: %s", exc)
+            self.eventPush(
+                "TASK_PROGRESS",
+                taskID,
+                message=f"Connection failed: {exc}",
+                error=True,
+            )
+        except OSError as exc:
+            logger.error("SSH/WebSocket error: %s", exc)
+            self.eventPush(
+                "TASK_PROGRESS",
+                taskID,
+                message=f"Connection failed: {exc}",
+                error=True,
+            )
+
+    async def connectDirect(self, host, port, taskID=None):
+        """Connect directly to a local ffast-server (no SLURM/SSH).
+
+        Used for local testing without a cluster.  menuHandler is
+        responsible for the input dialog; this method owns the session
+        lifecycle.
+        """
+        from cluster.session import connect_direct
+
+        self.eventPush(
+            "TASK_PROGRESS",
+            taskID,
+            message=f"Connecting to {host}:{port}…",
+        )
+        try:
+            session = await connect_direct(host, port)
+            self.remoteSession = session
+            self.remoteSession._listener = (
+                await session.start_listener(self)
+            )
+            logger.info("Local server connected: %s:%d", host, port)
+            self.eventPush(
+                "TASK_PROGRESS",
+                taskID,
+                title=f"Local server {host}:{port}",
+                message="Connected — ✕ to disconnect",
+            )
+
+            _alive = asyncio.get_event_loop().create_future()
+
+            def _on_done(_t):
+                if not _alive.done():
+                    _alive.set_result("done")
+
+            session._listener.add_done_callback(_on_done)
+
+            try:
+                await _alive
+                self.eventPush(
+                    "TASK_PROGRESS",
+                    taskID,
+                    message="Connection lost (server stopped)",
+                    error=True,
+                )
+                self.remoteSession = None
+            except asyncio.CancelledError:
+                session._listener.cancel()
+                await session.disconnect()
+                self.remoteSession = None
+                raise
+
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("Local server connect failed: %s", exc)
+            self.eventPush(
+                "TASK_PROGRESS",
+                taskID,
+                message=f"Failed: {exc}",
+                error=True,
+            )
+
     # ── remote array transfer ─────────────────────────────────────────────────
 
     def _onRemoteDatasetMeta(

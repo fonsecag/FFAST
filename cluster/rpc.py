@@ -14,7 +14,8 @@ Use pack_arrays / unpack_arrays for the SUBDATASET_ARRAYS event.
 import msgpack
 import numpy as np
 
-# Events the server broadcasts to every connected client.
+# Events the server broadcasts to every connected client via the generic
+# subscription loop in server._main().
 SERVER_TO_CLIENT = frozenset(
     {
         "TASK_CREATED",
@@ -26,6 +27,32 @@ SERVER_TO_CLIENT = frozenset(
         "MODEL_LOADED",
         "DATASET_DELETED",
         "MODEL_DELETED",
+    }
+)
+
+# Events the client listener (RemoteSession.start_listener) may safely
+# re-inject into the local env via eventPush().
+#
+# This is NOT a pure subset of SERVER_TO_CLIENT: REMOTE_DATASET_META and
+# REMOTE_MODEL_META are sent by dedicated server-side handlers, not the
+# generic subscription loop, so they don't appear there.
+#
+# Events in SERVER_TO_CLIENT but absent here are intentionally dropped by
+# the client — data-lifecycle events (DATASET_LOADED, MODEL_LOADED, …)
+# would cause AttributeError because the local env has no matching objects.
+CLIENT_ENV_SAFE = frozenset(
+    {
+        # Task-progress events — task IDs are namespaced "remote_<n>"
+        # by the listener before forwarding, so they can't collide with
+        # local task IDs.
+        "TASK_CREATED",
+        "TASK_PROGRESS",
+        "TASK_DONE",
+        "TASK_FAILED",
+        # Remote object announcements — handled by env._onRemoteDatasetMeta
+        # and env._onRemoteModelMeta to create local proxy objects.
+        "REMOTE_DATASET_META",
+        "REMOTE_MODEL_META",
     }
 )
 

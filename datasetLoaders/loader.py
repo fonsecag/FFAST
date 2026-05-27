@@ -205,6 +205,63 @@ class DatasetLoader(EventClass):
         """Check if this dataset has uniform molecular structures."""
         return not self.isVariable
 
+    def toMetaDict(self) -> dict:
+        """Return lightweight metadata for RPC transfer (REMOTE_DATASET_META).
+
+        Used by ffast-server to announce loaded datasets to connected clients
+        without transferring coordinate arrays.
+
+        Returns
+        -------
+        dict with keys: name, n, has_forces, is_sub
+        """
+        has_forces = False
+        try:
+            self.getForces()
+            has_forces = True
+        except Exception:
+            pass
+        return {
+            "name": self.getName(),
+            "n": self.getN(),
+            "has_forces": has_forces,
+            "is_sub": bool(self.isSubDataset),
+        }
+
+    def to_transfer_arrays(self) -> dict:
+        """Serialize geometry arrays for SubDataset transfer over the RPC channel.
+
+        Returns a dict ready to be passed to ``cluster.rpc.pack_arrays``.
+        Handles uniform datasets (R shape N×natoms×3).
+
+        Keys always present: ``n``, ``variable``, ``R``, ``E``.
+        Optional keys (None when unavailable): ``F``, ``z``.
+
+        See Also
+        --------
+        VariableDatasetLoader.to_transfer_arrays : override for variable datasets.
+        """
+        arrays: dict = {
+            "n": np.array([self.getN()]),
+            "variable": np.array([0]),
+            "R": self.getCoordinates(),
+        }
+        try:
+            arrays["F"] = self.getForces()
+        except Exception:
+            arrays["F"] = None
+        try:
+            arrays["z"] = self.getElements()
+        except Exception:
+            arrays["z"] = None
+        try:
+            arrays["E"] = np.asarray(
+                self.getEnergies(), dtype=np.float64
+            ).reshape(-1)
+        except Exception:
+            arrays["E"] = None
+        return arrays
+
 
 class VariableDatasetLoader(EventClass):
     """
@@ -259,6 +316,58 @@ class VariableDatasetLoader(EventClass):
     def isUniform(self):
         """Check if this dataset has uniform molecular structures."""
         return False
+
+    def toMetaDict(self) -> dict:
+        """Return lightweight metadata for RPC transfer (REMOTE_DATASET_META).
+
+        Same interface as DatasetLoader.toMetaDict — used by ffast-server
+        to announce loaded datasets without transferring coordinate arrays.
+
+        Returns
+        -------
+        dict with keys: name, n, has_forces, is_sub
+        """
+        has_forces = False
+        try:
+            self.getForces()
+            has_forces = True
+        except Exception:
+            pass
+        return {
+            "name": self.getName(),
+            "n": self.getN(),
+            "has_forces": has_forces,
+            "is_sub": bool(self.isSubDataset),
+        }
+
+    def to_transfer_arrays(self) -> dict:
+        """Serialize geometry arrays for SubDataset transfer over the RPC channel.
+
+        Returns a dict ready to be passed to ``cluster.rpc.pack_arrays``.
+        Uses the flat array format (R_flat, offsets, F_flat, z_flat).
+
+        Keys always present: ``n``, ``variable``, ``R_flat``, ``offsets``.
+        Optional keys (None when unavailable): ``F_flat``, ``z_flat``, ``E``.
+
+        See Also
+        --------
+        DatasetLoader.to_transfer_arrays : base implementation for uniform datasets.
+        """
+        arrays: dict = {
+            "n": np.array([self.getN()]),
+            "variable": np.array([1]),
+            "R_flat": self.R_flat,
+            "offsets": self.molecule_offsets,
+            "F_flat": self.F_flat,
+            "z_flat": self.z_flat,
+        }
+        try:
+            arrays["E"] = np.asarray(
+                self.getEnergies(), dtype=np.float64
+            ).reshape(-1)
+        except Exception:
+            arrays["E"] = None
+        return arrays
 
     def getNAtoms(self, index=None):
         """

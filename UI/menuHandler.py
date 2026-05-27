@@ -76,6 +76,11 @@ class MenuHandler(EventClass):
                 self.onRemoteDatasetLoad,
                 "Ctrl+Shift+D",
             )
+            File.addAction(
+                "Load Remote Prediction…",
+                self.onRemotePredictionLoad,
+                "Ctrl+Shift+P",
+            )
 
             # File.addAction("Preferences", self.onPreferences)
             # File.addAction("Exit", self.onExit)
@@ -900,3 +905,177 @@ class MenuHandler(EventClass):
             asyncio.create_task(
                 session.push_event("LOAD_DATASET", path, typ)
             )
+
+    def onRemotePredictionLoad(self):
+        """Load a cluster-side prediction file against an already-loaded remote dataset.
+
+        Flow:
+        1. Dropdown to select which remote dataset to attach the prediction to.
+        2. Text dialog for the cluster-side path (.npz or ASE format).
+        3. For ASE files: server probes first frame, KeySelectionDialog for
+           energy/force keys.
+        4. Sends LOAD_PREDICTION RPC — server calls
+           taskLoadPrepredictedDataset, which fires MODEL_LOADED → client
+           receives REMOTE_MODEL_META and auto-fetches prediction arrays via
+           the Prediction-Only Array Channel.
+        """
+        import asyncio
+        import logging
+        from PySide6.QtWidgets import QInputDialog, QMessageBox
+
+        logger = logging.getLogger("FFAST")
+        env = self.handler.env
+        session = getattr(env, "remoteSession", None)
+
+        if session is None:
+            QMessageBox.warning(
+                self.handler.window,
+                "No Cluster Connection",
+                "Not connected to a cluster.\n"
+                "Use File → Connect to Cluster… first.",
+            )
+            return
+
+        # ── 1. Pick remote dataset ───────────────────────────────────────────
+        from cluster.remote_dataset import CachedRemoteDataset
+
+        remote_datasets = [
+            ds for ds in env.getAllDatasets(excludeSubs=True)
+            if isinstance(ds, CachedRemoteDataset)
+        ]
+        if not remote_datasets:
+            QMessageBox.warning(
+                self.handler.window,
+                "No Remote Datasets",
+                "No remote datasets are loaded.\n"
+                "Use File → Load Remote Dataset… first.",
+            )
+            return
+
+        ds_names = [ds.getDisplayName() for ds in remote_datasets]
+        ds_name, ok = QInputDialog.getItem(
+            self.handler.window,
+            "Load Remote Prediction",
+            "Select remote dataset:",
+            ds_names,
+            0,
+            False,
+        )
+        if not ok:
+            return
+        dataset = remote_datasets[ds_names.index(ds_name)]
+
+        # ── 2. Cluster path to prediction file ──────────────────────────────
+        path, ok = QInputDialog.getText(
+            self.handler.window,
+            "Load Remote Prediction",
+            "Cluster path to prediction file (.npz or ASE format):",
+        )
+        if not ok or not path.strip():
+            return
+        path = path.strip()
+        ds_fp = dataset.fingerprint
+
+        logger.info(
+            "Remote prediction load requested: path=%s dataset=%r",
+            path, ds_fp[:8],
+        )
+
+        # ── 3. NPZ vs ASE ────────────────────────────────────────────────────
+        if path.lower().endswith(".npz"):
+            # NPZ: E/F keys are fixed ("E", "F") — no key dialog needed.
+            asyncio.create_task(
+                session.push_event("LOAD_PREDICTION", path, ds_fp)
+            )
+            return
+
+        # ASE: probe keys on server, then show KeySelectionDialog if needed.
+        handler_window = self.handler.window
+
+        async def _probeAndLoadPredTask(taskID=None):
+            env.eventPush(
+                "TASK_PROGRESS", taskID,
+                message="Probing prediction file keys on server…",
+            )
+            try:
+                probe = await session.probe_dataset_keys(path, "ase (auto)")
+            except Exception as exc:
+                logger.error("Key probe failed: %s", exc)
+                env.eventPush(
+                    "TASK_PROGRESS", taskID,
+                    message=f"Key probe failed: {exc}", error=True,
+                )
+                return
+
+            if probe.get("error"):
+                # Fall back: load without explicit key selection
+                await session.push_event("LOAD_PREDICTION", path, ds_fp)
+                return
+
+            energy_keys = probe.get("energy_keys") or []
+            force_keys = probe.get("force_keys") or []
+            has_calc_energy = bool(probe.get("has_calculator_energy"))
+            has_calc_forces = bool(probe.get("has_calculator_forces"))
+
+            energy_options = len(energy_keys) + (1 if has_calc_energy else 0)
+            force_options = len(force_keys) + (1 if has_calc_forces else 0)
+
+            selected_energy_key = energy_keys[0] if energy_keys else None
+            selected_force_key = force_keys[0] if force_keys else None
+
+            if energy_options > 1 or force_options > 1:
+                import asyncio as _asyncio
+                from PySide6.QtCore import QTimer
+
+                loop = _asyncio.get_event_loop()
+                dialog_future = loop.create_future()
+
+                def _show_dialog():
+                    """Show KeySelectionDialog outside any asyncio task."""
+                    try:
+                        from UI.KeySelectionDialog import KeySelectionDialog
+                        dlg = KeySelectionDialog(
+                            energy_keys, force_keys,
+                            parent=handler_window,
+                            for_predictions=True,
+                        )
+                        if dlg.exec() == KeySelectionDialog.Accepted:
+                            if not dialog_future.done():
+                                dialog_future.set_result(dlg.getSelection())
+                        else:
+                            if not dialog_future.done():
+                                dialog_future.set_result(None)
+                    except Exception as exc:
+                        if not dialog_future.done():
+                            dialog_future.set_exception(exc)
+
+                QTimer.singleShot(0, _show_dialog)
+                env.eventPush(
+                    "TASK_PROGRESS", taskID,
+                    message="Waiting for key selection…",
+                )
+                selection = await dialog_future
+
+                if selection is None:
+                    logger.info("Remote prediction load cancelled by user")
+                    return
+
+                selected_energy_key = selection["energy_ref"]
+                selected_force_key = selection["force_ref"]
+
+            logger.info(
+                "Remote LOAD_PREDICTION: path=%r dataset=%r "
+                "energy_key=%r force_key=%r",
+                path, ds_fp[:8], selected_energy_key, selected_force_key,
+            )
+            await session.push_event(
+                "LOAD_PREDICTION", path, ds_fp,
+                selected_energy_key=selected_energy_key,
+                selected_force_key=selected_force_key,
+            )
+
+        env.tm.newTask(
+            _probeAndLoadPredTask,
+            visual=True,
+            name="Load remote prediction…",
+        )

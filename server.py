@@ -81,6 +81,30 @@ async def _dispatch_client_event(env, event, args, kwargs, outbound):
         path, typ = args[0], args[1]
         await _send_dataset_keys(path, typ, outbound)
 
+    elif event == "LOAD_PREDICTION":
+        if len(args) < 2:
+            logger.warning("LOAD_PREDICTION: missing args %r", args)
+            return
+        path, dataset_fp = args[0], args[1]
+        selected_energy_key = kwargs.get("selected_energy_key")
+        selected_force_key = kwargs.get("selected_force_key")
+        logger.info(
+            "LOAD_PREDICTION: path=%r dataset=%r energy_key=%r force_key=%r",
+            path, dataset_fp[:8], selected_energy_key, selected_force_key,
+        )
+        env.taskLoadPrepredictedDataset(
+            path, dataset_fp,
+            selected_energy_key=selected_energy_key,
+            selected_force_key=selected_force_key,
+        )
+
+    elif event == "REQUEST_PREDICTION_ARRAYS":
+        if len(args) < 2:
+            logger.warning("REQUEST_PREDICTION_ARRAYS: missing args %r", args)
+            return
+        dataset_fp, model_fp = args[0], args[1]
+        await _send_prediction_arrays(env, dataset_fp, model_fp, outbound)
+
     else:
         logger.warning("Unknown client event: %s", event)
 
@@ -143,6 +167,56 @@ async def _send_dataset_keys(path: str, typ: str, outbound) -> None:
     except asyncio.QueueFull:
         await outbound.put(data)
     logger.debug("DATASET_KEYS_RESPONSE queued for %r", path)
+
+
+async def _send_prediction_arrays(env, dataset_fp, model_fp, outbound):
+    """Pack only cached prediction arrays for (dataset_fp, model_fp) and push.
+
+    Uses the Prediction-Only Array Channel — geometry/element arrays are NOT
+    re-sent.  Replies with a ``PREDICTION_ARRAYS`` event so the client
+    listener resolves its pending Future without treating it as a geometry
+    transfer.
+    """
+    from cluster.rpc import pack_prediction_arrays
+
+    arrays = {}
+    for dt_key in ("energy", "forces"):
+        cache_key = f"{dt_key}__{model_fp}__{dataset_fp}"
+        de = env.cache.get(cache_key)
+        if de is None:
+            continue
+        raw = de.get(dt_key)
+        if raw is None:
+            continue
+        # Variable-dataset forces arrive as list of (natoms_i, 3) arrays;
+        # flatten to (total_atoms, 3) — client rebuilds per-molecule slices
+        # using the already-held offsets.
+        if isinstance(raw, list):
+            try:
+                raw = np.concatenate(raw, axis=0)
+            except Exception as exc:
+                logger.warning(
+                    "_send_prediction_arrays: could not concatenate %s: %s",
+                    cache_key, exc,
+                )
+                continue
+        arrays[f"pred__{dt_key}__{model_fp}"] = np.asarray(raw)
+
+    if not arrays:
+        logger.warning(
+            "_send_prediction_arrays: no cache entries for model=%r dataset=%r",
+            model_fp[:8], dataset_fp[:8],
+        )
+
+    data = pack_prediction_arrays(dataset_fp, model_fp, arrays)
+    try:
+        outbound.put_nowait(data)
+    except asyncio.QueueFull:
+        await outbound.put(data)
+    logger.info(
+        "PREDICTION_ARRAYS queued: model=%r dataset=%r keys=%r",
+        model_fp[:8], dataset_fp[:8], list(arrays.keys()),
+    )
 
 
 async def _send_subdataset_arrays(env, fingerprint, outbound):

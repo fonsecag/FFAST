@@ -1504,17 +1504,28 @@ class Environment(EventClass):
             "Remote ghost model created: %r (%s)", fingerprint[:8], model_name
         )
 
-        # Auto-fetch arrays for associated datasets that are still proxies.
-        # Prediction data is included in the array transfer, so after this
-        # completes, the cache has everything plots need.
+        # Auto-fetch arrays for associated datasets.
+        # Branch on proxy state:
+        #   proxy (no geometry yet)  → full fetch (geometry + predictions)
+        #   populated                → prediction-only channel (no re-transfer)
         for ds_fp in (dataset_fingerprints or []):
             dataset = self.getDataset(ds_fp)
-            if dataset is not None and getattr(dataset, "is_remote_proxy", True):
+            if dataset is None:
+                continue
+            if getattr(dataset, "is_remote_proxy", True):
                 logger.info(
-                    "Auto-fetching arrays for dataset %r (has new ghost model %r)",
+                    "Auto-fetching arrays for dataset %r "
+                    "(has new ghost model %r)",
                     ds_fp[:8], fingerprint[:8],
                 )
                 self.taskFetchRemoteDataset(ds_fp)
+            else:
+                logger.info(
+                    "Fetching prediction arrays only for dataset %r "
+                    "model %r (dataset already populated)",
+                    ds_fp[:8], fingerprint[:8],
+                )
+                self.taskFetchPredictionArrays(ds_fp, fingerprint)
 
     async def _fetchRemoteDatasetTask(self, fingerprint, taskID=None):
         """Async task: transfer arrays from server and populate local proxy.
@@ -1663,6 +1674,115 @@ class Environment(EventClass):
             args=(fingerprint,),
             visual=True,
             name="Fetching remote arrays",
+        )
+
+    async def _fetchPredictionArraysTask(
+        self, ds_fp: str, model_fp: str, taskID=None
+    ):
+        """Async task: fetch prediction arrays only via the Prediction-Only Channel.
+
+        Sends ``REQUEST_PREDICTION_ARRAYS`` and populates the local cache with
+        the returned energy/forces data.  Geometry arrays are not re-transferred.
+        """
+        session = self.remoteSession
+        if session is None:
+            logger.error("_fetchPredictionArraysTask: no remote session")
+            return
+
+        self.eventPush(
+            "TASK_PROGRESS", taskID,
+            message="Requesting prediction arrays from remote server…",
+        )
+        try:
+            arrays = await session.request_prediction_arrays(
+                ds_fp, model_fp
+            )
+        except asyncio.TimeoutError:
+            self.eventPush(
+                "TASK_PROGRESS", taskID,
+                message="Timed out waiting for prediction arrays",
+                error=True,
+            )
+            logger.error(
+                "Prediction array transfer timed out: model=%r dataset=%r",
+                model_fp[:8], ds_fp[:8],
+            )
+            return
+        except Exception as exc:
+            self.eventPush(
+                "TASK_PROGRESS", taskID,
+                message=f"Prediction transfer error: {exc}",
+                error=True,
+            )
+            logger.error(
+                "Prediction array transfer failed model=%r dataset=%r: %s",
+                model_fp[:8], ds_fp[:8], exc,
+            )
+            return
+
+        self.eventPush(
+            "TASK_PROGRESS", taskID,
+            message="Importing prediction data…",
+        )
+
+        dataset = self.getDataset(ds_fp)
+        if dataset is None:
+            logger.error(
+                "_fetchPredictionArraysTask: dataset %r not found", ds_fp
+            )
+            return
+
+        offsets = None
+        if getattr(dataset, "isVariable", False):
+            offsets = getattr(dataset, "_offsets", None)
+
+        E_key = f"pred__energy__{model_fp}"
+        F_key = f"pred__forces__{model_fp}"
+
+        E = arrays.get(E_key)
+        F = arrays.get(F_key)
+
+        if E is not None:
+            energy_dt = self.getDataType("energy")
+            energy_de = energy_dt.newDataEntity(
+                energy=np.asarray(E).flatten()
+            )
+            self.setData(energy_de, "energy", model=model_fp, dataset=dataset)
+
+        if F is not None:
+            forces_dt = self.getDataType("forces")
+            F_arr = np.asarray(F)
+            if offsets is not None:
+                # Variable dataset — F was flattened on the server;
+                # reconstruct as list of per-molecule arrays.
+                F_val = [
+                    F_arr[offsets[i]:offsets[i + 1]]
+                    for i in range(len(offsets) - 1)
+                ]
+            else:
+                F_val = F_arr  # uniform: (N, natoms, 3)
+            forces_de = forces_dt.newDataEntity(forces=F_val)
+            self.setData(
+                forces_de, "forces", model=model_fp, dataset=dataset
+            )
+
+        self.lookForGhosts()
+        self.eventPush("REMOTE_ARRAY_FETCH_DONE", ds_fp)
+        logger.info(
+            "Prediction arrays imported: model=%r dataset=%r E=%s F=%s",
+            model_fp[:8], ds_fp[:8],
+            E is not None, F is not None,
+        )
+
+    def taskFetchPredictionArrays(
+        self, ds_fp: str, model_fp: str
+    ) -> None:
+        """Schedule a prediction-only array fetch (no geometry re-transfer)."""
+        self.newTask(
+            self._fetchPredictionArraysTask,
+            args=(ds_fp, model_fp),
+            visual=True,
+            name="Fetching remote predictions",
         )
 
 

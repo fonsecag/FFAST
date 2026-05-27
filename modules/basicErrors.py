@@ -44,6 +44,12 @@ def loadData(env):
 
             ePred = env.getData("energy", model=model, dataset=dataset)
             eData = dataset.getEnergies()
+            if eData is None:
+                logger.warning(
+                    "EnergyPredictionError: dataset %r has no energies, skipping",
+                    getattr(dataset, "fingerprint", dataset),
+                )
+                return False
 
             diff = ePred.get("energy") - eData
             shift = np.mean(diff)
@@ -67,6 +73,12 @@ def loadData(env):
 
             fPred = env.getData("forces", model=model, dataset=dataset)
             fData = dataset.getForces()
+            if fData is None:
+                logger.warning(
+                    "ForcesPredictionError: dataset %r has no forces, skipping",
+                    getattr(dataset, "fingerprint", dataset),
+                )
+                return False
 
             if hasattr(dataset, 'isVariable') and dataset.isVariable:
                 # Variable dataset: fPred and fData are lists

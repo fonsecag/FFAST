@@ -112,3 +112,25 @@ def unpack_arrays(kwargs: dict) -> dict:
         else:
             result[k] = v
     return result
+
+
+def pack_prediction_arrays(
+    dataset_fp: str, model_fp: str, arrays: dict
+) -> bytes:
+    """Serialize a PREDICTION_ARRAYS response (prediction-only channel).
+
+    ``arrays`` should have keys ``pred__energy__<model_fp>`` and/or
+    ``pred__forces__<model_fp>``.  Uses the same numpy encoding as
+    :func:`pack_arrays` but emits a ``PREDICTION_ARRAYS`` event so the
+    listener can distinguish it from ``SUBDATASET_ARRAYS``.
+
+    The receiver unpacks with the standard :func:`unpack_arrays` helper.
+    """
+    encoded = {}
+    for k, v in arrays.items():
+        encoded[k] = None if v is None else _encode_array(v)
+    return pack(
+        "PREDICTION_ARRAYS",
+        (dataset_fp, model_fp),
+        {"arrays": encoded},
+    )

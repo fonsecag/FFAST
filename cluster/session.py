@@ -84,11 +84,14 @@ class RemoteSession:
     _pending_array_requests: dict = None
     # path → asyncio.Future waiting for DATASET_KEYS_RESPONSE
     _pending_key_probes: dict = None
+    # (dataset_fp, model_fp) → asyncio.Future waiting for PREDICTION_ARRAYS
+    _pending_prediction_requests: dict = None
 
     def __post_init__(self):
         self._array_cache = {}
         self._pending_array_requests = {}
         self._pending_key_probes = {}
+        self._pending_prediction_requests = {}
 
     async def ping(self) -> bool:
         """Send ping, return True if pong received within 5 s."""
@@ -179,6 +182,31 @@ class RemoteSession:
                                 logger.warning(
                                     "Listener: DATASET_KEYS_RESPONSE for"
                                     " unknown path %r", path
+                                )
+                            await asyncio.sleep(0)
+                            continue  # do NOT forward to env
+
+                        # ── prediction-only array response ───────────────
+                        if event == "PREDICTION_ARRAYS" and len(args) >= 2:
+                            dataset_fp, model_fp = args[0], args[1]
+                            from cluster.rpc import unpack_arrays
+                            arrays = unpack_arrays(kwargs)
+                            key = (dataset_fp, model_fp)
+                            fut = self._pending_prediction_requests.pop(
+                                key, None
+                            )
+                            if fut is not None and not fut.done():
+                                fut.set_result(arrays)
+                                logger.info(
+                                    "Listener: resolved prediction future"
+                                    " dataset=%r model=%r",
+                                    dataset_fp[:8], model_fp[:8],
+                                )
+                            else:
+                                logger.warning(
+                                    "Listener: PREDICTION_ARRAYS for unknown"
+                                    " (dataset=%r, model=%r)",
+                                    dataset_fp[:8], model_fp[:8],
                                 )
                             await asyncio.sleep(0)
                             continue  # do NOT forward to env
@@ -311,6 +339,44 @@ class RemoteSession:
             arrays.get("R", None) and arrays["R"].shape,
         )
         return arrays
+
+    async def request_prediction_arrays(
+        self, dataset_fp: str, model_fp: str, timeout: float = 60.0
+    ) -> dict:
+        """Request prediction arrays (energy/forces) for a (dataset, model) pair.
+
+        Uses the dedicated Prediction-Only Array Channel — geometry arrays are
+        not re-transferred.  Sends ``REQUEST_PREDICTION_ARRAYS`` and awaits
+        the ``PREDICTION_ARRAYS`` response.
+
+        Parameters
+        ----------
+        dataset_fp : str
+            Server-side dataset fingerprint.
+        model_fp : str
+            Ghost model fingerprint.
+        timeout : float
+            Maximum seconds to wait for the server response (default 60 s).
+
+        Returns
+        -------
+        dict
+            Arrays keyed as ``pred__energy__<model_fp>`` and/or
+            ``pred__forces__<model_fp>``.
+        """
+        loop = asyncio.get_event_loop()
+        fut = loop.create_future()
+        key = (dataset_fp, model_fp)
+        self._pending_prediction_requests[key] = fut
+
+        logger.info(
+            "Requesting prediction arrays: dataset=%r model=%r",
+            dataset_fp[:8], model_fp[:8],
+        )
+        await self.push_event(
+            "REQUEST_PREDICTION_ARRAYS", dataset_fp, model_fp
+        )
+        return await asyncio.wait_for(fut, timeout=timeout)
 
     async def probe_dataset_keys(
         self, path: str, typ: str, timeout: float = 30.0

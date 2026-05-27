@@ -2,7 +2,7 @@ import os
 import sys
 from events import EventClass
 from PySide6.QtWidgets import QFileDialog
-from UI.Templates import customFileDialog, BigDatasetWarningDialog
+from UI.Templates import customFileDialog, BigDatasetWarningDialog, RemoteStrideDialog
 from collections.abc import Mapping, Container
 from client.dataType import AtomsList
 
@@ -851,6 +851,59 @@ class MenuHandler(EventClass):
             handler_window = self.handler.window
 
             async def _probeAndLoadTask(taskID=None):
+                import asyncio as _asyncio
+                from PySide6.QtCore import QTimer
+
+                # ── 3a. probe dataset length for stride estimate ──────────
+                env.eventPush(
+                    "TASK_PROGRESS", taskID,
+                    message="Probing dataset length on server…",
+                )
+                n_total = None
+                try:
+                    length_result = await session.probe_dataset_length(path)
+                    if not length_result.get("error"):
+                        n_total = length_result.get("n")
+                except Exception as exc:
+                    logger.warning("Length probe failed (non-fatal): %s", exc)
+
+                # ── 3b. show stride dialog on main thread ─────────────────
+                loop = _asyncio.get_event_loop()
+                stride_future = loop.create_future()
+
+                def _show_stride_dialog():
+                    try:
+                        dlg = RemoteStrideDialog(
+                            n_total=n_total,
+                            parent=handler_window,
+                        )
+                        if dlg.exec() == RemoteStrideDialog.Accepted:
+                            if not stride_future.done():
+                                stride_future.set_result(dlg.get_stride())
+                        else:
+                            if not stride_future.done():
+                                stride_future.set_result(None)
+                    except Exception as exc:
+                        if not stride_future.done():
+                            stride_future.set_exception(exc)
+
+                QTimer.singleShot(0, _show_stride_dialog)
+                env.eventPush(
+                    "TASK_PROGRESS", taskID,
+                    message="Waiting for stride selection…",
+                )
+                stride = await stride_future
+                if stride is None:
+                    logger.info("Remote dataset loading cancelled by user")
+                    return
+                # slice_num=0 means "load all" (efficient path); N>1 = every Nth
+                slice_num = 0 if stride == 1 else stride
+                logger.info(
+                    "Requesting remote load: path=%s type=%s stride=%d",
+                    path, typ, stride,
+                )
+
+                # ── 3c. probe keys ────────────────────────────────────────
                 env.eventPush(
                     "TASK_PROGRESS", taskID,
                     message="Probing dataset keys on server…",
@@ -870,7 +923,7 @@ class MenuHandler(EventClass):
                         "Server probe error for %r: %s", path, probe["error"]
                     )
                     # Fall back: load without explicit key selection
-                    await session.push_event("LOAD_DATASET", path, typ)
+                    await session.push_event("LOAD_DATASET", path, typ, slice_num=slice_num)
                     return
 
                 energy_keys = probe.get("energy_keys") or []
@@ -888,9 +941,6 @@ class MenuHandler(EventClass):
                 prediction_keys = []
 
                 if energy_options > 1 or force_options > 1:
-                    import asyncio as _asyncio
-                    from PySide6.QtCore import QTimer
-
                     loop = _asyncio.get_event_loop()
                     dialog_future = loop.create_future()
 
@@ -950,6 +1000,7 @@ class MenuHandler(EventClass):
                     selected_energy_key=selected_energy_key,
                     selected_force_key=selected_force_key,
                     prediction_keys=prediction_keys,
+                    slice_num=slice_num,
                 )
 
             env.tm.newTask(
@@ -959,9 +1010,64 @@ class MenuHandler(EventClass):
             )
 
         else:
-            # ── non-ASE: no key selection needed ─────────────────────────
-            asyncio.create_task(
-                session.push_event("LOAD_DATASET", path, typ)
+            # ── non-ASE: probe length + stride dialog, then send ──────────
+            handler_window = self.handler.window
+
+            async def _nonAseLoadTask(taskID=None):
+                import asyncio as _asyncio
+                from PySide6.QtCore import QTimer
+
+                env.eventPush(
+                    "TASK_PROGRESS", taskID,
+                    message="Probing dataset length on server…",
+                )
+                n_total = None
+                try:
+                    length_result = await session.probe_dataset_length(path)
+                    if not length_result.get("error"):
+                        n_total = length_result.get("n")
+                except Exception as exc:
+                    logger.warning("Length probe failed (non-fatal): %s", exc)
+
+                loop = _asyncio.get_event_loop()
+                stride_future = loop.create_future()
+
+                def _show_stride_dialog():
+                    try:
+                        dlg = RemoteStrideDialog(
+                            n_total=n_total,
+                            parent=handler_window,
+                        )
+                        if dlg.exec() == RemoteStrideDialog.Accepted:
+                            if not stride_future.done():
+                                stride_future.set_result(dlg.get_stride())
+                        else:
+                            if not stride_future.done():
+                                stride_future.set_result(None)
+                    except Exception as exc:
+                        if not stride_future.done():
+                            stride_future.set_exception(exc)
+
+                QTimer.singleShot(0, _show_stride_dialog)
+                env.eventPush(
+                    "TASK_PROGRESS", taskID,
+                    message="Waiting for stride selection…",
+                )
+                stride = await stride_future
+                if stride is None:
+                    logger.info("Remote dataset loading cancelled by user")
+                    return
+                slice_num = 0 if stride == 1 else stride
+                logger.info(
+                    "Requesting remote load: path=%s type=%s stride=%d",
+                    path, typ, stride,
+                )
+                await session.push_event("LOAD_DATASET", path, typ, slice_num=slice_num)
+
+            env.tm.newTask(
+                _nonAseLoadTask,
+                visual=True,
+                name="Load remote dataset…",
             )
 
     def onRemotePredictionLoad(self):

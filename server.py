@@ -7,10 +7,11 @@ Control messages are msgpack-encoded dicts:
     {"event": str, "args": list, "kwargs": dict}
 
 Client → server events:
-    LOAD_DATASET  args=[path, datasetType]
-                  kwargs={selected_energy_key, selected_force_key,
-                          prediction_keys, slice_num}
-    LOAD_MODEL    args=[path, modelType]
+    LOAD_DATASET          args=[path, datasetType]
+                          kwargs={selected_energy_key, selected_force_key,
+                                  prediction_keys, slice_num}
+    LOAD_MODEL            args=[path, modelType]
+    PROBE_DATASET_LENGTH  args=[path]  → DATASET_LENGTH_RESPONSE
 
 Server → client events (auto-forwarded):
     TASK_CREATED, TASK_PROGRESS, TASK_DONE, TASK_FAILED,
@@ -188,6 +189,12 @@ async def _dispatch_client_event(env, event, args, kwargs, outbound):
         path, typ = args[0], args[1]
         await _send_dataset_keys(path, typ, outbound)
 
+    elif event == "PROBE_DATASET_LENGTH":
+        if not args:
+            logger.warning("PROBE_DATASET_LENGTH: missing path")
+            return
+        await _send_dataset_length(args[0], outbound)
+
     elif event == "LOAD_PREDICTION":
         if len(args) < 2:
             logger.warning("LOAD_PREDICTION: missing args %r", args)
@@ -281,6 +288,32 @@ async def _send_dataset_keys(path: str, typ: str, outbound) -> None:
     except asyncio.QueueFull:
         await outbound.put(data)
     logger.debug("DATASET_KEYS_RESPONSE queued for %r", path)
+
+
+async def _send_dataset_length(path: str, outbound) -> None:
+    """Count frames in a dataset file and push DATASET_LENGTH_RESPONSE."""
+    from cluster.rpc import pack
+
+    n: int | None = None
+    error: str | None = None
+    try:
+        from client.dataType import AtomsList
+        n = AtomsList.calc_dataset_length_static(path)
+        logger.info("PROBE_DATASET_LENGTH %r: n=%d", path, n)
+    except Exception as exc:
+        logger.warning("PROBE_DATASET_LENGTH error for %r: %s", path, exc)
+        error = str(exc)
+
+    data = pack(
+        "DATASET_LENGTH_RESPONSE",
+        (path,),
+        {"n": n, "error": error},
+    )
+    try:
+        outbound.put_nowait(data)
+    except asyncio.QueueFull:
+        await outbound.put(data)
+    logger.debug("DATASET_LENGTH_RESPONSE queued for %r", path)
 
 
 async def _send_prediction_arrays(env, dataset_fp, model_fp, outbound):

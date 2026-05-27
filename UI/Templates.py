@@ -5,8 +5,10 @@ from PySide6.QtWidgets import QWidget, QTabWidget, QFileDialog
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
+    QSpinBox,
     QDialogButtonBox,
 )
 from config.uiConfig import config, getIcon
@@ -1901,3 +1903,63 @@ class BigDatasetWarningDialog(QDialog):
         if text:
             return text
         return None
+
+
+class RemoteStrideDialog(QDialog):
+    """Stride-sampling dialog for remote dataset loading.
+
+    Shows total frame count (from server probe) and updates an estimated
+    frame count live as the user adjusts N.
+    """
+
+    def __init__(self, n_total=None, parent=None):
+        super().__init__(parent)
+        self.n_total = n_total
+        self.setWindowTitle("Stride Sampling")
+        self.setModal(True)
+        self.resize(420, 160)
+
+        layout = QVBoxLayout()
+
+        if n_total is not None:
+            info = QLabel(f"Dataset contains <b>{n_total:,}</b> frames.")
+            info.setTextFormat(Qt.RichText)
+            layout.addWidget(info)
+
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Load every Nth frame (1 = all):"))
+        self.spinbox = QSpinBox()
+        self.spinbox.setRange(1, 10_000_000)
+        self.spinbox.setValue(1)
+        row.addWidget(self.spinbox)
+        layout.addLayout(row)
+
+        self.estimate_label = QLabel(self._estimate_text(1))
+        self.estimate_label.setStyleSheet("color: #666; font-size: 10pt;")
+        layout.addWidget(self.estimate_label)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        self.setLayout(layout)
+        self.spinbox.valueChanged.connect(self._on_value_changed)
+
+    def _estimate_text(self, n: int) -> str:
+        if self.n_total is None:
+            if n == 1:
+                return "Estimated frames: all"
+            return f"Estimated frames: total ÷ {n}"
+        estimated = max(1, (self.n_total + n - 1) // n)
+        if n == 1:
+            return f"Estimated frames: {self.n_total:,} (all)"
+        return f"Estimated frames: ~{estimated:,}"
+
+    def _on_value_changed(self, n: int):
+        self.estimate_label.setText(self._estimate_text(n))
+
+    def get_stride(self) -> int:
+        return self.spinbox.value()

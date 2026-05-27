@@ -145,6 +145,8 @@ class RemoteSession:
     _pending_array_requests: dict = None
     # path → asyncio.Future waiting for DATASET_KEYS_RESPONSE
     _pending_key_probes: dict = None
+    # path → asyncio.Future waiting for DATASET_LENGTH_RESPONSE
+    _pending_length_probes: dict = None
     # (dataset_fp, model_fp) → asyncio.Future waiting for PREDICTION_ARRAYS
     _pending_prediction_requests: dict = None
 
@@ -152,6 +154,7 @@ class RemoteSession:
         self._array_cache = {}
         self._pending_array_requests = {}
         self._pending_key_probes = {}
+        self._pending_length_probes = {}
         self._pending_prediction_requests = {}
 
     async def ping(self) -> bool:
@@ -243,6 +246,24 @@ class RemoteSession:
                                 logger.warning(
                                     "Listener: DATASET_KEYS_RESPONSE for"
                                     " unknown path %r", path
+                                )
+                            await asyncio.sleep(0)
+                            continue  # do NOT forward to env
+
+                        # ── dataset length response ───────────────────────
+                        if event == "DATASET_LENGTH_RESPONSE" and args:
+                            path = args[0]
+                            fut = self._pending_length_probes.pop(path, None)
+                            if fut is not None and not fut.done():
+                                fut.set_result(kwargs)
+                                logger.info(
+                                    "Listener: resolved length probe for %r",
+                                    path,
+                                )
+                            else:
+                                logger.warning(
+                                    "Listener: DATASET_LENGTH_RESPONSE for"
+                                    " unknown path %r", path,
                                 )
                             await asyncio.sleep(0)
                             continue  # do NOT forward to env
@@ -456,6 +477,28 @@ class RemoteSession:
         await self.push_event(
             "REQUEST_PREDICTION_ARRAYS", dataset_fp, model_fp
         )
+        return await asyncio.wait_for(fut, timeout=timeout)
+
+    async def probe_dataset_length(
+        self, path: str, timeout: float = 60.0
+    ) -> dict:
+        """Ask server to count frames in a dataset file.
+
+        Sends PROBE_DATASET_LENGTH and awaits DATASET_LENGTH_RESPONSE.
+
+        Returns
+        -------
+        dict with keys:
+            n     : int | None  — total frame count, or None on error
+            error : str | None  — set if server-side probe failed
+        """
+        loop = asyncio.get_event_loop()
+        fut = loop.create_future()
+        self._pending_length_probes[path] = fut
+
+        logger.info("Probing dataset length for %r", path)
+        await self.push_event("PROBE_DATASET_LENGTH", path)
+
         return await asyncio.wait_for(fut, timeout=timeout)
 
     async def probe_dataset_keys(

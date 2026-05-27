@@ -77,6 +77,19 @@ class RemoteSession:
     local_port: int
     remote_port: int
 
+    # ── array transfer cache ─────────────────────────────────────────────────
+    # fingerprint → {R, F, z, n} dicts of numpy arrays
+    _array_cache: dict = None
+    # fingerprint → asyncio.Future waiting for SUBDATASET_ARRAYS response
+    _pending_array_requests: dict = None
+    # path → asyncio.Future waiting for DATASET_KEYS_RESPONSE
+    _pending_key_probes: dict = None
+
+    def __post_init__(self):
+        self._array_cache = {}
+        self._pending_array_requests = {}
+        self._pending_key_probes = {}
+
     async def ping(self) -> bool:
         """Send ping, return True if pong received within 5 s."""
         try:
@@ -123,13 +136,22 @@ class RemoteSession:
         """
         from cluster.rpc import unpack
 
-        # Only task-lifecycle events are safe to forward to the local env.
+        # Events safe to forward to the local env directly.
         # Data-lifecycle events (DATASET_LOADED, MODEL_LOADED, DATA_UPDATED,
-        # DATASET_DELETED, MODEL_DELETED) require the actual data objects to
-        # exist locally — forwarding them causes AttributeError in SideBar
-        # because env.getDataset/getModel returns None.
+        # DATASET_DELETED, MODEL_DELETED) are NOT forwarded because the local
+        # env has no matching data objects and forwarding causes AttributeError.
+        # REMOTE_DATASET_META is forwarded so the env can create a proxy.
+        # SUBDATASET_ARRAYS is intercepted here to resolve the pending Future
+        # and must NOT be forwarded to env.
         _LOCAL_SAFE = frozenset(
-            {"TASK_CREATED", "TASK_PROGRESS", "TASK_DONE", "TASK_FAILED"}
+            {
+                "TASK_CREATED",
+                "TASK_PROGRESS",
+                "TASK_DONE",
+                "TASK_FAILED",
+                "REMOTE_DATASET_META",
+                "REMOTE_MODEL_META",   # ghost model metadata (fires after predictions loaded)
+            }
         )
 
         async def _listen():
@@ -140,15 +162,72 @@ class RemoteSession:
                     try:
                         event, args, kwargs = unpack(message)
                         logger.debug(
-                            "Listener received: %s args=%r kwargs=%r",
-                            event, args, kwargs,
+                            "Listener received: %s args=%r", event, args
                         )
+
+                        # ── key probe response ────────────────────────────
+                        if event == "DATASET_KEYS_RESPONSE" and args:
+                            path = args[0]
+                            fut = self._pending_key_probes.pop(path, None)
+                            if fut is not None and not fut.done():
+                                fut.set_result(kwargs)
+                                logger.info(
+                                    "Listener: resolved key probe for %r",
+                                    path,
+                                )
+                            else:
+                                logger.warning(
+                                    "Listener: DATASET_KEYS_RESPONSE for"
+                                    " unknown path %r", path
+                                )
+                            await asyncio.sleep(0)
+                            continue  # do NOT forward to env
+
+                        # ── array transfer response ───────────────────────
+                        if event == "SUBDATASET_ARRAYS" and args:
+                            fingerprint = args[0]
+                            from cluster.rpc import unpack_arrays
+                            arrays = unpack_arrays(kwargs)
+                            # model_names is a plain str→str dict packed
+                            # alongside the arrays (not encoded as ndarrays)
+                            model_names = kwargs.get("model_names") or {}
+                            fut = self._pending_array_requests.pop(
+                                fingerprint, None
+                            )
+                            if fut is not None and not fut.done():
+                                fut.set_result(
+                                    {
+                                        "arrays": arrays,
+                                        "model_names": model_names,
+                                    }
+                                )
+                                logger.info(
+                                    "Listener: resolved array future for %r"
+                                    " (models: %s)",
+                                    fingerprint,
+                                    list(model_names.keys()),
+                                )
+                            else:
+                                logger.warning(
+                                    "Listener: SUBDATASET_ARRAYS for unknown"
+                                    " fingerprint %r", fingerprint
+                                )
+                            await asyncio.sleep(0)
+                            continue  # do NOT forward to env
+
                         if event not in _LOCAL_SAFE:
                             logger.debug(
                                 "Listener: skipping non-local-safe event %s",
                                 event,
                             )
                             continue
+
+                        if event == "REMOTE_DATASET_META" and args:
+                            logger.info(
+                                "Listener: forwarding REMOTE_DATASET_META"
+                                " fp=%r kwargs=%r", args[0], kwargs
+                            )
+
                         # Phantom task: TASK_CREATED from server carries only
                         # taskID.  The local TaskManager has no record of it,
                         # so TasksList.onTaskCreated would silently skip it.
@@ -182,6 +261,92 @@ class RemoteSession:
 
         return asyncio.create_task(_listen())
 
+    async def request_subdataset_arrays(
+        self, fingerprint: str, timeout: float = 300.0
+    ) -> dict:
+        """Request numpy arrays for a dataset from the remote server.
+
+        Sends REQUEST_SUBDATASET_ARRAYS and awaits the SUBDATASET_ARRAYS
+        response.  Result is cached so repeated calls for the same fingerprint
+        are instant.
+
+        Parameters
+        ----------
+        fingerprint : str
+            Server-side dataset fingerprint.
+        timeout : float
+            Maximum seconds to wait for the server response (default 300 s —
+            large SubDatasets can take a while to serialise).
+
+        Returns
+        -------
+        dict with two top-level keys:
+
+        ``arrays`` : dict
+            Coordinate/element arrays (keys R/F/z for uniform or
+            R_flat/F_flat/z_flat/offsets for variable datasets) plus any
+            cached prediction arrays prefixed ``pred__<dtype>__<model_fp>``.
+        ``model_names`` : dict[str, str]
+            Server-side model fingerprint → human-readable name for each
+            model whose prediction data was included in ``arrays``.
+        """
+        # Return cached result immediately
+        if fingerprint in self._array_cache:
+            logger.info("Array cache hit for %r", fingerprint)
+            return self._array_cache[fingerprint]
+
+        # Create a Future that the listener will resolve
+        loop = asyncio.get_event_loop()
+        fut = loop.create_future()
+        self._pending_array_requests[fingerprint] = fut
+
+        logger.info("Requesting arrays for %r from server…", fingerprint)
+        await self.push_event("REQUEST_SUBDATASET_ARRAYS", fingerprint)
+
+        arrays = await asyncio.wait_for(fut, timeout=timeout)
+        self._array_cache[fingerprint] = arrays
+        logger.info(
+            "Arrays cached for %r (R shape %s)",
+            fingerprint,
+            arrays.get("R", None) and arrays["R"].shape,
+        )
+        return arrays
+
+    async def probe_dataset_keys(
+        self, path: str, typ: str, timeout: float = 30.0
+    ) -> dict:
+        """Ask server to probe available energy/force key names for a file.
+
+        Sends PROBE_DATASET_KEYS and awaits DATASET_KEYS_RESPONSE.  The server
+        reads only the first frame so the round-trip is fast (<1 s normally).
+
+        Parameters
+        ----------
+        path : str
+            Cluster-side path to the dataset file.
+        typ : str
+            Dataset type string (e.g. ``"ase (auto)"``).
+        timeout : float
+            Maximum seconds to wait for the server response (default 30 s).
+
+        Returns
+        -------
+        dict with keys:
+            energy_keys : list[str]
+            force_keys  : list[str]
+            has_calculator_energy : bool
+            has_calculator_forces : bool
+            error : str | None  — set if server-side probe failed
+        """
+        loop = asyncio.get_event_loop()
+        fut = loop.create_future()
+        self._pending_key_probes[path] = fut
+
+        logger.info("Probing dataset keys for %r (type=%s)", path, typ)
+        await self.push_event("PROBE_DATASET_KEYS", path, typ)
+
+        return await asyncio.wait_for(fut, timeout=timeout)
+
     async def disconnect(self) -> None:
         """
         Close WebSocket and kill SSH tunnel.
@@ -201,6 +366,40 @@ class RemoteSession:
             "(SSH tunnel closed; job still running on cluster)",
             self.job_id,
         )
+
+
+async def connect_direct(host: str = "localhost", port: int = 8765) -> "RemoteSession":
+    """Connect directly to a running ffast-server without SLURM or SSH.
+
+    Use this for local testing:
+    1. ``python server.py --port 8765`` in one terminal.
+    2. In the app: File → Connect to Local Server…
+
+    Returns a RemoteSession with job_id="local" and ssh_proc=None.
+    """
+    import websockets
+
+    url = f"ws://{host}:{port}"
+    logger.info("connect_direct: connecting to %s", url)
+
+    websocket = await websockets.connect(url)
+
+    # verify with ping/pong
+    await websocket.send("ping")
+    reply = await asyncio.wait_for(websocket.recv(), timeout=10)
+    if reply != "pong":
+        await websocket.close()
+        raise OSError(f"Unexpected ping reply: {reply!r}")
+
+    logger.info("connect_direct: connected to %s", url)
+    return RemoteSession(
+        job_id="local",
+        ssh_proc=None,
+        websocket=websocket,
+        profile=None,
+        local_port=port,
+        remote_port=port,
+    )
 
 
 async def connect_to_cluster(

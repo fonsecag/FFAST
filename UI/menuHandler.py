@@ -67,6 +67,11 @@ class MenuHandler(EventClass):
                 "Ctrl+Shift+C",
             )
             File.addAction(
+                "Connect to Local Server…",
+                self.onConnectLocalServer,
+                "Ctrl+Shift+L",
+            )
+            File.addAction(
                 "Load Remote Dataset…",
                 self.onRemoteDatasetLoad,
                 "Ctrl+Shift+D",
@@ -629,8 +634,105 @@ class MenuHandler(EventClass):
             name=f"Connecting to {profile.host}…",
         )
 
+    def onConnectLocalServer(self):
+        """Connect directly to a local ffast-server (no SLURM/SSH).
+
+        Use for local testing:
+          Terminal 1: python server.py --port 8765
+          Then File → Connect to Local Server…
+        """
+        import logging
+        from PySide6.QtWidgets import QInputDialog, QMessageBox
+
+        logger = logging.getLogger("FFAST")
+        env = self.handler.env
+
+        addr_str, ok = QInputDialog.getText(
+            self.handler.window,
+            "Connect to Local Server",
+            "host:port  (IPv4 — e.g. 127.0.0.1:8765):",
+            text="127.0.0.1:8765",
+        )
+        if not ok or not addr_str.strip():
+            return
+        try:
+            if ":" in addr_str:
+                host, port_s = addr_str.rsplit(":", 1)
+                host = host.strip()
+                port = int(port_s.strip())
+            else:
+                host = "127.0.0.1"
+                port = int(addr_str.strip())
+        except ValueError:
+            QMessageBox.warning(
+                self.handler.window, "Invalid address",
+                f"Expected host:port, got {addr_str!r}",
+            )
+            return
+
+        async def _connectTask(taskID=None):
+            import asyncio as _asyncio
+            from cluster.session import connect_direct
+
+            env.eventPush("TASK_PROGRESS", taskID, message=f"Connecting to {host}:{port}…")
+            try:
+                session = await connect_direct(host, port)
+                env.remoteSession = session
+                env.remoteSession._listener = await session.start_listener(env)
+                logger.info("Local server connected: %s:%d", host, port)
+                env.eventPush(
+                    "TASK_PROGRESS",
+                    taskID,
+                    title=f"Local server {host}:{port}",
+                    message="Connected — ✕ to disconnect",
+                )
+
+                _alive = _asyncio.get_event_loop().create_future()
+
+                def _on_done(_t):
+                    if not _alive.done():
+                        _alive.set_result("done")
+
+                session._listener.add_done_callback(_on_done)
+
+                try:
+                    await _alive
+                    env.eventPush(
+                        "TASK_PROGRESS", taskID,
+                        message="Connection lost (server stopped)", error=True,
+                    )
+                    env.remoteSession = None
+                except _asyncio.CancelledError:
+                    session._listener.cancel()
+                    await session.disconnect()
+                    env.remoteSession = None
+                    raise
+
+            except _asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.error("Local server connect failed: %s", exc)
+                env.eventPush(
+                    "TASK_PROGRESS", taskID,
+                    message=f"Failed: {exc}", error=True,
+                )
+
+        env.tm.newTask(
+            _connectTask,
+            visual=True,
+            name=f"Local server {host}:{port}",
+        )
+
     def onRemoteDatasetLoad(self):
-        """Load a dataset on the remote cluster via the active RPC session."""
+        """Load a dataset on the remote cluster via the active RPC session.
+
+        Mirrors the local onDatasetLoad routine:
+        1. Text dialog for cluster-side path.
+        2. Type dropdown (same choices as local).
+        3. For ASE files: server probes first frame, then shows the same
+           KeySelectionDialog so energy/force keys can be picked.
+        4. Sends LOAD_DATASET RPC with selected keys.
+        """
         import asyncio
         import logging
         from PySide6.QtWidgets import QInputDialog, QMessageBox
@@ -648,6 +750,7 @@ class MenuHandler(EventClass):
             )
             return
 
+        # ── 1. path ──────────────────────────────────────────────────────────
         path, ok = QInputDialog.getText(
             self.handler.window,
             "Load Remote Dataset",
@@ -657,6 +760,7 @@ class MenuHandler(EventClass):
             return
         path = path.strip()
 
+        # ── 2. type ──────────────────────────────────────────────────────────
         types = sorted(list(env.datasetTypes.keys()))
         typ, ok2 = QInputDialog.getItem(
             self.handler.window,
@@ -669,9 +773,130 @@ class MenuHandler(EventClass):
         if not ok2:
             return
 
-        logger.info(
-            "Requesting remote load: path=%s type=%s", path, typ
-        )
-        asyncio.create_task(
-            session.push_event("LOAD_DATASET", path, typ)
-        )
+        logger.info("Requesting remote load: path=%s type=%s", path, typ)
+
+        if typ == "ase (auto)":
+            # ── 3. ASE: probe keys on server, show KeySelectionDialog ─────
+            #
+            # IMPORTANT: dialog.exec() must NOT be called while an asyncio
+            # task is active — calling it inside a coroutine triggers:
+            #   RuntimeError: Cannot enter into task … while another task …
+            #   is being executed.
+            # Fix: probe keys in an async task, then defer the dialog to a
+            # QTimer callback (no task running at that point) and bridge back
+            # into the task via an asyncio.Future.
+            handler_window = self.handler.window
+
+            async def _probeAndLoadTask(taskID=None):
+                env.eventPush(
+                    "TASK_PROGRESS", taskID,
+                    message="Probing dataset keys on server…",
+                )
+                try:
+                    probe = await session.probe_dataset_keys(path, typ)
+                except Exception as exc:
+                    logger.error("Key probe failed: %s", exc)
+                    env.eventPush(
+                        "TASK_PROGRESS", taskID,
+                        message=f"Key probe failed: {exc}", error=True,
+                    )
+                    return
+
+                if probe.get("error"):
+                    logger.warning(
+                        "Server probe error for %r: %s", path, probe["error"]
+                    )
+                    # Fall back: load without explicit key selection
+                    await session.push_event("LOAD_DATASET", path, typ)
+                    return
+
+                energy_keys = probe.get("energy_keys") or []
+                force_keys = probe.get("force_keys") or []
+                has_calc_energy = bool(probe.get("has_calculator_energy"))
+                has_calc_forces = bool(probe.get("has_calculator_forces"))
+
+                # Mirrors local _showASEKeySelectionDialog logic:
+                # skip dialog when there is only one option for each.
+                energy_options = len(energy_keys) + (1 if has_calc_energy else 0)
+                force_options = len(force_keys) + (1 if has_calc_forces else 0)
+
+                selected_energy_key = energy_keys[0] if energy_keys else None
+                selected_force_key = force_keys[0] if force_keys else None
+                prediction_keys = []
+
+                if energy_options > 1 or force_options > 1:
+                    import asyncio as _asyncio
+                    from PySide6.QtCore import QTimer
+
+                    loop = _asyncio.get_event_loop()
+                    dialog_future = loop.create_future()
+
+                    def _show_dialog_on_main_thread():
+                        """Run dialog outside any asyncio task (QTimer callback).
+
+                        When this fires, the probe task is suspended on
+                        ``await dialog_future``, so no asyncio task is
+                        "executing".  dialog.exec() can safely enter Qt's
+                        nested event loop without the RuntimeError.
+                        """
+                        try:
+                            from UI.KeySelectionDialog import KeySelectionDialog
+                            dlg = KeySelectionDialog(
+                                energy_keys, force_keys,
+                                parent=handler_window,
+                            )
+                            if dlg.exec() == KeySelectionDialog.Accepted:
+                                if not dialog_future.done():
+                                    dialog_future.set_result(
+                                        dlg.getSelection()
+                                    )
+                            else:
+                                # User cancelled
+                                if not dialog_future.done():
+                                    dialog_future.set_result(None)
+                        except Exception as exc:
+                            if not dialog_future.done():
+                                dialog_future.set_exception(exc)
+
+                    # Schedule dialog for next Qt event loop tick.
+                    # By this point our coroutine will be suspended on
+                    # ``await dialog_future`` (no task executing).
+                    QTimer.singleShot(0, _show_dialog_on_main_thread)
+
+                    env.eventPush(
+                        "TASK_PROGRESS", taskID,
+                        message="Waiting for key selection…",
+                    )
+                    selection = await dialog_future  # task suspended here
+
+                    if selection is None:
+                        logger.info("Remote dataset loading cancelled by user")
+                        return
+
+                    selected_energy_key = selection["energy_ref"]
+                    selected_force_key = selection["force_ref"]
+                    prediction_keys = selection["predictions"]
+
+                logger.info(
+                    "Remote LOAD_DATASET: energy_key=%r force_key=%r "
+                    "prediction_keys=%r",
+                    selected_energy_key, selected_force_key, prediction_keys,
+                )
+                await session.push_event(
+                    "LOAD_DATASET", path, typ,
+                    selected_energy_key=selected_energy_key,
+                    selected_force_key=selected_force_key,
+                    prediction_keys=prediction_keys,
+                )
+
+            env.tm.newTask(
+                _probeAndLoadTask,
+                visual=True,
+                name="Load remote dataset…",
+            )
+
+        else:
+            # ── non-ASE: no key selection needed ─────────────────────────
+            asyncio.create_task(
+                session.push_event("LOAD_DATASET", path, typ)
+            )

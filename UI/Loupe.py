@@ -577,6 +577,7 @@ class Loupe(Widget, EventChildClass):
 
         # EVENTS
         self.eventSubscribe("SUBDATASET_INDICES_CHANGED", self.onSubChanged)
+        self.eventSubscribe("REMOTE_ARRAY_FETCH_DONE", self.onRemoteArrayFetchDone)
 
         #MENU BAR
         self.mBar = QtWidgets.QMenuBar(self)
@@ -669,6 +670,17 @@ class Loupe(Widget, EventChildClass):
         self.selectedDatasetKey = key
 
         dataset = self.getSelectedDataset()
+
+        # Remote proxy — trigger array fetch and wait for REMOTE_ARRAY_FETCH_DONE
+        if dataset is not None and getattr(dataset, "is_remote_proxy", False):
+            logger.info(
+                "Loupe: remote proxy selected (%r) — triggering array fetch",
+                key,
+            )
+            self.env.taskFetchRemoteDataset(dataset.fingerprint)
+            # Don't call setDataset yet; onRemoteArrayFetchDone will resume
+            return
+
         self.canvas.setDataset(dataset)
 
         self.index = 0
@@ -686,6 +698,12 @@ class Loupe(Widget, EventChildClass):
             return
 
         self.onDatasetSelected(key, force=True)
+
+    def onRemoteArrayFetchDone(self, fingerprint):
+        """Arrays for a remote dataset arrived — refresh Loupe if it's selected."""
+        if fingerprint == self.selectedDatasetKey:
+            logger.info("Loupe: remote arrays ready for %r — refreshing", fingerprint)
+            self.onDatasetSelected(fingerprint, force=True)
 
     # INDEX
     def updateCurrentIndex(self):

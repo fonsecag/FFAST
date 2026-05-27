@@ -71,6 +71,11 @@ class Environment(EventClass):
         # Active remote cluster session (set by menuHandler after connect_to_cluster)
         self.remoteSession = None
 
+        # Subscribe to remote dataset metadata so we can create local proxies
+        self.eventSubscribe("REMOTE_DATASET_META", self._onRemoteDatasetMeta)
+        # Subscribe to remote ghost-model metadata (fired after predictions load)
+        self.eventSubscribe("REMOTE_MODEL_META", self._onRemoteModelMeta)
+
         self.maxDatasetSize = 0  # To handle the smoothing maximum value in plots
 
     #############
@@ -489,9 +494,14 @@ class Environment(EventClass):
                 logger.info("Dataset loading cancelled by user")
                 return
 
-            # Merge prediction keys from dialog with any passed in
+            # Merge prediction keys from dialog with any passed in.
+            # SmartASELoader echoes the caller's prediction_keys unchanged
+            # when show_dialog=False, so naïve concatenation would double
+            # every entry.  Deduplicate to prevent loading predictions twice.
             if pred_keys:
-                prediction_keys = (prediction_keys or []) + pred_keys
+                seen = {tuple(k) for k in (prediction_keys or [])}
+                extra = [k for k in pred_keys if tuple(k) not in seen]
+                prediction_keys = (prediction_keys or []) + extra
         else:
             dataset = result
 
@@ -1421,6 +1431,239 @@ class Environment(EventClass):
             logger.info("Cleaning up remote session on quit…")
             await session.disconnect()
             self.remoteSession = None
+
+    # ── remote array transfer ─────────────────────────────────────────────────
+
+    def _onRemoteDatasetMeta(
+        self,
+        fingerprint,
+        name=None,
+        n=None,
+        has_forces=True,
+        is_sub=False,
+    ):
+        """Create a local CachedRemoteDataset proxy when the server loads a dataset.
+
+        The proxy has no arrays yet (``is_remote_proxy=True``) but appears in
+        the Loupe dataset ComboBox so the user can select it.  Actual array
+        transfer is triggered by :meth:`taskFetchRemoteDataset`.
+        """
+        from cluster.remote_dataset import CachedRemoteDataset
+
+        if self.getDataset(fingerprint) is not None:
+            logger.debug("REMOTE_DATASET_META: proxy already exists for %r", fingerprint)
+            return
+
+        n_val = int(n) if n is not None else 0
+        label = name if name else fingerprint[:12]
+        proxy = CachedRemoteDataset(fingerprint, label, n_val)
+        # slice_num=-2 skips the maxDatasetSize update (proxy has no arrays)
+        self.setNewDataset(proxy, slice_num=-2)
+        logger.info(
+            "Remote proxy created: %r (n=%d, has_forces=%s)",
+            label, n_val, has_forces,
+        )
+
+    def _onRemoteModelMeta(
+        self,
+        fingerprint,
+        name=None,
+        dataset_fingerprints=None,
+    ):
+        """Create a local GhostModelLoader when the server registers a ghost model.
+
+        Called when ``REMOTE_MODEL_META`` arrives.  The server sends this event
+        from the ``MODEL_LOADED`` handler, which fires *after*
+        ``_loadPredictionsFromKeys`` and ``lookForGhosts()`` have run — so
+        prediction arrays are already in ``env.cache`` on the server side.
+
+        After creating the ghost model, auto-triggers ``taskFetchRemoteDataset``
+        for every associated dataset that still has no arrays on the client
+        (``is_remote_proxy=True``).  This pulls the arrays *including* the
+        prediction data so plots work immediately.
+        """
+        from modelLoaders.ghost import GhostModelLoader
+
+        if self.getModel(fingerprint) is not None:
+            logger.debug(
+                "REMOTE_MODEL_META: ghost model already exists for %r", fingerprint
+            )
+            return
+
+        model_name = name if name else fingerprint[:8]
+        # Register info so GhostModelLoader.initialise() finds the display name.
+        self.info.setdefault("objects", {})[fingerprint] = {
+            "path": "remote",
+            "name": model_name,
+            "type": "ghost_model",
+        }
+        model = GhostModelLoader(self, fingerprint)
+        model.initialise()
+        self.setNewModel(model)
+        logger.info(
+            "Remote ghost model created: %r (%s)", fingerprint[:8], model_name
+        )
+
+        # Auto-fetch arrays for associated datasets that are still proxies.
+        # Prediction data is included in the array transfer, so after this
+        # completes, the cache has everything plots need.
+        for ds_fp in (dataset_fingerprints or []):
+            dataset = self.getDataset(ds_fp)
+            if dataset is not None and getattr(dataset, "is_remote_proxy", True):
+                logger.info(
+                    "Auto-fetching arrays for dataset %r (has new ghost model %r)",
+                    ds_fp[:8], fingerprint[:8],
+                )
+                self.taskFetchRemoteDataset(ds_fp)
+
+    async def _fetchRemoteDatasetTask(self, fingerprint, taskID=None):
+        """Async task: transfer arrays from server and populate local proxy.
+
+        Progress is reported through TASK_PROGRESS so the Tasks panel shows a
+        progress bar during the transfer.
+        """
+        session = self.remoteSession
+        if session is None:
+            logger.error("taskFetchRemoteDataset: no remote session active")
+            return
+
+        self.eventPush(
+            "TASK_PROGRESS",
+            taskID,
+            message="Requesting arrays from remote server…",
+        )
+        try:
+            arrays = await session.request_subdataset_arrays(fingerprint)
+        except asyncio.TimeoutError:
+            self.eventPush(
+                "TASK_PROGRESS",
+                taskID,
+                message="Timed out waiting for server response",
+                error=True,
+            )
+            logger.error("Array transfer timed out for %r", fingerprint)
+            return
+        except Exception as exc:
+            self.eventPush(
+                "TASK_PROGRESS",
+                taskID,
+                message=f"Transfer error: {exc}",
+                error=True,
+            )
+            logger.error("Array transfer failed for %r: %s", fingerprint, exc)
+            return
+
+        self.eventPush(
+            "TASK_PROGRESS",
+            taskID,
+            message="Populating local cache…",
+        )
+
+        # Unpack payload — request_subdataset_arrays now returns a dict with
+        # two top-level keys: "arrays" (coord/element arrays + pred__ entries)
+        # and "model_names" (fp → display name).
+        payload = arrays  # named "arrays" for historical reasons; it's the payload
+        raw_arrays = payload.get("arrays", payload)   # back-compat if plain dict
+        model_names = payload.get("model_names") or {}
+
+        # Separate prediction entries from geometry/element arrays.
+        pred_data: dict = {}   # model_fp → {dtype: np.ndarray}
+        main_arrays: dict = {}
+        for key, val in raw_arrays.items():
+            if key.startswith("pred__"):
+                parts = key.split("__", 2)
+                if len(parts) == 3:
+                    _, dt_key, model_fp = parts
+                    pred_data.setdefault(model_fp, {})[dt_key] = val
+            else:
+                main_arrays[key] = val
+
+        dataset = self.getDataset(fingerprint)
+        if dataset is None:
+            # No proxy was created yet — build one now
+            from cluster.remote_dataset import CachedRemoteDataset
+
+            n_val = len(main_arrays.get("R") or [])
+            dataset = CachedRemoteDataset(fingerprint, fingerprint[:12], n_val)
+            self.setNewDataset(dataset, slice_num=-2)
+
+        dataset.populate(main_arrays)
+
+        # ── Recreate prediction DataEntities from transferred arrays ─────────
+        if pred_data:
+            self.eventPush(
+                "TASK_PROGRESS", taskID,
+                message="Importing prediction data…",
+            )
+
+        offsets = main_arrays.get("offsets")   # present for variable datasets
+        for model_fp, preds in pred_data.items():
+            try:
+                E = preds.get("energy")
+                F = preds.get("forces")
+
+                if E is not None:
+                    energy_dt = self.getDataType("energy")
+                    energy_de = energy_dt.newDataEntity(
+                        energy=np.asarray(E).flatten()
+                    )
+                    self.setData(energy_de, "energy",
+                                 model=model_fp, dataset=dataset)
+
+                if F is not None:
+                    forces_dt = self.getDataType("forces")
+                    F_arr = np.asarray(F)
+                    if offsets is not None:
+                        # Variable dataset — F was flattened on the server;
+                        # reconstruct as list of per-molecule arrays.
+                        F_val = [
+                            F_arr[offsets[i]:offsets[i + 1]]
+                            for i in range(len(offsets) - 1)
+                        ]
+                    else:
+                        F_val = F_arr  # uniform (N, natoms, 3)
+                    forces_de = forces_dt.newDataEntity(forces=F_val)
+                    self.setData(forces_de, "forces",
+                                 model=model_fp, dataset=dataset)
+
+                # Store model info so GhostModelLoader.initialise() finds it.
+                model_name = model_names.get(model_fp, model_fp[:8])
+                self.info.setdefault("objects", {})[model_fp] = {
+                    "path": "remote",
+                    "name": model_name,
+                    "type": "ghost_model",
+                }
+                logger.info(
+                    "Imported predictions for %r (model %s)",
+                    model_name, model_fp[:8],
+                )
+            except Exception as exc:
+                logger.error(
+                    "Failed to import predictions for model %r: %s",
+                    model_fp[:8], exc,
+                )
+
+        # Create GhostModelLoader objects for any newly-imported prediction data
+        if pred_data:
+            self.lookForGhosts()
+
+        # Notify Loupe (and any other subscriber) that arrays are ready
+        self.eventPush("REMOTE_ARRAY_FETCH_DONE", fingerprint)
+        self.eventPush("DATASET_UPDATED", fingerprint)
+        logger.info("Array transfer complete for %r", fingerprint)
+
+    def taskFetchRemoteDataset(self, fingerprint: str) -> None:
+        """Schedule an async task to transfer arrays for *fingerprint* from the server.
+
+        Idempotent: if arrays are already cached in the session,
+        :meth:`RemoteSession.request_subdataset_arrays` returns instantly.
+        """
+        self.newTask(
+            self._fetchRemoteDatasetTask,
+            args=(fingerprint,),
+            visual=True,
+            name="Fetching remote arrays",
+        )
 
 
 class HeadlessEnvironment(Environment, threading.Thread):

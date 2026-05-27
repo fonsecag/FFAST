@@ -362,6 +362,8 @@ class TaskItem(ObjectListItem, EventChildClass):
         prog=None,
         percent=False,
         message="Working...",
+        error=False,
+        title=None,
     ):
         if taskID is not self.id:
             return
@@ -387,6 +389,16 @@ class TaskItem(ObjectListItem, EventChildClass):
         # message
         self.messageLabel.setText(message)
         self.messageLabel.setToolTip(message)
+
+        # title update (e.g. after state change like "connected")
+        if title is not None:
+            self.titleLabel.setText(title)
+
+        # error styling
+        if error:
+            self.messageLabel.setStyleSheet("color: #e05555;")
+        else:
+            self.messageLabel.setStyleSheet("")
 
     def cancel(self):
         taskID = self.id

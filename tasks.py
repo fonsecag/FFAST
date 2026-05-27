@@ -204,6 +204,8 @@ class TaskManager(EventClass):
         prog=None,
         percent=False,
         message="Working...",
+        error=False,
+        title=None,
     ):
         task = self.getTask(taskID)
         if task is None:
@@ -215,3 +217,6 @@ class TaskManager(EventClass):
             task["progress"] = None
 
         task["progressMessage"] = message
+        task["error"] = error
+        if title is not None:
+            task["name"] = title

@@ -499,20 +499,43 @@ class MenuHandler(EventClass):
         env = self.handler.env
 
         async def _connectTask(taskID=None):
+            import asyncio as _asyncio
             from cluster.session import connect_to_cluster
             from cluster.backend import ClusterError
 
+            _job_id = None  # captured after SLURM submit
+
+            def _on_job_submitted(job_id: str):
+                nonlocal _job_id
+                _job_id = job_id
+
             def _progress(msg: str):
+                prefix = f"[Job {_job_id}] " if _job_id else ""
                 env.eventPush(
                     "TASK_PROGRESS",
                     taskID,
-                    message=msg,
+                    message=f"{prefix}{msg}",
                 )
+
+            async def _scancel(job_id: str):
+                """Best-effort SLURM job cancellation, runs independently."""
+                from cluster.slurm import RemoteSlurmBackend
+                try:
+                    backend = RemoteSlurmBackend(
+                        host=profile.host,
+                        username=profile.username,
+                        identity_file=profile.identity_file,
+                    )
+                    await backend.cancel_job(job_id)
+                    logger.info("scancel %s succeeded", job_id)
+                except Exception as exc:
+                    logger.warning("scancel %s failed: %s", job_id, exc)
 
             try:
                 session = await connect_to_cluster(
                     profile,
                     progress_cb=_progress,
+                    on_job_submitted=_on_job_submitted,
                 )
                 # Store session on env so other components can reach it
                 env.remoteSession = session
@@ -520,25 +543,76 @@ class MenuHandler(EventClass):
                 env.remoteSession._listener = (
                     await session.start_listener(env)
                 )
-                env.eventPush(
-                    "TASK_PROGRESS",
-                    taskID,
-                    message=(
-                        f"Connected! Job {session.job_id} on "
-                        f"localhost:{session.local_port}"
-                    ),
-                )
                 logger.info(
                     "Remote session ready: job=%s local_port=%d",
                     session.job_id,
                     session.local_port,
                 )
+
+                env.eventPush(
+                    "TASK_PROGRESS",
+                    taskID,
+                    title=f"Cluster: {profile.host} [{session.job_id}]",
+                    message="Connected — ✕ to disconnect",
+                )
+
+                # Keep task alive so the sidebar item stays as a
+                # disconnect handle.
+                #
+                # Use a Future (not `await session._listener`) so that
+                # CancelledError always lands here regardless of whether
+                # the listener has already exited.  Awaiting a completed
+                # Task returns immediately without raising CancelledError,
+                # which caused scancel to be skipped in a race condition.
+                _alive = _asyncio.get_event_loop().create_future()
+
+                def _on_listener_done(t):
+                    if not _alive.done():
+                        _alive.set_result("listener_exited")
+
+                session._listener.add_done_callback(_on_listener_done)
+
+                try:
+                    await _alive
+                    # Natural exit — listener died (server dropped)
+                    logger.warning(
+                        "Cluster listener exited unexpectedly (job %s)",
+                        session.job_id,
+                    )
+                    env.eventPush(
+                        "TASK_PROGRESS",
+                        taskID,
+                        message="Connection lost (server dropped)",
+                        error=True,
+                    )
+                    env.remoteSession = None
+                except _asyncio.CancelledError:
+                    # ✕ clicked — disconnect cleanly then scancel
+                    logger.info(
+                        "Disconnecting from cluster (user request, job %s)",
+                        session.job_id,
+                    )
+                    session._listener.cancel()
+                    await session.disconnect()
+                    env.remoteSession = None
+                    _asyncio.create_task(_scancel(session.job_id))
+                    raise
+
+            except _asyncio.CancelledError:
+                # Cancelled before connection was established
+                if _job_id is not None:
+                    logger.info(
+                        "Task cancelled — sending scancel for job %s", _job_id
+                    )
+                    _asyncio.create_task(_scancel(_job_id))
+                raise
             except ClusterError as exc:
                 logger.error("Cluster connection failed: %s", exc)
                 env.eventPush(
                     "TASK_PROGRESS",
                     taskID,
                     message=f"Connection failed: {exc}",
+                    error=True,
                 )
             except OSError as exc:
                 logger.error("SSH/WebSocket error: %s", exc)
@@ -546,6 +620,7 @@ class MenuHandler(EventClass):
                     "TASK_PROGRESS",
                     taskID,
                     message=f"Connection failed: {exc}",
+                    error=True,
                 )
 
         env.tm.newTask(

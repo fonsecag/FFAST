@@ -139,12 +139,12 @@ class RemoteSession:
                         continue  # skip text messages (pong etc.)
                     try:
                         event, args, kwargs = unpack(message)
-                        logger.info(
+                        logger.debug(
                             "Listener received: %s args=%r kwargs=%r",
                             event, args, kwargs,
                         )
                         if event not in _LOCAL_SAFE:
-                            logger.info(
+                            logger.debug(
                                 "Listener: skipping non-local-safe event %s",
                                 event,
                             )
@@ -209,6 +209,7 @@ async def connect_to_cluster(
     poll_interval: float = _POLL_INTERVAL,
     poll_timeout: float = _POLL_TIMEOUT,
     progress_cb: Optional[Callable[[str], None]] = None,
+    on_job_submitted: Optional[Callable[[str], None]] = None,
 ) -> RemoteSession:
     """
     Full connect flow: SLURM submit → poll → SSH tunnel → WebSocket.
@@ -226,6 +227,9 @@ async def connect_to_cluster(
     progress_cb : callable(str) | None
         Optional callback invoked with a human-readable progress message at
         each stage — useful for forwarding to the UI task progress system.
+    on_job_submitted : callable(str) | None
+        Called once with the SLURM job ID immediately after submission.
+        Use this to capture the job ID for cancellation purposes.
 
     Returns
     -------
@@ -264,6 +268,8 @@ async def connect_to_cluster(
     _progress("Submitting SLURM job…")
     spec = profile.to_job_spec(command)
     job_id = await backend.submit_job(spec)
+    if on_job_submitted is not None:
+        on_job_submitted(job_id)
     _progress(f"Job submitted: {job_id}")
 
     # ── 2. poll until RUNNING ─────────────────────────────────────────────

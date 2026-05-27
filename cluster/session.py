@@ -19,14 +19,75 @@ The SLURM job keeps running until its time limit (server lifetime policy).
 """
 
 import asyncio
+import json
 import logging
 import os
 import socket
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Callable, Optional
 
 logger = logging.getLogger("FFAST")
+
+# ── session record persistence ────────────────────────────────────────────────
+# Saved under ~/.ffast/sessions.json so the reconnect UI can find running jobs.
+
+_SESSIONS_FILE = os.path.expanduser(
+    os.path.join("~", ".ffast", "sessions.json")
+)
+
+
+def _load_session_records() -> list:
+    """Read session records from ~/.ffast/sessions.json (returns [] on error)."""
+    if not os.path.exists(_SESSIONS_FILE):
+        return []
+    try:
+        with open(_SESSIONS_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def _write_session_records(records: list) -> None:
+    os.makedirs(os.path.dirname(_SESSIONS_FILE), exist_ok=True)
+    try:
+        with open(_SESSIONS_FILE, "w") as f:
+            json.dump(records, f, indent=2)
+    except Exception as exc:
+        logger.warning("Failed to write sessions.json: %s", exc)
+
+
+def save_session_record(
+    job_id: str, profile_name: str, node: str, remote_port: int
+) -> None:
+    """Upsert a session record for the given job."""
+    records = _load_session_records()
+    records = [r for r in records if r.get("job_id") != job_id]
+    records.append(
+        {
+            "job_id": job_id,
+            "profile_name": profile_name,
+            "node": node,
+            "remote_port": remote_port,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+    )
+    _write_session_records(records)
+    logger.info("Session record saved: job=%s node=%s", job_id, node)
+
+
+def delete_session_record(job_id: str) -> None:
+    """Remove the session record for a job (call on user-initiated disconnect)."""
+    records = _load_session_records()
+    records = [r for r in records if r.get("job_id") != job_id]
+    _write_session_records(records)
+    logger.info("Session record deleted: job=%s", job_id)
+
+
+def load_session_records() -> list:
+    """Return all saved session records.  Used by the reconnect UI."""
+    return _load_session_records()
 
 _DEFAULT_REMOTE_PORT = 8765
 _POLL_INTERVAL = 5        # seconds between squeue polls
@@ -527,7 +588,8 @@ async def connect_to_cluster(
         backend = SlurmBackend()
 
     server_cmd = getattr(profile, "ffast_server_cmd", "ffast-server") or "ffast-server"
-    command = f"{server_cmd} --port {remote_port}"
+    snap_interval = getattr(profile, "snapshot_interval_minutes", 5)
+    command = f"{server_cmd} --port {remote_port} --snapshot-interval {snap_interval}"
 
     # ── 1. submit SLURM job ───────────────────────────────────────────────
     _progress("Submitting SLURM job…")
@@ -660,6 +722,170 @@ async def connect_to_cluster(
         "RemoteSession ready: job=%s node=%s local_port=%d",
         job_id, node, local_port,
     )
+
+    # Persist session record so the UI can offer reconnect after a disconnect.
+    save_session_record(job_id, profile.name, node, remote_port)
+
+    return RemoteSession(
+        job_id=job_id,
+        ssh_proc=ssh_proc,
+        websocket=websocket,
+        profile=profile,
+        local_port=local_port,
+        remote_port=remote_port,
+    )
+
+
+async def reconnect_to_cluster(
+    profile,
+    job_id: str,
+    remote_port: int = _DEFAULT_REMOTE_PORT,
+    progress_cb: Optional[Callable[[str], None]] = None,
+) -> "RemoteSession":
+    """Reconnect to a RUNNING cluster job without submitting a new SLURM job.
+
+    Use when the client disconnected (network blip, laptop sleep, etc.) but
+    the server is still running.  Skips job submission and polling; goes
+    directly to node resolution → SSH tunnel → WebSocket.
+
+    Parameters
+    ----------
+    profile : ClusterProfile
+        Connection profile (used for SSH credentials).
+    job_id : str
+        SLURM job ID of the already-running server.
+    remote_port : int
+        Port ffast-server is listening on inside the job (default 8765).
+    progress_cb : callable(str) | None
+        Optional progress callback for UI integration.
+
+    Returns
+    -------
+    RemoteSession
+
+    Raises
+    ------
+    ClusterError
+        Job is no longer running.
+    OSError
+        SSH tunnel died or WebSocket could not connect.
+    """
+    from cluster.backend import ClusterError, JobStatus
+    from cluster.slurm import RemoteSlurmBackend, SlurmBackend
+
+    def _progress(msg: str) -> None:
+        logger.info(msg)
+        if progress_cb is not None:
+            progress_cb(msg)
+
+    if profile.host:
+        backend = RemoteSlurmBackend(
+            host=profile.host,
+            username=profile.username,
+            identity_file=profile.identity_file,
+        )
+    else:
+        backend = SlurmBackend()
+
+    # ── 1. verify job still RUNNING ───────────────────────────────────────
+    _progress(f"Verifying job {job_id} is still running…")
+    status = await backend.poll_status(job_id)
+    if status != JobStatus.RUNNING:
+        raise ClusterError(
+            f"Job {job_id} is no longer running (status: {status.name})"
+        )
+
+    # ── 2. resolve node address ───────────────────────────────────────────
+    node = await backend.get_node_address(job_id)
+    _progress(f"Job {job_id} running on node: {node}")
+
+    # ── 3. SSH port-forward ───────────────────────────────────────────────
+    local_port = _find_free_port()
+    login_target = (
+        f"{profile.username}@{profile.host}"
+        if profile.username
+        else profile.host
+    )
+    identity_file = os.path.expanduser(
+        getattr(profile, "identity_file", "") or ""
+    )
+    ssh_cmd = [
+        "ssh",
+        "-N",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "BatchMode=yes",
+        "-o", "ExitOnForwardFailure=yes",
+        "-o", "ServerAliveInterval=30",
+    ]
+    if identity_file:
+        ssh_cmd += ["-i", identity_file]
+    ssh_cmd += ["-L", f"{local_port}:{node}:{remote_port}", login_target]
+
+    _progress(
+        f"Opening SSH tunnel: localhost:{local_port}"
+        f" → {node}:{remote_port} via {profile.host}"
+    )
+    ssh_proc = subprocess.Popen(
+        ssh_cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+
+    # ── 4. connect WebSocket (retry until tunnel ready) ───────────────────
+    import websockets
+
+    ws_url = f"ws://localhost:{local_port}"
+    _progress(f"Connecting to {ws_url}…")
+
+    websocket = None
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, _TUNNEL_RETRIES + 1):
+        if ssh_proc.poll() is not None:
+            stderr = ssh_proc.stderr.read().decode(errors="replace").strip()
+            raise OSError(
+                f"SSH tunnel exited (exit {ssh_proc.returncode}).\n{stderr}"
+            )
+        try:
+            websocket = await websockets.connect(ws_url, max_size=None)
+            break
+        except Exception as exc:
+            last_exc = exc
+            logger.debug(
+                "WebSocket reconnect attempt %d/%d failed: %s",
+                attempt, _TUNNEL_RETRIES, exc,
+            )
+            await asyncio.sleep(_TUNNEL_RETRY_DELAY)
+
+    if websocket is None:
+        ssh_proc.terminate()
+        raise OSError(
+            f"Could not reconnect to {ws_url} after "
+            f"{_TUNNEL_RETRIES} attempts: {last_exc}"
+        )
+
+    # ── 5. verify with ping/pong ──────────────────────────────────────────
+    _progress("Verifying connection…")
+    try:
+        await websocket.send("ping")
+        reply = await asyncio.wait_for(websocket.recv(), timeout=10)
+    except Exception as exc:
+        ssh_proc.terminate()
+        await websocket.close()
+        raise OSError(f"Ping/pong handshake failed: {exc}") from exc
+
+    if reply != "pong":
+        ssh_proc.terminate()
+        await websocket.close()
+        raise OSError(f"Unexpected ping reply: {reply!r}")
+
+    _progress("Reconnected!")
+    logger.info(
+        "RemoteSession reconnected: job=%s node=%s local_port=%d",
+        job_id, node, local_port,
+    )
+
+    # Refresh session record with new node/port
+    save_session_record(job_id, profile.name, node, remote_port)
 
     return RemoteSession(
         job_id=job_id,

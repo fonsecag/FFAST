@@ -40,6 +40,8 @@ class ClusterProfile:
     gpu_count: int = 0
     memory_mb: int = 4096
     time_limit: str = "01:00:00"
+    # Auto-snapshot interval in minutes (0 = disabled)
+    snapshot_interval_minutes: int = 5
 
     def to_job_spec(self, command: str) -> JobSpec:
         return JobSpec(

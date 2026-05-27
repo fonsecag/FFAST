@@ -47,6 +47,113 @@ def _setupServerLogger():
     )
 
 
+async def _auto_snapshot_loop(
+    env, job_id: str, interval_minutes: int
+) -> None:
+    """Periodically save server state to ~/.ffast/snapshots/<job_id>/."""
+    snapshot_dir = os.path.expanduser(
+        os.path.join("~", ".ffast", "snapshots", job_id)
+    )
+    os.makedirs(snapshot_dir, exist_ok=True)
+    logger.info(
+        "Auto-snapshot: every %d min → %s", interval_minutes, snapshot_dir
+    )
+    while True:
+        await asyncio.sleep(interval_minutes * 60)
+        try:
+            loop = asyncio.get_event_loop()
+            # env.save is blocking I/O — run in a thread executor
+            await loop.run_in_executor(None, env.save, snapshot_dir)
+            logger.info("Auto-snapshot saved to %s", snapshot_dir)
+        except Exception as exc:
+            logger.warning("Auto-snapshot failed: %s", exc)
+
+
+def _replay_state_to_client(env, outbound) -> None:
+    """Enqueue REMOTE_DATASET_META + REMOTE_MODEL_META for all current objects.
+
+    Called synchronously at the start of each new client connection so that a
+    reconnecting client gets the current server state without having to
+    re-trigger dataset/model loads.  This is the degenerate (one-shot full
+    push) case of the sync protocol; future incremental sync would replace
+    this with delta events.
+    """
+    from cluster.rpc import pack
+
+    # ── datasets ─────────────────────────────────────────────────────────────
+    try:
+        datasets = env.getAllDatasets(excludeSubs=True)
+    except Exception:
+        datasets = []
+
+    for dataset in datasets:
+        fingerprint = getattr(dataset, "fingerprint", None)
+        if fingerprint is None:
+            continue
+        try:
+            n = dataset.getN()
+            name = dataset.getName()
+            is_sub = bool(getattr(dataset, "isSubDataset", False))
+            try:
+                dataset.getForces()
+                has_forces = True
+            except Exception:
+                has_forces = False
+            data = pack(
+                "REMOTE_DATASET_META",
+                (fingerprint,),
+                {"name": name, "n": n, "has_forces": has_forces, "is_sub": is_sub},
+            )
+            try:
+                outbound.put_nowait(data)
+            except asyncio.QueueFull:
+                logger.warning(
+                    "State replay: outbound queue full, skipping dataset %r",
+                    fingerprint,
+                )
+            logger.info(
+                "State replay: REMOTE_DATASET_META queued for %r", fingerprint
+            )
+        except Exception as exc:
+            logger.warning(
+                "State replay: dataset %r error: %s", fingerprint, exc
+            )
+
+    # ── ghost models ──────────────────────────────────────────────────────────
+    for model_fp, model in list(env.models.items()):
+        if not getattr(model, "isGhost", False):
+            continue
+        try:
+            name = getattr(model, "name", None) or model_fp[:8]
+            dataset_fps = []
+            for cache_key in list(env.cache.keys()):
+                parts = cache_key.split("__")
+                if len(parts) == 3 and parts[1] == model_fp:
+                    ds_fp = parts[2]
+                    if ds_fp not in dataset_fps:
+                        dataset_fps.append(ds_fp)
+            data = pack(
+                "REMOTE_MODEL_META",
+                (model_fp,),
+                {"name": name, "dataset_fingerprints": dataset_fps},
+            )
+            try:
+                outbound.put_nowait(data)
+            except asyncio.QueueFull:
+                logger.warning(
+                    "State replay: outbound queue full, skipping model %r",
+                    model_fp[:8],
+                )
+            logger.info(
+                "State replay: REMOTE_MODEL_META queued for model=%r name=%r",
+                model_fp[:8], name,
+            )
+        except Exception as exc:
+            logger.warning(
+                "State replay: model %r error: %s", model_fp[:8], exc
+            )
+
+
 async def _dispatch_client_event(env, event, args, kwargs, outbound):
     """Route an incoming client event to the appropriate env method."""
     if event == "LOAD_DATASET":
@@ -104,6 +211,13 @@ async def _dispatch_client_event(env, event, args, kwargs, outbound):
             return
         dataset_fp, model_fp = args[0], args[1]
         await _send_prediction_arrays(env, dataset_fp, model_fp, outbound)
+
+    elif event == "REQUEST_STATE_SYNC":
+        # Client explicitly requests a full state replay (e.g. after reconnect).
+        # The server also replays state automatically on every new connection
+        # (see _handler), so this is a fallback for explicit re-sync.
+        logger.info("REQUEST_STATE_SYNC received — replaying state to client")
+        _replay_state_to_client(env, outbound)
 
     else:
         logger.warning("Unknown client event: %s", event)
@@ -340,7 +454,14 @@ async def _handler(websocket, env, outbound):
     addr = websocket.remote_address
     logger.info("Client connected: %s", addr)
 
+    # State replay is triggered on the first ping/pong exchange (see below).
+    # Doing it here (before receive_loop) would race with the ping/pong
+    # handshake: binary replay messages would arrive before the text "pong"
+    # and break the client's handshake assertion.
+    _state_replayed = False
+
     async def receive_loop():
+        nonlocal _state_replayed
         async for message in websocket:
             if isinstance(message, bytes):
                 try:
@@ -351,6 +472,12 @@ async def _handler(websocket, env, outbound):
             elif message == "ping":
                 await websocket.send("pong")
                 logger.debug("Pong sent to %s", addr)
+                # Replay current server state once, right after the
+                # handshake completes.  The pong is already on the wire so
+                # subsequent binary messages are safe to enqueue.
+                if not _state_replayed:
+                    _state_replayed = True
+                    _replay_state_to_client(env, outbound)
             else:
                 logger.debug(
                     "Unknown text message from %s: %r", addr, message
@@ -398,7 +525,7 @@ async def _serve(env, outbound, port: int):
     logger.info("ffast-server shut down")
 
 
-async def _main(port: int):
+async def _main(port: int, snapshot_interval: int = 5, job_id: str = "local"):
     """Bootstrap env, wire RPC subscriptions, run server + event loop."""
     from client.environment import HeadlessEnvironment
     from cluster.rpc import SERVER_TO_CLIENT, pack
@@ -496,12 +623,19 @@ async def _main(port: int):
 
     env.eventSubscribe("MODEL_LOADED", _on_model_loaded_meta)
 
-    logger.info("Environment ready")
+    logger.info("Environment ready (job_id=%s)", job_id)
 
-    await asyncio.gather(
-        env.headlessEventLoop(),
-        _serve(env, outbound, port),
-    )
+    coros = [env.headlessEventLoop(), _serve(env, outbound, port)]
+    if snapshot_interval > 0:
+        coros.append(_auto_snapshot_loop(env, job_id, snapshot_interval))
+        logger.info(
+            "Snapshot loop scheduled: interval=%d min job_id=%s",
+            snapshot_interval, job_id,
+        )
+    else:
+        logger.info("Auto-snapshot disabled (interval=0)")
+
+    await asyncio.gather(*coros)
 
 
 def cli():
@@ -516,10 +650,32 @@ def cli():
         default=8765,
         help="Port to listen on (default: 8765)",
     )
+    parser.add_argument(
+        "--snapshot-interval",
+        type=int,
+        default=5,
+        metavar="MINUTES",
+        help="Auto-snapshot interval in minutes (0 = disabled, default: 5)",
+    )
+    parser.add_argument(
+        "--job-id",
+        type=str,
+        default=None,
+        metavar="JOB_ID",
+        help="SLURM job ID for snapshot directory naming "
+             "(auto-detected from SLURM_JOB_ID env var if not set)",
+    )
     args = parser.parse_args()
 
+    # Auto-detect job_id from SLURM environment; fall back to CLI arg or "local"
+    job_id = (
+        os.environ.get("SLURM_JOB_ID")
+        or args.job_id
+        or "local"
+    )
+
     try:
-        asyncio.run(_main(args.port))
+        asyncio.run(_main(args.port, args.snapshot_interval, job_id))
     except KeyboardInterrupt:
         logger.info("Interrupted — shutting down")
     except Exception:

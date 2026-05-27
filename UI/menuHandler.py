@@ -484,6 +484,7 @@ class MenuHandler(EventClass):
         import logging
         logger = logging.getLogger("FFAST")
         from UI.ClusterProfileDialog import ClusterConnectDialog
+        from PySide6.QtWidgets import QMessageBox
 
         dialog = ClusterConnectDialog(parent=self.handler.window)
         if dialog.exec() != ClusterConnectDialog.Accepted:
@@ -491,7 +492,6 @@ class MenuHandler(EventClass):
 
         profile = dialog.get_profile()
         if not profile.host:
-            from PySide6.QtWidgets import QMessageBox
             QMessageBox.warning(
                 self.handler.window,
                 "Connect to Cluster",
@@ -508,12 +508,46 @@ class MenuHandler(EventClass):
 
         env = self.handler.env
 
+        # ── reconnect check ───────────────────────────────────────────────
+        # If a session record exists for this profile the server may still be
+        # running.  Offer to reconnect (skips SLURM submit + polling).
+        reconnect_job_id = None
+        try:
+            from cluster.session import load_session_records
+            records = [
+                r for r in load_session_records()
+                if r.get("profile_name") == profile.name
+            ]
+            if records:
+                latest = records[-1]
+                msg = QMessageBox(self.handler.window)
+                msg.setWindowTitle("Reconnect to cluster?")
+                msg.setText(
+                    f"A previous session was found for <b>{profile.name}</b>:<br><br>"
+                    f"&nbsp;&nbsp;Job <b>{latest['job_id']}</b>"
+                    f" — started {latest.get('timestamp', 'unknown')}<br><br>"
+                    f"Reconnect to the running job, or submit a new one?"
+                )
+                reconnect_btn = msg.addButton(
+                    f"Reconnect to {latest['job_id']}", QMessageBox.AcceptRole
+                )
+                msg.addButton("Submit new job", QMessageBox.RejectRole)
+                msg.exec()
+                if msg.clickedButton() == reconnect_btn:
+                    reconnect_job_id = latest["job_id"]
+                    logger.info(
+                        "User chose to reconnect to job %s", reconnect_job_id
+                    )
+        except Exception as exc:
+            logger.warning("Reconnect check failed: %s", exc)
+
         async def _connectTask(taskID=None):
             import asyncio as _asyncio
-            from cluster.session import connect_to_cluster
             from cluster.backend import ClusterError
 
-            _job_id = None  # captured after SLURM submit
+            # For reconnect, job_id is already known; for new jobs it's set
+            # via the on_job_submitted callback.
+            _job_id = reconnect_job_id
 
             def _on_job_submitted(job_id: str):
                 nonlocal _job_id
@@ -528,7 +562,7 @@ class MenuHandler(EventClass):
                 )
 
             async def _scancel(job_id: str):
-                """Best-effort SLURM job cancellation, runs independently."""
+                """Best-effort SLURM job cancellation (new jobs only)."""
                 from cluster.slurm import RemoteSlurmBackend
                 try:
                     backend = RemoteSlurmBackend(
@@ -542,14 +576,27 @@ class MenuHandler(EventClass):
                     logger.warning("scancel %s failed: %s", job_id, exc)
 
             try:
-                session = await connect_to_cluster(
-                    profile,
-                    progress_cb=_progress,
-                    on_job_submitted=_on_job_submitted,
-                )
+                if reconnect_job_id is not None:
+                    from cluster.session import reconnect_to_cluster
+                    session = await reconnect_to_cluster(
+                        profile,
+                        reconnect_job_id,
+                        progress_cb=_progress,
+                    )
+                else:
+                    from cluster.session import connect_to_cluster
+                    session = await connect_to_cluster(
+                        profile,
+                        progress_cb=_progress,
+                        on_job_submitted=_on_job_submitted,
+                    )
+
                 # Store session on env so other components can reach it
                 env.remoteSession = session
-                # Forward server→client events into the local event system
+                # Forward server→client events into the local event system.
+                # For reconnect sessions the server replays REMOTE_DATASET_META
+                # and REMOTE_MODEL_META automatically on connection, so the
+                # listener will receive and forward them as normal.
                 env.remoteSession._listener = (
                     await session.start_listener(env)
                 )
@@ -584,7 +631,9 @@ class MenuHandler(EventClass):
 
                 try:
                     await _alive
-                    # Natural exit — listener died (server dropped)
+                    # Natural exit — listener died (server dropped).
+                    # Keep session record: user can still reconnect if the
+                    # job is still alive (e.g. transient tunnel failure).
                     logger.warning(
                         "Cluster listener exited unexpectedly (job %s)",
                         session.job_id,
@@ -597,7 +646,7 @@ class MenuHandler(EventClass):
                     )
                     env.remoteSession = None
                 except _asyncio.CancelledError:
-                    # ✕ clicked — disconnect cleanly then scancel
+                    # ✕ clicked — disconnect cleanly.
                     logger.info(
                         "Disconnecting from cluster (user request, job %s)",
                         session.job_id,
@@ -605,12 +654,17 @@ class MenuHandler(EventClass):
                     session._listener.cancel()
                     await session.disconnect()
                     env.remoteSession = None
-                    _asyncio.create_task(_scancel(session.job_id))
+                    if reconnect_job_id is None:
+                        # New job submitted by us — cancel it on the cluster.
+                        _asyncio.create_task(_scancel(session.job_id))
+                    # Delete local record: user explicitly disconnected.
+                    from cluster.session import delete_session_record
+                    delete_session_record(session.job_id)
                     raise
 
             except _asyncio.CancelledError:
-                # Cancelled before connection was established
-                if _job_id is not None:
+                # Cancelled before connection was established.
+                if _job_id is not None and reconnect_job_id is None:
                     logger.info(
                         "Task cancelled — sending scancel for job %s", _job_id
                     )
@@ -636,7 +690,11 @@ class MenuHandler(EventClass):
         env.tm.newTask(
             _connectTask,
             visual=True,
-            name=f"Connecting to {profile.host}…",
+            name=(
+                f"Reconnecting to {profile.host} [{reconnect_job_id}]…"
+                if reconnect_job_id
+                else f"Connecting to {profile.host}…"
+            ),
         )
 
     def onConnectLocalServer(self):

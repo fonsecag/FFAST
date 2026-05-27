@@ -391,7 +391,7 @@ async def _serve(env, outbound, port: int):
 
     logger.info("Starting ffast-server on port %d", port)
     # Bind to "" so the OS picks the right family (IPv4 + IPv6 on most systems).
-    async with websockets.serve(handler, "", port):
+    async with websockets.serve(handler, "", port, max_size=None):
         logger.info("ffast-server listening on ws://0.0.0.0:%d", port)
         while not env.quitReady:
             await asyncio.sleep(1)

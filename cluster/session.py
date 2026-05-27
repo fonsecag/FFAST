@@ -448,7 +448,7 @@ async def connect_direct(host: str = "localhost", port: int = 8765) -> "RemoteSe
     url = f"ws://{host}:{port}"
     logger.info("connect_direct: connecting to %s", url)
 
-    websocket = await websockets.connect(url)
+    websocket = await websockets.connect(url, max_size=None)
 
     # verify with ping/pong
     await websocket.send("ping")
@@ -623,7 +623,7 @@ async def connect_to_cluster(
                 f"(exit {ssh_proc.returncode}).\n{stderr}"
             )
         try:
-            websocket = await websockets.connect(ws_url)
+            websocket = await websockets.connect(ws_url, max_size=None)
             break
         except Exception as exc:
             last_exc = exc

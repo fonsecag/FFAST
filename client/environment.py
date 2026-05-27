@@ -1569,6 +1569,11 @@ class Environment(EventClass):
             raise
         except ClusterError as exc:
             logger.error("Cluster connection failed: %s", exc)
+            # Job is definitively dead — purge the stale record so the
+            # reconnect dialog doesn't re-appear on the next connect attempt.
+            if reconnect_job_id is not None:
+                from cluster.session import delete_session_record
+                delete_session_record(reconnect_job_id)
             self.eventPush(
                 "TASK_PROGRESS",
                 taskID,
